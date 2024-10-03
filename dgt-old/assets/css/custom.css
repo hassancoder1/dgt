@@ -1,0 +1,277 @@
+#sidebar-menu ul li ul.sub-menu li a {
+    padding: .5rem 1.5rem .5rem 2rem !important;
+}
+#sidebar-menu ul li a {
+    padding: .37rem 1.5rem .37rem 0.5rem !important;
+    /*padding: .7rem 1.5rem .7rem 0.5rem !important;*/
+}
+
+.w-40{
+    width: 40%;
+}
+.scroll {
+    /*width: 200px;*/
+    /*height: 400px;*/
+    /*background: red;*/
+    /*overflow: scroll;*/
+    /*height: 77vh;*/
+    overflow-y: overlay;
+    overflow-x: scroll;
+}
+
+.scroll::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.scroll::-webkit-scrollbar-track {
+    -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+}
+
+.scroll::-webkit-scrollbar-thumb, .vscomp-options-container::-webkit-scrollbar-thumb {
+    border-radius: 10px;
+    -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.5);
+}
+
+
+.screen-ht {
+    height: 87vh;
+}
+
+.screen-ht-71 {
+    height: 71vh;
+}
+
+#fix-head-table {
+    position: relative;
+}
+
+#fix-head-table thead {
+    position: sticky !important;
+    top: 0;
+    background-color: #effafa;
+    z-index: 999;
+}
+
+#fix-head-table tbody {
+    margin-top: 2px;
+}
+
+.right-0 {
+    right: 0 !important;
+}
+
+.error-response {
+    position: absolute;
+    /*top: 20px;*/
+    right: 0;
+    color: red;
+    z-index: 9;
+}
+
+/*roznamcha m account veiwe*/
+.ac_row .input-group-text, .ac_row input[type=text] {
+    background: transparent !important;
+    border-radius: 0;
+}
+
+.ac_row input {
+    border-top: none;
+    border-left: none;
+    border-right: none;
+}
+
+.ac_row .input-group-text {
+    border: none;
+}
+
+
+/*sticky*/
+.sticky-social {
+    position: fixed;
+    top: 15%;
+    left: -30px;
+    padding: 0;
+    margin: 0;
+    transform: translateY(-50%);
+    -webkit-transform: translateY(-50%);
+    -ms-transform: translateY(-50%);
+}
+
+.social {
+    list-style: none;
+}
+
+.social li button {
+    border: none;
+    background: transparent;
+    font-family: auto !important;
+}
+
+.social li a, .social li button {
+    padding: 5px 10px;
+    display: block;
+    font-size: 16px;
+    color: #ffffff;
+    cursor: pointer;
+}
+
+.social li .fa {
+    margin-right: 10px;
+}
+
+.social li {
+    /*padding: 5px 10px;*/
+    margin-bottom: 2px;
+    transition: all 0.8s ease-in-out;
+}
+
+/*
+.social li:hover {
+    margin-left: -30px;
+    opacity: .8;
+}
+
+.social li:hover .fa, .social li:hover span {
+    margin-right: 15px;
+}*/
+
+.social .fa, .social span {
+    color: #fff;
+    transition: all 0.8s ease-in-out;
+}
+
+.insta {
+    background-color: #DC4F42;
+}
+
+.pin {
+    background-color: #CB2128;
+}
+
+.vim {
+    background-color: #59BFBE;
+}
+
+.social .facebook {
+    background: #3b5998;
+}
+
+.social .twitter {
+    background: #00aced;
+}
+
+.social .instagram {
+    background: #e4405f;
+}
+
+.social .youtube {
+    background: #cd201f;
+}
+
+.social .linkedin {
+    background: #0077B5;
+}
+
+.social .whatsapp {
+    background: #4dc247;
+}
+
+.social .excel {
+    background: #1d6f42;
+}
+
+.social .work {
+    background: #00a1f1;
+}
+
+.table-sm > :not(caption) > * > * {
+    padding: .25rem .25rem
+}
+
+.table-form .input-group {
+    align-items: baseline !important;
+}
+
+.table-form .form-control, .table-form .form-select {
+    border-radius: 0;
+    padding: 2px;
+    height: 28px;
+}
+.table-form .form-control, .input-group-text{
+    border-radius: 0;
+    padding: 2px;
+}
+
+.table-form .virtual-select-sm {
+    padding: 0 !important;
+}
+
+.table-form label {
+    padding-right: .05rem;
+    /*margin-bottom: 0;*/
+}
+
+.table-form td {
+    padding: 0;
+}
+/*New design like Gmail filters form*/
+.table-form-2 {
+    /*align-items: baseline !important;*/
+}
+
+.table-form-2 .form-control, .table-form-2 .form-select {
+    border-radius: 0;
+    padding: 2.5px;
+    border: none;
+    border-bottom: 1px solid #eee;
+}
+.table-form-2 .form-control:focus, .table-form-2 .form-select:focus {
+    border-color: #3b76e1;
+    transition: linear .1s;
+}
+.table-form-2 .form-control, .input-group-text{
+    border-radius: 0;
+    padding: 2.5px;
+}
+
+.table-form-2 .virtual-select-sm {
+    padding: 0 !important;
+}
+
+.table-form-2 label {
+    /*padding-right: .025rem;*/
+    margin-bottom: 0;
+    color: #000;
+    text-transform: uppercase;
+    font-weight: 600;
+    font-size: 12px;
+}
+.table-form-2 td {
+    padding: 0.5rem 0;
+}
+
+.bold {
+    font-weight: bold;
+}
+
+.table th {
+    vertical-align: middle;
+}
+.pointer{
+    cursor: pointer !important;
+}
+.line-height-1{
+    line-height: 1 !important;
+}
+.info-div {
+    position: absolute;
+    right: 0;
+    background: #E5E5E5;
+    color: black;
+    /*transform: rotate(45deg);*/
+    border-radius: 0 10px 0 0;
+    padding: 0 8px;
+    font-size: 9px;
+}
