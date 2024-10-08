@@ -1,4 +1,10 @@
 <?php 
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+// Include the Composer autoloader for PHPMailer
+require 'vendor/autoload.php';
+
 $page_title = 'Compose Email';
 include("header.php"); 
 ?>
@@ -19,7 +25,7 @@ if (isset($_POST['sendMail'])) {
     // Get form data
     $recipients = $_POST['to']; // This will be an array
     $subject = $_POST['subject'];
-    $message = $_POST['message']; // This will now include the rich text content from Quill
+    $message = $_POST['message']; // This will include the rich text content from Quill
 
     // Handle file upload
     $uploadDir = 'mail-uploads/';
@@ -38,31 +44,41 @@ if (isset($_POST['sendMail'])) {
         $stmt->bind_param("ssss", $recipientsString, $subject, $message, $filePath);
 
         if ($stmt->execute()) {
-            // Prepare to send the email with attachment
-            $headers = "From: no-reply@dgt.llc\r\n";
-            $headers .= "MIME-Version: 1.0\r\n";
-            $headers .= "Content-Type: multipart/mixed; boundary=\"boundary1\"\r\n";
-
             foreach ($recipients as $to) {
-                $body = "--boundary1\r\n";
-                $body .= "Content-Type: text/html; charset=UTF-8\r\n";
-                $body .= "Content-Transfer-Encoding: 7bit\r\n\r\n";
-                $body .= $message . "\r\n\r\n";  // Now sends rich text content
+                // Initialize PHPMailer and configure it
+                $mail = new PHPMailer(true);
 
-                if (file_exists($filePath)) {
-                    $fileContent = chunk_split(base64_encode(file_get_contents($filePath)));
-                    $body .= "--boundary1\r\n";
-                    $body .= "Content-Type: application/octet-stream; name=\"" . basename($filePath) . "\"\r\n";
-                    $body .= "Content-Transfer-Encoding: base64\r\n";
-                    $body .= "Content-Disposition: attachment; filename=\"" . basename($filePath) . "\"\r\n\r\n";
-                    $body .= $fileContent . "\r\n\r\n";
+                try {
+                    //Server settings
+                    $mail->isSMTP();                                         // Send using SMTP
+                    $mail->Host       = 'smtp.titan.email';                  // Set the SMTP server to send through
+                    $mail->SMTPAuth   = true;                                // Enable SMTP authentication
+                    $mail->Username   = 'no-reply@dgt.llc';            // SMTP username
+                    $mail->Password   = 'Asmat@123456';               // SMTP password
+                    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;      // Enable TLS encryption, `PHPMailer::ENCRYPTION_SMTPS` encouraged
+                    $mail->Port       = 465;                                 // TCP port to connect to
+
+                    //Recipients
+                    $mail->setFrom('no-reply@dgt.llc', 'DGT.LLC');
+                    $mail->addAddress($to);                                  // Add a recipient
+
+                    // Attachments
+                    if (file_exists($filePath)) {
+                        $mail->addAttachment($filePath);                     // Add attachments
+                    }
+
+                    // Content
+                    $mail->isHTML(true);                                     // Set email format to HTML
+                    $mail->Subject = $subject;
+                    $mail->Body    = $message;                               // Rich text from Quill editor
+                    $mail->AltBody = strip_tags($message);                   // Fallback for plain text email clients
+
+                    $mail->send();
+                    echo "<div class='alert alert-success'>Email sent successfully to $to!</div>";
+                } catch (Exception $e) {
+                    echo "<div class='alert alert-danger'>Message could not be sent. Mailer Error: {$mail->ErrorInfo}</div>";
                 }
-
-                $body .= "--boundary1--"; // End boundary
-                mail($to, $subject, $body, $headers);
             }
-
-            echo "<div class='alert alert-success'>Email sent successfully!</div>";
         } else {
             echo "<div class='alert alert-danger'>Error saving data: " . $stmt->error . "</div>";
         }

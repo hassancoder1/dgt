@@ -722,7 +722,7 @@ function totalPurchasesDone($khaata_no)
 function totalPurchaseAmount($purchaseId)
 {
     $sum = 0;
-    $data = fetch('purchase_details', array('parent_id' => $purchaseId));
+    $data = fetch('transaction_items', array('parent_id' => $purchaseId));
     if (mysqli_num_rows($data) > 0) {
         while ($datum = mysqli_fetch_assoc($data)) {
             $sum += $datum['final_amount'];

@@ -12,21 +12,21 @@ if ($id > 0) {
                 <div class="card mb-2">
                     <div class="card-body">
                         <div class="row border-bottom pb-2">
-                        <div class="col-md-12 border-bottom px-2 pb-2 mb-2">
+                            <div class="col-md-12 border-bottom px-2 pb-2 mb-2">
                                 <div class="d-flex align-items-center justify-content-between">
                                     <div>
                                         <b><?php echo strtoupper($_fields['p_s_name']) . ' #'; ?> </b><?php echo $_fields['sr_no']; ?>
                                     </div>
                                     <div><b>User </b><?php echo $_fields['username']; ?></div>
-                                <!-- </div>
+                                    <!-- </div>
                                 <div class="d-flex align-items-center justify-content-between"> -->
                                     <div><b>Date </b><?php echo my_date($_fields['_date']); ?></div>
                                     <div><b>Type </b><?php echo badge(strtoupper($_fields['type']), 'dark'); ?></div>
-                                <!-- </div>
+                                    <!-- </div>
                                 <div class="d-flex align-items-center justify-content-between"> -->
                                     <div><b>Country </b><?php echo $_fields['country']; ?></div>
                                     <div><b>Branch </b><?php echo branchName($_fields['branch_id']); ?></div>
-                                <!-- </div>
+                                    <!-- </div>
                                 <div class="d-flex align-items-center justify-content-between"> -->
                                     <div><b>Status </b>
                                         <?php if ($_fields['locked'] == 0) {
@@ -55,25 +55,25 @@ if ($id > 0) {
                             </div>
                             <div class="col-md-4">
                                 <strong>Notify Party Details</strong>
-                                <?php if($notify_party){ ?>
-                                <div><b>Acc No. </b><?= $notify_party['np_acc']; ?></div>
-                                <div><b>Acc Name </b><?php echo $notify_party['np_acc_name']; ?></div>
+                                <?php if ($notify_party) { ?>
+                                    <div><b>Acc No. </b><?= $notify_party['np_acc']; ?></div>
+                                    <div><b>Acc Name </b><?php echo $notify_party['np_acc_name']; ?></div>
                                 <?php
-                                if (!empty($notify_party['np_acc_details'])) {
-                                    $details = $notify_party['np_acc_details'];
-                                    $countryPos = strpos($details, 'Country');
-                                    if ($countryPos !== false) {
-                                        $companyName = substr($details, 0, $countryPos);
-                                        $remainingDetails = substr($details, $countryPos);
-                                        echo '<div><b>Company Name: </b>' . trim($companyName) . '</div>';
-                                        echo '<div><b>Details: </b>' . nl2br($remainingDetails) . '</div>';
-                                    } else {
-                                        echo '<div><b>Company Details: </b>' . nl2br($details) . '</div>';
+                                    if (!empty($notify_party['np_acc_details'])) {
+                                        $details = $notify_party['np_acc_details'];
+                                        $countryPos = strpos($details, 'Country');
+                                        if ($countryPos !== false) {
+                                            $companyName = substr($details, 0, $countryPos);
+                                            $remainingDetails = substr($details, $countryPos);
+                                            echo '<div><b>Company Name: </b>' . trim($companyName) . '</div>';
+                                            echo '<div><b>Details: </b>' . nl2br($remainingDetails) . '</div>';
+                                        } else {
+                                            echo '<div><b>Company Details: </b>' . nl2br($details) . '</div>';
+                                        }
                                     }
+                                } else {
+                                    echo "Notify Party Details Not Added!";
                                 }
-                            }else{
-                                echo "Notify Party Details Not Added!";
-                            }
                                 ?>
 
                             </div>
@@ -140,11 +140,11 @@ if ($id > 0) {
                                         if (isset($payments->full_advance) && $payments->full_advance === 'advance') {
                                             echo '<b>Type:</b> ' . ucfirst($payments->full_advance) . ' - ' . $percentage . '% (Remaining: ' . $remaining_percentage . '%)<br>';
                                             echo '<b>Partial Amount 1 (' . $percentage . '%):</b> ' . number_format($partial_amount1, 2) . '<br>';
-                                            echo '<b>Date:</b> ' . $payments->partial_date1 . '<br>';
-                                            echo '<b>Report:</b> ' . ucfirst($payments->partial_report1) . '<br>';
+                                            // echo '<b>Date:</b> ' . $payments->partial_date1 . '<br>';
+                                            // echo '<b>Report:</b> ' . ucfirst($payments->partial_report1) . '<br>';
                                             echo '<b>Partial Amount 2 (' . $remaining_percentage . '%):</b> ' . number_format($partial_amount2, 2) . '<br>';
-                                            echo '<b>Date:</b> ' . $payments->partial_date2 . '<br>';
-                                            echo '<b>Report:</b> ' . ucfirst($payments->partial_report2) . '<br>';
+                                            // echo '<b>Date:</b> ' . $payments->partial_date2 . '<br>';
+                                            // echo '<b>Report:</b> ' . ucfirst($payments->partial_report2) . '<br>';
 
                                             $paymentDetails = [
                                                 'Type' => ucfirst($payments->full_advance) . ' - ' . $percentage . '% (Remaining: ' . $remaining_percentage . '%)',
@@ -152,14 +152,14 @@ if ($id > 0) {
                                                 'Date 1' => $payments->partial_date1,
                                                 'Report 1' => ucfirst($payments->partial_report1),
                                                 'Partial Amount 2' => number_format($partial_amount2, 2),
-                                                'Date 2' => $payments->partial_date2,
-                                                'Report 2' => ucfirst($payments->partial_report2)
+                                                // 'Date 2' => $payments->partial_date2,
+                                                // 'Report 2' => ucfirst($payments->partial_report2)
                                             ];
                                         } elseif (isset($payments->full_advance) && $payments->full_advance === 'full') {
                                             echo '<b>Type:</b> Full Payment<br>';
                                             echo '<b>Total Amount:</b> ' . number_format($total_amount, 2) . '<br>';
-                                            echo '<b>Date:</b> ' . $payments->full_date . '<br>';
-                                            echo '<b>Report:</b> ' . ucfirst($payments->full_report) . '<br>';
+                                            // echo '<b>Date:</b> ' . $payments->full_date . '<br>';
+                                            // echo '<b>Report:</b> ' . ucfirst($payments->full_report) . '<br>';
 
                                             $paymentDetails = [
                                                 'Type' => 'Full Payment',
@@ -179,12 +179,13 @@ if ($id > 0) {
 
 
                                 <!-- Report Section -->
-                                <?php if (isset($_fields['sea_road_report'])): ?>
+                                 <duv class="mt-3"></duv>
+                                <!-- <?php if (isset($_fields['sea_road_report'])): ?>
                                     <div class="col-md-12">
                                         <div class="fs-6 fw-bold">Report</div>
                                         <?php echo $_fields['sea_road_report']; ?>
                                     </div>
-                                <?php endif; ?>
+                                <?php endif; ?> -->
                             </div>
                         <?php endif; ?>
                         <?php if (!empty($_fields['items'])) { ?>
@@ -213,11 +214,11 @@ if ($id > 0) {
                                     $i = 0;
                                     $rate = 0;
                                     foreach ($items as $details) {
-                                    $goods = goodsName($details['goods_id']);
-                                    $t_country = $details['origin'];
-                                    $allot = $details['allotment_name'];
-                                    $curr1 = $details['currency1'];
-                                    $curr2 = $details['currency2'];
+                                        $goods = goodsName($details['goods_id']);
+                                        $t_country = $details['origin'];
+                                        $allot = $details['allotment_name'];
+                                        $curr1 = $details['currency1'];
+                                        $curr2 = $details['currency2'];
                                         echo '<tr>';
                                         echo '<td>' . $details['sr'] . '</td>';
                                         echo '<td>' . goodsName($details['goods_id']) . '</td>';
@@ -281,261 +282,263 @@ if ($id > 0) {
                             </table>
                         <?php } ?>
                     </div>
-                    <script>
-                        function presetValue(SelectValue = '') {
-                            let reportType = SelectValue !== '' ? SelectValue : document.getElementById('reportType').value;
-                            let reportTextArea = document.getElementById('reportBox');
+                    <?php if ($_POST['page'] !== "bill-transfer") { ?>
+                        <script>
+                            function presetValue(SelectValue = '') {
+                                let reportType = SelectValue !== '' ? SelectValue : document.getElementById('reportType').value;
+                                let reportTextArea = document.getElementById('reportBox');
 
-                            let content = {};
-                            if (reportType === 'goods_details') {
-                                content = JSON.parse(document.getElementById('goodsTotalsJSON').value);
-                            } else if (reportType === 'loading_details') {
-                                content = JSON.parse(document.getElementById('loadingDetailsJSON').value);
-                            } else if (reportType === 'payment_details') {
-                                content = JSON.parse(document.getElementById('paymentDetailsJSON').value);
-                            }
-
-                            if (Object.keys(content).length > 0) {
-                                let contentString = '';
-                                for (const [key, value] of Object.entries(content)) {
-                                    contentString += `${key}: ${value} `;
+                                let content = {};
+                                if (reportType === 'goods_details') {
+                                    content = JSON.parse(document.getElementById('goodsTotalsJSON').value);
+                                } else if (reportType === 'loading_details') {
+                                    content = JSON.parse(document.getElementById('loadingDetailsJSON').value);
+                                } else if (reportType === 'payment_details') {
+                                    content = JSON.parse(document.getElementById('paymentDetailsJSON').value);
                                 }
-                                contentString = contentString.trim();
 
-                                let currentText = reportTextArea.value.trim();
-                                // Check for duplication before prepending
-                                if (!currentText.startsWith(contentString)) {
-                                    reportTextArea.value = contentString + ' ' + currentText;
+                                if (Object.keys(content).length > 0) {
+                                    let contentString = '';
+                                    for (const [key, value] of Object.entries(content)) {
+                                        contentString += `${key}: ${value} `;
+                                    }
+                                    contentString = contentString.trim();
+
+                                    let currentText = reportTextArea.value.trim();
+                                    // Check for duplication before prepending
+                                    if (!currentText.startsWith(contentString)) {
+                                        reportTextArea.value = contentString + ' ' + currentText;
+                                    }
+                                } else {
+                                    reportTextArea.value = ''; // Clear the textarea if no content is found
                                 }
-                            } else {
-                                reportTextArea.value = ''; // Clear the textarea if no content is found
-                            }
-                        }
-
-
-                        // This listener will clear the textarea when the report type changes
-                        document.getElementById('reportType').addEventListener('change', function() {
-                            document.getElementById('reportBox').value = ''; // Clear the textarea
-                            presetValue(this.value); // Set the preset value based on the new selection
-                        });
-
-                        function openModal(reportType = '', reportText = '') {
-                            document.getElementById('customModal').style.display = 'block';
-                            document.getElementById('reportType').value = reportType !== '' ? reportType : '';
-
-                            // Set the textarea with the preset value
-                            presetValue(reportType);
-
-                            // Additional handling to get report details for editing
-                            if (reportText !== '') {
-                                let reportForEdit = document.getElementById(reportText).textContent.trim();
-                                document.getElementById('reportBox').value = reportForEdit; // Set the textarea for editing
                             }
 
-                            if (reportType === '' && reportText === '') {
-                                document.getElementById('modalHeading').innerText = 'Add Report';
-                                document.getElementById('modalButton').innerText = 'Add Report';
-                                document.getElementById('reportBox').value = ''; // Clear the textarea for new report
-                            } else {
-                                document.getElementById('modalHeading').innerText = 'Update Report';
-                                document.getElementById('modalButton').innerText = 'Update Report';
+
+                            // This listener will clear the textarea when the report type changes
+                            document.getElementById('reportType').addEventListener('change', function() {
+                                document.getElementById('reportBox').value = ''; // Clear the textarea
+                                presetValue(this.value); // Set the preset value based on the new selection
+                            });
+
+                            function openModal(reportType = '', reportText = '') {
+                                document.getElementById('customModal').style.display = 'block';
+                                document.getElementById('reportType').value = reportType !== '' ? reportType : '';
+
+                                // Set the textarea with the preset value
+                                presetValue(reportType);
+
+                                // Additional handling to get report details for editing
+                                if (reportText !== '') {
+                                    let reportForEdit = document.getElementById(reportText).textContent.trim();
+                                    document.getElementById('reportBox').value = reportForEdit; // Set the textarea for editing
+                                }
+
+                                if (reportType === '' && reportText === '') {
+                                    document.getElementById('modalHeading').innerText = 'Add Report';
+                                    document.getElementById('modalButton').innerText = 'Add Report';
+                                    document.getElementById('reportBox').value = ''; // Clear the textarea for new report
+                                } else {
+                                    document.getElementById('modalHeading').innerText = 'Update Report';
+                                    document.getElementById('modalButton').innerText = 'Update Report';
+                                }
                             }
-                        }
 
-                        function closeModal() {
-                            document.getElementById('customModal').style.display = 'none';
-                        }
+                            function closeModal() {
+                                document.getElementById('customModal').style.display = 'none';
+                            }
 
-                        window.onclick = event => {
-                            if (event.target === document.getElementById('customModal')) closeModal();
-                        };
+                            window.onclick = event => {
+                                if (event.target === document.getElementById('customModal')) closeModal();
+                            };
 
-                        // let reportsData;
-                    </script>
-
+                            // let reportsData;
+                        </script>
 
 
-                    <?php
-                    if (isset($record['reports']) && !empty($record['reports']) && $record['reports'] !== '[]') {
-                        $purchase_reports = json_decode($record['reports'], true);
-                        if (json_last_error() !== JSON_ERROR_NONE) {
-                            echo '<div class="alert alert-danger">JSON Decode Error: ' . htmlspecialchars(json_last_error_msg()) . '</div>';
-                            $purchase_reports = [];
-                        }
 
-                        if (!empty($purchase_reports)) {
-                    ?>
-                            <div class="p-3 mt-4">
-                                <h4 class="fw-bold">Purchase Reports</h4>
-                                <table class="table mb-2 table-hover table-sm">
-                                    <thead>
-                                        <tr>
-                                            <th class="text-nowrap" colspan="4">Report Type</th>
-                                            <th class="" colspan="7">Report Details</th>
-                                            <th colspan="1">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($purchase_reports as $key => $value): ?>
-                                            <tr>
-                                                <td class="text-nowrap fw-bold" colspan="4"><?php echo ucwords(str_replace('_', ' ', $key)); ?></td>
-                                                <td class="" colspan="7"><?php echo nl2br(htmlspecialchars($value)); ?></td>
-                                                <th colspan="1" class="text-nowrap">
-                                                    <a href="?deletePurchaseReport=<?= urlencode($key); ?>&p_hidden_id=<?= urlencode($record['id']); ?>" class="btn btn-sm btn-outline-danger py-0 px-1 mx-2">
-                                                        <i class="fa fa-trash-alt"></i>
-                                                    </a>
-                                                    <input type="hidden" id="<?= htmlspecialchars($key . $record['id']); ?>" value="<?= htmlspecialchars($key); ?>">
-                                                    <textarea class="d-none" id="<?= htmlspecialchars($key . $record['id'] . '_report'); ?>"><?= htmlspecialchars($value); ?></textarea>
-                                                    <button onclick="openModal('<?= htmlspecialchars($key); ?>','<?= htmlspecialchars($key . $record['id'] . '_report'); ?>')" class="btn btn-sm btn-outline-primary py-0 px-1 mx-2">
-                                                        <i class="fa fa-pencil"></i>
-                                                    </button>
-
-                                                </th>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <script>
-                                // reportsData = <?php echo json_encode($purchase_reports, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
-                            </script>
                         <?php
+                        if (isset($record['reports']) && !empty($record['reports']) && $record['reports'] !== '[]') {
+                            $purchase_reports = json_decode($record['reports'], true);
+                            if (json_last_error() !== JSON_ERROR_NONE) {
+                                echo '<div class="alert alert-danger">JSON Decode Error: ' . htmlspecialchars(json_last_error_msg()) . '</div>';
+                                $purchase_reports = [];
+                            }
+
+                            if (!empty($purchase_reports)) {
+                        ?>
+                                <div class="p-3 mt-4">
+                                    <h4 class="fw-bold">Purchase Reports</h4>
+                                    <table class="table mb-2 table-hover table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th class="text-nowrap" colspan="4">Report Type</th>
+                                                <th class="" colspan="7">Report Details</th>
+                                                <th colspan="1">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($purchase_reports as $key => $value): ?>
+                                                <tr>
+                                                    <td class="text-nowrap fw-bold" colspan="4"><?php echo ucwords(str_replace('_', ' ', $key)); ?></td>
+                                                    <td class="" colspan="7"><?php echo nl2br(htmlspecialchars($value)); ?></td>
+                                                    <th colspan="1" class="text-nowrap">
+                                                        <a href="?deletePurchaseReport=<?= urlencode($key); ?>&p_hidden_id=<?= urlencode($record['id']); ?>" class="btn btn-sm btn-outline-danger py-0 px-1 mx-2">
+                                                            <i class="fa fa-trash-alt"></i>
+                                                        </a>
+                                                        <input type="hidden" id="<?= htmlspecialchars($key . $record['id']); ?>" value="<?= htmlspecialchars($key); ?>">
+                                                        <textarea class="d-none" id="<?= htmlspecialchars($key . $record['id'] . '_report'); ?>"><?= htmlspecialchars($value); ?></textarea>
+                                                        <button onclick="openModal('<?= htmlspecialchars($key); ?>','<?= htmlspecialchars($key . $record['id'] . '_report'); ?>')" class="btn btn-sm btn-outline-primary py-0 px-1 mx-2">
+                                                            <i class="fa fa-pencil"></i>
+                                                        </button>
+
+                                                    </th>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <script>
+                                    // reportsData = <?php echo json_encode($purchase_reports, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+                                </script>
+                            <?php
+                            } else {
+                                echo '<strong class="p-3">No Reports Found!</strong>';
+                            ?>
+                                <script>
+                                    // reportsData = '';
+                                </script>
+                            <?php
+                            }
                         } else {
                             echo '<strong class="p-3">No Reports Found!</strong>';
-                        ?>
+                            ?>
                             <script>
                                 // reportsData = '';
                             </script>
-                        <?php
-                        }
-                    } else {
-                        echo '<strong class="p-3">No Reports Found!</strong>';
-                        ?>
-                        <script>
-                            // reportsData = '';
-                        </script>
                     <?php
+                        }
                     }
                     ?>
 
                 </div>
                 <?php
-                    if ($record['locked'] == 1 && $_POST['page'] === "bill-transfer") {
-                        // $ddd = '';
-                        $ddd = 'ENTRY:' . $i . ' GOODS:' . $goods . ' COUNTRY:' . $t_country . ' ALLOT:' . $allot . ' T.Qty:' . $qty_no . ' T.KGs:' . $total_kgs . ' RATE:' . $rate/$i . ' T.AMNT:' . $amount . $curr1 . ' EXCH.:' . $curr2; 
+                if ($record['locked'] == 1 && ($_POST['page'] === "bill-transfer" || $_POST['page'] === "purchase-advance" || $_POST['page'] === "purchase-remaining")) {
+                    // $ddd = '';
+                    $ddd = 'ENTRY:' . $i . ' GOODS:' . $goods . ' COUNTRY:' . $t_country . ' ALLOT:' . $allot . ' T.Qty:' . $qty_no . ' T.KGs:' . $total_kgs . ' RATE:' . $rate / $i . ' T.AMNT:' . $amount . $curr1 . ' EXCH.:' . $curr2;
                 ?>
-                        <div class="card">
-                            <div class="card-body p-2">
-                                <form method="post">
-                                    <div class="row gx-1 gy-3 table-form mb-3">
-                                        <div class="col-3">
-                                            <div class="input-group">
-                                                <label for="cr_acc" class="text-success">Dr. (Sale)</label>
-                                                
-                                                <input value="<?php echo $_fields['cr_acc']; ?>" id="cr_acc"
-                                                    name="dr_khaata_no" readonly tabindex="-1" class="form-control"
-                                                    required>
-                                            </div>
-                                            <input type="hidden" name="dr_khaata_id"
-                                                value="<?php echo $_fields['cr_acc_id']; ?>">
+                    <div class="card">
+                        <div class="card-body p-2">
+                            <form method="post">
+                                <div class="row gx-1 gy-3 table-form mb-3">
+                                    <div class="col-3">
+                                        <div class="input-group">
+                                            <label for="cr_acc" class="text-success">Dr. (Sale)</label>
+
+                                            <input value="<?php echo $_fields['cr_acc']; ?>" id="cr_acc"
+                                                name="dr_khaata_no" readonly tabindex="-1" class="form-control"
+                                                required>
                                         </div>
-                                        <div class="col-3">
-                                            <div class="input-group">
-                                                <label for="p_khaata_no" class="text-danger">Cr. (Purchaser)</label>
-                                                <input type="text" id="p_khaata_no" name="cr_khaata_no"
-                                                    class="form-control"
-                                                    readonly tabindex="-1"
-                                                    value="<?php echo $_fields['dr_acc']; ?>">
-                                            </div>
-                                            <input type="hidden" name="cr_khaata_id"
-                                                value="<?php echo $_fields['dr_acc_id'] ?>">
-                                        </div>
-                                        <div class="col-3">
-                                            <div class="input-group">
-                                                <label for="transfer_date">Date</label>
-                                                <input type="date" class="form-control" id="transfer_date"
-                                                    name="transfer_date" required
-                                                    value="<?php echo date('Y-m-d'); ?>">
-                                            </div>
-                                        </div>
-                                        <div class="col-3">
-                                            <div class="input-group">
-                                                <?php echo json_encode($record['payments']); ?>
-                                                <label for="amount" class="mb-0">Amount</label>
-                                                <input value="<?php echo round($final_amount, 2); ?>" id="amount"
-                                                    readonly
-                                                    name="amount" class="form-control" required tabindex="-1">
-                                            </div>
-                                        </div>
-                                        <div class="col-11">
-                                            <div class="input-group">
-                                                <label for="details">Details</label>
-                                                <input type="text" name="details" id="details" class="form-control"
-                                                    value="<?php echo $ddd; ?>">
-                                            </div>
-                                        </div>
-                                        <div class="col-auto">
-                                            <button name="ttrFirstSubmit" type="submit"
-                                                class="btn btn-primary w-100 btn-sm"><i class="fa fa-upload"></i>Transfer
-                                            </button>
-                                        </div>
-                                        <input type="hidden" name="p_id_hidden" value="<?php echo $record['id']; ?>">
-                                        <input type="hidden" name="type" value="<?php echo $record['type']; ?>">
+                                        <input type="hidden" name="dr_khaata_id"
+                                            value="<?php echo $_fields['cr_acc_id']; ?>">
                                     </div>
-                                    <?php //if ($record['khaata_tr1'] != '') {
-                                        $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'transfered_from_id' => $record['id'], 'transfered_from' => 'purchase_' . $record['type']));
-                                        if (mysqli_num_rows($rozQ) > 0) { ?>
-                                            <table class="table table-sm table-bordered mb-0">
-                                                <thead>
+                                    <div class="col-3">
+                                        <div class="input-group">
+                                            <label for="p_khaata_no" class="text-danger">Cr. (Purchaser)</label>
+                                            <input type="text" id="p_khaata_no" name="cr_khaata_no"
+                                                class="form-control"
+                                                readonly tabindex="-1"
+                                                value="<?php echo $_fields['dr_acc']; ?>">
+                                        </div>
+                                        <input type="hidden" name="cr_khaata_id"
+                                            value="<?php echo $_fields['dr_acc_id'] ?>">
+                                    </div>
+                                    <div class="col-3">
+                                        <div class="input-group">
+                                            <label for="transfer_date">Date</label>
+                                            <input type="date" class="form-control" id="transfer_date"
+                                                name="transfer_date" required
+                                                value="<?php echo date('Y-m-d'); ?>">
+                                        </div>
+                                    </div>
+                                    <div class="col-3">
+                                        <div class="input-group">
+                                            <label for="amount" class="mb-0">Amount</label>
+                                            <input value="<?php echo round($final_amount, 2); ?>" id="amount"
+                                                readonly
+                                                name="amount" class="form-control" required tabindex="-1">
+                                        </div>
+                                    </div>
+
+                                    <div class="col-10">
+                                        <div class="input-group">
+                                            <label for="details">Details</label>
+                                            <input type="text" name="details" id="details" class="form-control"
+                                                value="<?php echo $ddd; ?>">
+                                        </div>
+                                    </div>
+                                    <div class="col-2">
+                                        <button name="ttrFirstSubmit" type="submit"
+                                            class="btn btn-primary w-100 btn-sm"><i class="fa fa-upload"></i>Transfer
+                                        </button>
+                                    </div>
+                                    <input type="hidden" name="p_id_hidden" value="<?php echo $record['id']; ?>">
+                                    <input type="hidden" name="type" value="<?php echo $record['type']; ?>">
+                                </div>
+                                <?php if ($record['khaata_tr1'] != '') {
+                                    $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'transfered_from_id' => $record['id'], 'transfered_from' => 'purchase_' . $record['type']));
+                                    if (mysqli_num_rows($rozQ) > 0) { ?>
+                                        <table class="table table-sm table-bordered mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Sr#</th>
+                                                    <th>Date</th>
+                                                    <th>A/c#</th>
+                                                    <th>Roz.#</th>
+                                                    <th>Name</th>
+                                                    <th>No</th>
+                                                    <th>Details</th>
+                                                    <th>Dr.</th>
+                                                    <th>Cr.</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php while ($roz = mysqli_fetch_assoc($rozQ)) {
+                                                    $dr = $cr = 0; ?>
+                                                    <input type="hidden" value="<?php echo $roz['r_date']; ?>"
+                                                        id="temp_transfer_date">
+                                                    <input type="hidden" value="<?php echo $roz['r_id']; ?>"
+                                                        name="r_id[]">
                                                     <tr>
-                                                        <th>Sr#</th>
-                                                        <th>Date</th>
-                                                        <th>A/c#</th>
-                                                        <th>Roz.#</th>
-                                                        <th>Name</th>
-                                                        <th>No</th>
-                                                        <th>Details</th>
-                                                        <th>Dr.</th>
-                                                        <th>Cr.</th>
+                                                        <td>
+                                                            <?php echo SuperAdmin() ? $roz['r_id'] . '-' . $roz['branch_serial'] : $roz['branch_serial']; ?>
+                                                        </td>
+                                                        <td><?php echo $roz['r_date']; ?></td>
+                                                        <td>
+                                                            <a href="ledger?back-khaata-no=<?php echo $roz['khaata_no']; ?>"
+                                                                target="_blank"><?php echo $roz['khaata_no']; ?></a>
+                                                        </td>
+                                                        <td><?php echo $roz['roznamcha_no']; ?></td>
+                                                        <td class="small"><?php echo $roz['r_name']; ?></td>
+                                                        <td><?php echo $roz['r_no']; ?></td>
+                                                        <td class="small"><?php echo $roz['details']; ?></td>
+                                                        <?php if ($roz['dr_cr'] == "dr") {
+                                                            $dr = $roz['amount'];
+                                                        } else {
+                                                            $cr = $roz['amount'];
+                                                        } ?>
+                                                        <td class="text-success"><?php echo $dr; ?></td>
+                                                        <td class="text-danger"><?php echo $cr; ?></td>
                                                     </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <?php while ($roz = mysqli_fetch_assoc($rozQ)) {
-                                                        $dr = $cr = 0; ?>
-                                                        <input type="hidden" value="<?php echo $roz['r_date']; ?>"
-                                                            id="temp_transfer_date">
-                                                        <input type="hidden" value="<?php echo $roz['r_id']; ?>"
-                                                            name="r_id[]">
-                                                        <tr>
-                                                            <td>
-                                                                <?php echo SuperAdmin() ? $roz['r_id'] . '-' . $roz['branch_serial'] : $roz['branch_serial']; ?>
-                                                            </td>
-                                                            <td><?php echo $roz['r_date']; ?></td>
-                                                            <td>
-                                                                <a href="ledger?back-khaata-no=<?php echo $roz['khaata_no']; ?>"
-                                                                    target="_blank"><?php echo $roz['khaata_no']; ?></a>
-                                                            </td>
-                                                            <td><?php echo $roz['roznamcha_no']; ?></td>
-                                                            <td class="small"><?php echo $roz['r_name']; ?></td>
-                                                            <td><?php echo $roz['r_no']; ?></td>
-                                                            <td class="small"><?php echo $roz['details']; ?></td>
-                                                            <?php if ($roz['dr_cr'] == "dr") {
-                                                                $dr = $roz['amount'];
-                                                            } else {
-                                                                $cr = $roz['amount'];
-                                                            } ?>
-                                                            <td class="text-success"><?php echo $dr; ?></td>
-                                                            <td class="text-danger"><?php echo $cr; ?></td>
-                                                        </tr>
-                                                    <?php } ?>
-                                                </tbody>
-                                            </table>
-                                    <?php //}
-                                    } ?>
-                                </form>
-                            </div>
+                                                <?php } ?>
+                                            </tbody>
+                                        </table>
+                                <?php }
+                                } ?>
+                            </form>
                         </div>
-                <?php 
+                    </div>
+                <?php
                 } ?>
             </div>
             <div class="col-2 order-1 fixed-sidebar table-form">
@@ -566,8 +569,10 @@ if ($id > 0) {
                             TRANSFER
                         </button>
                     </form>
+                <?php }
+                if ($_POST['page'] !== "bill-transfer") { ?>
+                    <button class="btn btn-dark btn-sm w-100 mt-3" onclick="openModal('', '')">Add Reports</button>
                 <?php } ?>
-                <button class="btn btn-dark btn-sm w-100 mt-3" onclick="openModal('', '')">Add Reports</button>
                 <div id="customModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); z-index: 1000;">
                     <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 75%; padding: 20px; background-color: white; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
                         <button style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 24px; cursor: pointer;" onclick="closeModal()">
@@ -592,8 +597,11 @@ if ($id > 0) {
                 </div>
                 <div class="bottom-buttons">
                     <div class="px-2">
-                        <?php $update_url = $_fields['type'] == 'booking' ? 'purchase-add' : ($_fields['type'] == 'market' ? 'purchase-market-add' : 'purchase-local-add'); ?>
-                        <a href="<?php echo $update_url . '?id=' . $id; ?>" class="btn btn-dark btn-sm w-100 mt-2">UPDATE</a>
+                        <?php $update_url = $_fields['type'] == 'booking' ? 'purchase-add' : ($_fields['type'] == 'market' ? 'purchase-market-add' : 'purchase-local-add');
+                        if ($_POST['page'] !== "bill-transfer") {
+                        ?>
+                            <a href="<?php echo $update_url . '?id=' . $id; ?>" class="btn btn-dark btn-sm w-100 mt-2">UPDATE</a>
+                        <?php } ?>
                         <a href="print/purchase-single?t_id=<?php echo $id; ?>&action=order&secret=<?php echo base64_encode('powered-by-upsol') . "&print_type=full"; ?>"
                             target="_blank" class="btn btn-dark btn-sm w-100 mt-2">PRINT</a>
                         <?php if ($_fields['locked'] == 0) { ?>

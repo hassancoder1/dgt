@@ -16,7 +16,8 @@ if ($purchase_id > 0) {
         array('heading' => 'TYPE', 'value' => $record['type'], 'id' => ''),
         array('heading' => 'ALLOT NAME', 'value' => $record['allot'], 'id' => ''),
     );
-    //var_dump($record); ?>
+    //var_dump($record); 
+?>
     <div class="row">
         <div class="col-10 order-1 content-column">
             <div class="card">
@@ -49,7 +50,8 @@ if ($purchase_id > 0) {
                                         <?php //echo '<span class="text-muted" id="p_contacts">';
                                         $details1 = ['indexes' => $p_khaata['indexes'], 'vals' => $p_khaata['vals']];
                                         echo displayKhaataDetails($details1);
-                                        //echo '</span>'; ?>
+                                        //echo '</span>'; 
+                                        ?>
                                     </div>
                                 </div>
                             </div>
@@ -75,7 +77,8 @@ if ($purchase_id > 0) {
                                         <?php //echo '<span class="text-muted" id="s_contacts">';
                                         $details2 = ['indexes' => $s_khaata['indexes'], 'vals' => $s_khaata['vals']];
                                         echo displayKhaataDetails($details2);
-                                        ///echo '</span>'; ?>
+                                        ///echo '</span>'; 
+                                        ?>
                                     </div>
                                 </div>
                             </div>
@@ -197,7 +200,6 @@ if ($purchase_id > 0) {
                             array('Percent', $record['pct'] . '%'),
                             array('Advance', round($record['pct_amt'], 2)),
                         );
-
                     } ?>
                     <hr class="my-0">
                     <div class="row">
@@ -262,13 +264,13 @@ if ($purchase_id > 0) {
                             if ($bal <= 10) {
                                 if ($record['transfer2'] == 0) { ?>
                                     <form method="post"
-                                          onsubmit="return confirm('Transfer to Remaining 80% Form.\n Press OK to transfer')">
+                                        onsubmit="return confirm('Transfer to Remaining 80% Form.\n Press OK to transfer')">
                                         <input type="hidden" name="p_id_hidden" value="<?php echo $purchase_id; ?>">
                                         <button name="transferAdvanceToRem" type="submit" class="btn btn-dark btn-sm">
                                             TRANSFER
                                         </button>
                                     </form>
-                                <?php } else {
+                            <?php } else {
                                     echo '<i class="fa fa-check-double text-success"></i> Transferred';
                                 }
                             } ?>
@@ -319,7 +321,7 @@ if ($purchase_id > 0) {
                             <div class="input-group position-relative">
                                 <label for="khaata_no1" class="text-success">Dr. A/c</label>
                                 <input name="dr_khaata_no" id="khaata_no1" required class="form-control bg-transparent"
-                                       value="<?php echo $adv_arr['dr_khaata_no']; ?>">
+                                    value="<?php echo $adv_arr['dr_khaata_no']; ?>">
                                 <small class="error-response top-0" id="p_response"></small>
                             </div>
                             <input type="hidden" name="dr_khaata_id" id="p_khaata_id">
@@ -328,7 +330,7 @@ if ($purchase_id > 0) {
                             <div class="input-group position-relative">
                                 <label for="khaata_no2" class="text-danger">Cr. A/c</label>
                                 <input name="cr_khaata_no" id="khaata_no2" required class="form-control bg-transparent"
-                                       value="<?php echo $adv_arr['cr_khaata_no']; ?>">
+                                    value="<?php echo $adv_arr['cr_khaata_no']; ?>">
                                 <small class="error-response top-0" id="s_response"></small>
                             </div>
                             <input type="hidden" name="cr_khaata_id" id="s_khaata_id">
@@ -350,7 +352,7 @@ if ($purchase_id > 0) {
                             <div class="input-group">
                                 <label for="amount">Amount</label>
                                 <input type="text" id="amount" name="amount" class="form-control currency"
-                                       onkeyup="lastAmount()" required value="<?php echo $adv_arr['amount']; ?>">
+                                    onkeyup="lastAmount()" required value="<?php echo $adv_arr['amount']; ?>">
                             </div>
                         </div>
                         <div class="col-md-3">
@@ -366,7 +368,7 @@ if ($purchase_id > 0) {
                                 </select>
                                 <label for="rate">Rate</label>
                                 <input type="text" name="rate" class="form-control currency" id="rate" required
-                                       onkeyup="lastAmount()" value="<?php echo $adv_arr['rate']; ?>">
+                                    onkeyup="lastAmount()" value="<?php echo $adv_arr['rate']; ?>">
                             </div>
                         </div>
                         <div class="col-md-1">
@@ -385,23 +387,23 @@ if ($purchase_id > 0) {
                             <div class="input-group">
                                 <label for="final_amount">F.Amt.</label>
                                 <input type="text" name="final_amount" class="form-control" id="final_amount" required
-                                       readonly tabindex="-1" value="<?php echo $adv_arr['final_amount']; ?>">
+                                    readonly tabindex="-1" value="<?php echo $adv_arr['final_amount']; ?>">
 
                                 <label for="transfer_date">Date</label>
                                 <input type="date" class="form-control" id="transfer_date" name="transfer_date" required
-                                       value="<?php echo $adv_arr['transfer_date']; ?>">
+                                    value="<?php echo $adv_arr['transfer_date']; ?>">
                             </div>
                         </div>
                         <div class="col-md-8">
                             <div class="input-group">
                                 <label for="report">Report</label>
                                 <input placeholder="Report" class="form-control" id="report" name="report" required
-                                       value="<?php echo $adv_arr['report']; ?>">
+                                    value="<?php echo $adv_arr['report']; ?>">
                             </div>
                         </div>
                         <div class="col-md-1 text-end">
                             <button name="tAdvSubmit" id="recordSubmit" type="submit"
-                                    class="btn <?php echo $adv_arr['finish']['btn_class']; ?> btn-sm  rounded-0"><i
+                                class="btn <?php echo $adv_arr['finish']['btn_class']; ?> btn-sm  rounded-0"><i
                                     class="fa fa-paper-plane"></i> <?php echo $adv_arr['finish']['btn_text']; ?>
                             </button>
                         </div>
@@ -415,53 +417,54 @@ if ($purchase_id > 0) {
                         if (mysqli_num_rows($rozQ) > 0) { ?>
                             <table class="table table-sm table-bordered">
                                 <thead>
-                                <tr>
-                                    <th>Sr#</th>
-                                    <th>Date</th>
-                                    <th>A/c#</th>
-                                    <th>Roz.#</th>
-                                    <th>Name</th>
-                                    <th>No</th>
-                                    <th>Details</th>
-                                    <th>Dr.</th>
-                                    <th>Cr.</th>
-                                </tr>
+                                    <tr>
+                                        <th>Sr#</th>
+                                        <th>Date</th>
+                                        <th>A/c#</th>
+                                        <th>Roz.#</th>
+                                        <th>Name</th>
+                                        <th>No</th>
+                                        <th>Details</th>
+                                        <th>Dr.</th>
+                                        <th>Cr.</th>
+                                    </tr>
                                 </thead>
                                 <tbody>
-                                <?php while ($roz = mysqli_fetch_assoc($rozQ)) {
-                                    $rid_delete_array[] = $roz['r_id'];
-                                    $dr = $cr = 0; ?>
-                                    <input type="hidden" value="<?php echo $roz['r_id']; ?>" name="r_id[]">
-                                    <tr>
-                                        <td>
-                                            <?php echo SuperAdmin() ? $roz['r_id'] . '-' . $roz['branch_serial'] : $roz['branch_serial']; ?>
-                                        </td>
-                                        <td><?php echo $roz['r_date']; ?></td>
-                                        <td>
-                                            <a href="ledger?back-khaata-no=<?php echo $roz['khaata_no']; ?>"
-                                               target="_blank"><?php echo $roz['khaata_no']; ?></a></td>
-                                        <td><?php echo $roz['roznamcha_no']; ?></td>
-                                        <td class="small"><?php echo $roz['r_name']; ?></td>
-                                        <td><?php echo $roz['r_no']; ?></td>
-                                        <td class="small"><?php echo $roz['details']; ?></td>
-                                        <?php if ($roz['dr_cr'] == "dr") {
-                                            $dr = $roz['amount'];
-                                        } else {
-                                            $cr = $roz['amount'];
-                                        } ?>
-                                        <td class="text-success"><?php echo $dr; ?></td>
-                                        <td class="text-danger"><?php echo $cr; ?></td>
-                                    </tr>
-                                <?php } ?>
+                                    <?php while ($roz = mysqli_fetch_assoc($rozQ)) {
+                                        $rid_delete_array[] = $roz['r_id'];
+                                        $dr = $cr = 0; ?>
+                                        <input type="hidden" value="<?php echo $roz['r_id']; ?>" name="r_id[]">
+                                        <tr>
+                                            <td>
+                                                <?php echo SuperAdmin() ? $roz['r_id'] . '-' . $roz['branch_serial'] : $roz['branch_serial']; ?>
+                                            </td>
+                                            <td><?php echo $roz['r_date']; ?></td>
+                                            <td>
+                                                <a href="ledger?back-khaata-no=<?php echo $roz['khaata_no']; ?>"
+                                                    target="_blank"><?php echo $roz['khaata_no']; ?></a>
+                                            </td>
+                                            <td><?php echo $roz['roznamcha_no']; ?></td>
+                                            <td class="small"><?php echo $roz['r_name']; ?></td>
+                                            <td><?php echo $roz['r_no']; ?></td>
+                                            <td class="small"><?php echo $roz['details']; ?></td>
+                                            <?php if ($roz['dr_cr'] == "dr") {
+                                                $dr = $roz['amount'];
+                                            } else {
+                                                $cr = $roz['amount'];
+                                            } ?>
+                                            <td class="text-success"><?php echo $dr; ?></td>
+                                            <td class="text-danger"><?php echo $cr; ?></td>
+                                        </tr>
+                                    <?php } ?>
                                 </tbody>
                             </table>
-                        <?php }
+                    <?php }
                     } ?>
                 </form>
                 <?php //$decodedArray = json_decode($_POST['p_type_hidden'], true);
                 if ($purchase_pays_id > 0) { ?>
                     <form method="post"
-                          onsubmit="return confirm('Are you sure to delete Payment?\nThe record will be delete from Roznamcha too.\nPress OK to Delete');">
+                        onsubmit="return confirm('Are you sure to delete Payment?\nThe record will be delete from Roznamcha too.\nPress OK to Delete');">
                         <input type="hidden" name="r_id_hidden" value="<?php echo htmlspecialchars(json_encode($rid_delete_array)); ?>">
                         <input type="hidden" name="p_id_hidden" value="<?php echo $purchase_id; ?>">
                         <input type="hidden" name="p_type_hidden" value="<?php echo $purchase_type; ?>">
@@ -507,15 +510,15 @@ if ($purchase_id > 0) {
                             </div>
 
                             <a class="btn btn-primary btn-sm w-100 my-1"
-                               data-bs-toggle="collapse" href="#collapseExample" role="button" aria-expanded="false"
-                               aria-controls="collapseExample">
+                                data-bs-toggle="collapse" href="#collapseExample" role="button" aria-expanded="false"
+                                aria-controls="collapseExample">
                                 Add Advance Payment
                             </a>
                         </div>
                     <?php } ?>
                     <div class="px-2">
                         <a href="print/purchase-booking?p_id=<?php echo $purchase_id; ?>&action=adv" target="_blank"
-                           class="btn btn-success btn-sm w-100">PRINT</a>
+                            class="btn btn-success btn-sm w-100">PRINT</a>
                     </div>
                 </div>
             </div>
@@ -529,9 +532,11 @@ if ($purchase_id > 0) {
         $.ajax({
             url: 'ajax/fetchSingleKhaata.php',
             type: 'post',
-            data: {khaata_no: khaata_no},
+            data: {
+                khaata_no: khaata_no
+            },
             dataType: 'json',
-            success: function (response) {
+            success: function(response) {
                 if (response.success === true) {
                     enableButton(recordSubmitId);
                     $(khaataId).val(response.messages['khaata_id']);
@@ -593,11 +598,11 @@ if ($purchase_id > 0) {
     }
 
     disableButton('recordSubmit');
-    $(document).on('keyup', "#khaata_no1", function (e) {
+    $(document).on('keyup', "#khaata_no1", function(e) {
         fetchKhaata("#khaata_no1", "#p_khaata_id", "#p_response", "#p", "#p_khaata_image", "recordSubmit");
     });
     fetchKhaata("#khaata_no1", "#p_khaata_id", "#p_response", "#p", "#p_khaata_image", "recordSubmit");
-    $(document).on('keyup', "#khaata_no2", function (e) {
+    $(document).on('keyup', "#khaata_no2", function(e) {
         fetchKhaata("#khaata_no2", "#s_khaata_id", "#s_response", "#s", "#s_khaata_image", "recordSubmit");
     });
     fetchKhaata("#khaata_no2", "#s_khaata_id", "#s_response", "#s", "#s_khaata_image", "recordSubmit");
@@ -629,4 +634,3 @@ if ($purchase_id > 0) {
         }*/
     }
 </script>
-

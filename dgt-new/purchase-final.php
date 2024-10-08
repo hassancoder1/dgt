@@ -1,18 +1,15 @@
 <?php
-$page_title = 'Purchases';
-$pageURL = 'purchases';
+$page_title = 'Final Bill Payment';
+$pageURL = 'purchase-final';
 include("header.php");
-
 $remove = $size = $brand = $goods_name = $start_print = $end_print = $is_transferred = $s_khaata_id = '';
 $is_search = false;
 global $connect;
-
 $sql = "SELECT * FROM `transactions` WHERE p_s='p'";
 $conditions = []; // Store all conditions here
 $print_filters = [];
-
 if ($_GET) {
-    $remove = removeFilter($pageURL);
+    $remove = removeFilter('purchase-final');
     $is_search = true;
 
     // Filter by goods_name
@@ -24,6 +21,7 @@ if ($_GET) {
     // Filter by start date
     if (isset($_GET['start']) && !empty($_GET['start'])) {
         $start_print = mysqli_real_escape_string($connect, $_GET['start']);
+        // $pageURL .= '&start=' . $start_print;
         $print_filters[] = 'start=' . $start_print;
         $conditions[] = "_date >= '$start_print'";
     }
@@ -31,42 +29,48 @@ if ($_GET) {
     // Filter by end date
     if (isset($_GET['end']) && !empty($_GET['end'])) {
         $end_print = mysqli_real_escape_string($connect, $_GET['end']);
+        // $pageURL .= '&end=' . $end_print;
         $print_filters[] = 'end=' . $end_print;
         $conditions[] = "_date <= '$end_print'";
     }
 
-    // Filter by is_transferred
     if (isset($_GET['is_transferred']) && $_GET['is_transferred'] !== '') {
         $is_transferred = mysqli_real_escape_string($connect, $_GET['is_transferred']);
         $print_filters[] = "is_transferred=" . $is_transferred;
         if ($is_transferred === '1') {
-            $conditions[] = "locked = '1'"; // Only transferred records
+            $conditions[] = "locked = '1'"; // Only inactive records
         } elseif ($is_transferred === '0') {
-            $conditions[] = "locked = '0'"; // Only not transferred records
+            $conditions[] = "locked = '0'"; // Only active records
+
         }
     }
 
     // Filter by s_khaata_id
     if (isset($_GET['s_khaata_id']) && !empty($_GET['s_khaata_id'])) {
         $s_khaata_id = mysqli_real_escape_string($connect, $_GET['s_khaata_id']);
-        $print_filters[] = 's_khaata_id=' . $s_khaata_id;
-        // $conditions[] = "s_khaata_id = '$s_khaata_id'";
+        // $pageURL .= '&s_khaata_id=' . $s_khaata_id;
     }
 }
 
+// If there are any conditions, concatenate them with 'AND'
 if (count($conditions) > 0) {
     $sql .= ' AND ' . implode(' AND ', $conditions);
+} else {
+    $sql .= " AND locked = '1' AND transfer_level >= '6'";
 }
 
 $sql .= " ORDER BY id DESC";
-
 if (count($print_filters) > 0) {
     $pageURL .= "?";
-    $pageURL .= implode('&', $print_filters);
+    foreach ($print_filters as $filter) {
+        $pageURL .= '&' . $filter;
+    }
+} else {
+    $pageURL .= '?is_tranferred=1';
+    $is_transferred = '1';
 }
 $mypageURL = $pageURL;
 ?>
-
 
 <div class="fixed-top">
     <?php require_once('nav-links.php'); ?>
@@ -117,13 +121,21 @@ $mypageURL = $pageURL;
                             } */ ?>
                         </select>-->
                 <select class="form-select" name="is_transferred">
+                    <option <?= isset($is_transferred) && $is_transferred == 1 ? 'selected' : 'selected'; ?> value="1">Transferred</option>
+                    <option <?= isset($is_transferred) && $is_transferred == 0 ? 'selected' : ''; ?> value="0">Not Transferred</option>
+                </select>
+
+
+
+
+                <!-- <select class="form-select" name="is_transferred">
                     <option value="">All</option>
                     <?php $imp_exp_array = array(1 => 'transferred', 0 => 'not transferred');
                     foreach ($imp_exp_array as $item => $value) {
                         $sel_tran = $is_transferred == $item ? 'selected' : '';
                         echo '<option ' . $sel_tran . '  value="' . $item . '">' . strtoupper($value) . '</option>';
                     } ?>
-                </select>
+                </select> -->
                 <!-- <select name="s_khaata_id" class="form-select">
                     <option value="">Seller A/c</option>
                     <?php $accounts_query = fetch('khaata');
@@ -179,30 +191,36 @@ $mypageURL = $pageURL;
                                 <th>Qty</th>
                                 <th>KGs</th>
                                 <th>AMOUNT</th>
-                                <th>PAYMENT TYPE</th>
-                                <th>COUNTRY</th>
+                                <th>Advance Payment</th> <!-- Updated Column -->
+                                <th>Remaining Payment</th> <!-- Updated Column -->
                                 <th>ROAD</th>
-                                <th>LOADING COUNTRY | DATE</th>
-                                <th>RECEIVING COUNTRY | DATE</th>
-                                <th>DOCS</th>
+                                <th>Loading Date</th>
+                                <th>Receiving Date</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php $purchases = mysqli_query($connect, $sql);
+                            <?php
+                            $purchases = mysqli_query($connect, $sql);
                             $row_count = $p_qty_total = $p_kgs_total = 0;
+                            $i = 1;
+
                             while ($purchase = mysqli_fetch_assoc($purchases)) {
                                 $id = $purchase['id'];
                                 $_fields_single = transactionSingle($id);
-
                                 $is_doc = $purchase['is_doc'];
                                 $locked = $purchase['locked'];
+
+                                // Decode the payments JSON field
+                                $payments = $purchase['payments'];
+                                $payments = json_decode($payments, true);
+                                // Check if full_advance equals 'advance'
+                                if (isset($payments['full_advance']) && $payments['full_advance'] != 'advance') {
+                                    continue; // Skip this entry if not an advance payment
+                                }
 
                                 $cntrs = purchaseSpecificData($id, 'purchase_rows');
                                 $totals = purchaseSpecificData($id, 'product_details');
                                 $Goods = empty($_fields_single['items'][0]) ? '' : goodsName($_fields_single['items'][0]['goods_id']);
-
-                                $Size = $cntrs > 0 ? '<b>SIZE. </b>' . $totals['Size'][0] . '<br>' : '';
-                                $Brand = $cntrs > 0 ? '<b>BRNAD. </b>' . $totals['Brand'][0] . ' ' : '';
 
                                 $Qty = empty($_fields_single['items_sum']) ? '' : $_fields_single['items_sum']['sum_qty_no'];
                                 $KGs = empty($_fields_single['items_sum']) ? '' : $_fields_single['items_sum']['sum_total_kgs'];
@@ -213,58 +231,34 @@ $mypageURL = $pageURL;
                                 if (!empty($sea_road_array)) {
                                     $sea_road = $sea_road_array->sea_road ?? '';
                                     if ($sea_road == 'sea') {
-                                        $_fields_sr = ['l_country' => $sea_road_array->l_country, 'l_date' => $sea_road_array->l_date, 'r_country' => $sea_road_array->r_country, 'r_date' => $sea_road_array->r_date];
+                                        $_fields_sr = [
+                                            'l_country' => $sea_road_array->l_country,
+                                            'l_date' => $sea_road_array->l_date,
+                                            'r_country' => $sea_road_array->r_country,
+                                            'r_date' => $sea_road_array->r_date
+                                        ];
                                     }
                                     if ($sea_road == 'road') {
-                                        $_fields_sr = ['l_country' => $sea_road_array->l_country_road, 'l_date' => $sea_road_array->l_date_road, 'r_country' => $sea_road_array->r_country_road, 'r_date' => $sea_road_array->r_date_road];
+                                        $_fields_sr = [
+                                            'l_country' => $sea_road_array->l_country_road,
+                                            'l_date' => $sea_road_array->l_date_road,
+                                            'r_country' => $sea_road_array->r_country_road,
+                                            'r_date' => $sea_road_array->r_date_road
+                                        ];
                                     }
                                 }
 
-                                if ($is_search) {
-                                    // if ($start != '') {
-                                    //     if ($purchase['p_date'] < $start) continue;
-                                    // }
-                                    // if ($end != '') {
-                                    //     if ($purchase['p_date'] > $end) continue;
-                                    // }
-                                    $GoodsKaNaam = $cntrs > 0 ? $totals['Goods'][0] : '';
-                                    if ($goods_name != '') {
-                                        if ($goods_name != $GoodsKaNaam) continue;
-                                    }
-                                    if ($size != '') {
-                                        if ($size != $totals['Size'][0]) continue;
-                                    }
-                                    if ($brand != '') {
-                                        if ($brand != $totals['Brand'][0]) continue;
-                                    }
-
-                                    if ($is_transferred != '') {
-                                        if ($is_transferred == '1') {
-                                            if ($locked == 0) continue;
-                                        }
-                                        if ($is_transferred == '0') {
-                                            if ($locked == 1) continue;
-                                        }
-                                    }
-                                    // if ($s_khaata_id != '') {
-                                    //     if ($s_khaata_id != $purchase['s_khaata_id']) continue;
-                                    // }
-                                }
-                                $p_qty_total += !empty($totals['Qty']) ? $totals['Qty'] : 0;
-                                $p_kgs_total += !empty($totals['KGs']) ? $totals['KGs'] : 0;
-                                $rowColor = '';
-                                if ($locked == 0) {
-                                    $rowColor = $is_doc == 0 ? ' text-danger ' : ' text-warning ';
-                                } ?>
+                                $rowColor = $locked == 0 ? ($is_doc == 0 ? ' text-danger ' : ' text-warning ') : '';
+                            ?>
                                 <tr class="text-nowrap">
                                     <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $id; ?>)"
                                         data-bs-toggle="modal" data-bs-target="#KhaataDetails">
-                                        <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $id;
-                                        echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?></td>
-                                    <td class="<?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['type']); //badge(strtoupper($_fields_single['type']), $purchase['type'] == 'booking' ? 'dark' : 'danger'); 
-                                                                            ?></td>
+                                        <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $id; ?>
+                                        <?php echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
+                                    </td>
+                                    <td class="<?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['type']); ?></td>
                                     <td class="<?php echo $rowColor; ?>"><?php echo branchName($_fields_single['branch_id']); ?></td>
-                                    <td class="<?php echo $rowColor; ?>"><?php echo my_date($_fields_single['_date']);; ?></td>
+                                    <td class="<?php echo $rowColor; ?>"><?php echo my_date($_fields_single['_date']); ?></td>
                                     <td class="s_khaata_id_row <?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['cr_acc']); ?></td>
                                     <td class="<?php echo $rowColor; ?>"><?php echo $_fields_single['cr_acc_name']; ?></td>
                                     <td class="<?php echo $rowColor; ?>"><?php echo $Goods; ?></td>
@@ -275,30 +269,29 @@ $mypageURL = $pageURL;
                                             echo $totals['Final'] . '<sub>' . $totals['curr2'] . '</sub>';
                                         } ?>
                                     </td>
-                                    <td class="<?php echo $rowColor; ?> px-2"><?= isset($_fields_single['payment_details']->full_advance) ? ucwords($_fields_single['payment_details']->full_advance) : "No Payment Details Available"; ?></td>
-                                    <td class="<?php echo $rowColor; ?>"><?php echo $purchase['country']; ?></td>
-                                    <?php
-                                    if ($sea_road == '') {
-                                        echo '<td class="<?php echo $rowColor; ?>" colspan="3"></td>';
-                                    } else {
-                                        echo '<td class="' . $rowColor . '">' . $sea_road . '</td>';
-                                        echo '<td class="' . $rowColor . '">' . $_fields_sr['l_country'] . ' ' . my_date($_fields_sr['l_date']) . '</td>';
-                                        echo '<td class="' . $rowColor . '">' . $_fields_sr['r_country'] . ' ' . my_date($_fields_sr['r_date']) . '</td>';
-                                    }
-                                    ?>
+
+                                    <!-- New Advance Payment column displaying partial_amount1 -->
                                     <td class="<?php echo $rowColor; ?>">
-                                        <?php if ($is_doc == 1) {
-                                            $atts = getAttachments($id, 'purchase_contract');
-                                            foreach ($atts as $att) {
-                                                echo '<a href="attachments/' . $att['attachment'] . '" title="' . $att['created_at'] . '" target="_blank"><i class="fa fa-download text-success"></i></a>';
-                                            }
-                                        } ?>
+                                        <?php echo isset($payments['partial_amount1']) ? $payments['partial_amount1'] : "No Advance Alloted"; ?>
                                     </td>
+                                    <td class="<?php echo $rowColor; ?>">
+                                        <?php echo isset($payments['partial_amount2']) ? $payments['partial_amount2'] : "No Advance Alloted"; ?>
+                                    </td>
+                                    <?php if ($sea_road == '') { ?>
+                                        <td class="<?php echo $rowColor; ?>" colspan="3"></td>
+                                    <?php } else { ?>
+                                        <td class="<?php echo $rowColor; ?>"><?php echo $sea_road; ?></td>
+                                        <td class="<?php echo $rowColor; ?>"><?php echo my_date($_fields_sr['l_date']); ?></td>
+                                        <td class="<?php echo $rowColor; ?>"><?php echo my_date($_fields_sr['r_date']); ?></td>
+                                    <?php } ?>
                                 </tr>
-                            <?php $row_count++;
-                            } ?>
+                            <?php
+                                $row_count++;
+                            }
+                            ?>
                         </tbody>
                     </table>
+
                     <input type="hidden" id="row_count" value="<?php echo $row_count; ?>">
                     <input type="hidden" id="p_qty_total" value="<?php echo $p_qty_total; ?>">
                     <input type="hidden" id="p_kgs_total" value="<?php echo $p_kgs_total; ?>">
@@ -318,7 +311,7 @@ $mypageURL = $pageURL;
     <div class="modal-dialog modal-fullscreen -modal-xl -modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="staticBackdropLabel">PURCHASE DETAILS</h5>
+                <h5 class="modal-title" id="staticBackdropLabel">PURCHASE ADVANCE</h5>
                 <a href="<?php echo $mypageURL; ?>" class="btn-close" aria-label="Close"></a>
             </div>
             <div class="modal-body bg-light pt-0" id="viewDetails"></div>
@@ -329,12 +322,12 @@ $mypageURL = $pageURL;
     function viewPurchase(id = null) {
         if (id) {
             $.ajax({
-                url: 'ajax/viewSingleTransaction.php',
+                url: 'ajax/viewPurchaseRemaining.php',
                 type: 'post',
                 data: {
                     id: id,
                     level: 1,
-                    page: "purchases"
+                    page: "purchase-remaining"
                 },
                 success: function(response) {
                     $('#viewDetails').html(response);
@@ -345,15 +338,180 @@ $mypageURL = $pageURL;
         }
     }
 </script>
-<?php if (isset($_POST['deleteTransaction'])) {
+<?php
+
+if (isset($_POST['tRemSubmit'])) {
+    $msg = 'DB Error';
+    $msgType = 'danger';
+    $p_id = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
+    $p_type = mysqli_real_escape_string($connect, $_POST['p_type_hidden']);
+    $url = 'purchase-remaining?p_id=' . $p_id;
+    $jmaa_khaata_no = mysqli_real_escape_string($connect, $_POST['dr_khaata_no']);
+    $jmaa_khaata_id = mysqli_real_escape_string($connect, $_POST['dr_khaata_id']);
+    $bnaam_khaata_no = mysqli_real_escape_string($connect, $_POST['cr_khaata_no']);
+    $bnaam_khaata_id = mysqli_real_escape_string($connect, $_POST['cr_khaata_id']);
+    $currency1 = mysqli_real_escape_string($connect, $_POST['currency1']);
+    $amount = mysqli_real_escape_string($connect, $_POST['amount']);
+    $currency2 = mysqli_real_escape_string($connect, $_POST['currency2']);
+    $rate = mysqli_real_escape_string($connect, $_POST['rate']);
+    $opr = mysqli_real_escape_string($connect, $_POST['opr']);
+    $final_amount = mysqli_real_escape_string($connect, $_POST['final_amount']);
+    $transfer_date = mysqli_real_escape_string($connect, $_POST['transfer_date']);
+    $report = mysqli_real_escape_string($connect, $_POST['report']);
+    $details = 'Amount: ' . $amount . $currency1 . ' Rate: ' . $rate . '/' . $currency2 . ' TransferDate' . $transfer_date . ' ' . $report;
+    $data = array(
+        'type' => 'p_rem',
+        'purchase_id' => $p_id,
+        'dr_khaata_no' => $jmaa_khaata_no,
+        'dr_khaata_id' => $jmaa_khaata_id,
+        'cr_khaata_no' => $bnaam_khaata_no,
+        'cr_khaata_id' => $bnaam_khaata_id,
+        'currency1' => $currency1,
+        'amount' => $amount,
+        'currency2' => $currency2,
+        'rate' => $rate,
+        'opr' => $opr,
+        'final_amount' => $final_amount,
+        'transfer_date' => $transfer_date,
+        'report' => $details
+    );
+    if (isset($_POST['action']) && $_POST['action'] == 'update') {
+        $purchase_pays_id = mysqli_real_escape_string($connect, $_POST['purchase_pays_id_hidden']);
+        $data['updated_at'] = date('Y-m-d H:i:s');
+        $data['updated_by'] = $userId;
+        $adv_payment_added = update('purchase_pays', $data, array('id' => $purchase_pays_id));
+    } else {
+        $data['created_at'] = date('Y-m-d H:i:s');
+        $data['created_by'] = $userId;
+        $adv_payment_added = insert('purchase_pays', $data);
+        $purchase_pays_id = $connect->insert_id;
+    }
+    $r_type = 'Business';
+    $transfered_from = 'purchase_rem';
+    $type = 'P.R';
+    if ($adv_payment_added) {
+        $msg = 'Payment saved in DB. ';
+//$msg = 'Transferred to Business Roznamcha ' . $str . ' Also, transferred Loading form.';
+        $msgType = 'success';
+        $pdQ = fetch('transactions', array('id' => $p_id));
+        $p_data = mysqli_fetch_assoc($pdQ);
+        $branch_serial = getBranchSerial($p_data['branch_id'], $r_type);
+        $dataArray = array(
+            'r_type' => $r_type,
+            'transfered_from' => $transfered_from,
+            'transfered_from_id' => $purchase_pays_id,
+            'branch_id' => $p_data['branch_id'],
+            'user_id' => $p_data['created_by'],
+            'username' => $userName,
+            'r_date' => $transfer_date,
+            'roznamcha_no' => $purchase_pays_id,
+            'r_name' => $type,
+            'r_no' => $p_id,
+            'details' => $details
+        );
+        $str = ucfirst($p_data['type']) . " Purchase#" . $p_id . " ";
+        $transferred = false;
+        if (isset($_POST['r_id'])) {
+            $r_ids = $_POST['r_id'];
+            $i = 0;
+            $dataArrayUpdate = array();
+            foreach ($r_ids as $r_id) {
+                $i++;
+                if ($i == 1) {
+                    $k_data = fetch('khaata', array('id' => $jmaa_khaata_id));
+                    $k_datum = mysqli_fetch_assoc($k_data);
+                    $dataArrayUpdate['cat_id'] = $k_datum['cat_id'];
+                    $dataArrayUpdate['khaata_branch_id'] = $k_datum['branch_id'];
+                    $dataArrayUpdate['khaata_id'] = $jmaa_khaata_id;
+                    $dataArrayUpdate['khaata_no'] = $jmaa_khaata_no;
+                    $dataArrayUpdate['amount'] = $final_amount;
+                    $dataArrayUpdate['dr_cr'] = 'dr';
+                    $str .= "<span class='badge bg-dark mx-2'> Dr. " . $jmaa_khaata_no . "</span>";
+                }
+                if ($i == 2) {
+                    $k_data = fetch('khaata', array('id' => $bnaam_khaata_id));
+                    $k_datum = mysqli_fetch_assoc($k_data);
+                    $dataArrayUpdate['cat_id'] = $k_datum['cat_id'];
+                    $dataArrayUpdate['khaata_branch_id'] = $k_datum['branch_id'];
+                    $dataArrayUpdate['khaata_id'] = $bnaam_khaata_id;
+                    $dataArrayUpdate['khaata_no'] = $bnaam_khaata_no;
+                    $dataArrayUpdate['amount'] = $final_amount;
+                    $dataArrayUpdate['dr_cr'] = 'cr';
+                    $str .= "<span class='badge bg-dark mx-2'> Cr. " . $bnaam_khaata_no . "</span>";
+                }
+                $transferred = update('roznamchaas', $dataArrayUpdate, array('r_id' => $r_id));
+            }
+        } else {
+            for ($i = 1;
+                 $i <= 2;
+                 $i++) {
+                if ($i == 1) {
+                    $k_data = fetch('khaata', array('id' => $jmaa_khaata_id));
+                    $k_datum = mysqli_fetch_assoc($k_data);
+                    $dataArray['branch_serial'] = $branch_serial;
+                    $dataArray['cat_id'] = $k_datum['cat_id'];
+                    $dataArray['khaata_branch_id'] = $k_datum['branch_id'];
+                    $dataArray['khaata_id'] = $jmaa_khaata_id;
+                    $dataArray['khaata_no'] = $jmaa_khaata_no;
+                    $dataArray['amount'] = $final_amount;
+                    $dataArray['dr_cr'] = 'dr';
+                    $str .= "<span class='badge bg-dark mx-2'>Dr." . $jmaa_khaata_no . "</span>";
+                }
+                if ($i == 2) {
+                    $k_data = fetch('khaata', array('id' => $bnaam_khaata_id));
+                    $k_datum = mysqli_fetch_assoc($k_data);
+                    $dataArray['branch_serial'] = $branch_serial + 1;
+                    $dataArray['cat_id'] = $k_datum['cat_id'];
+                    $dataArray['khaata_branch_id'] = $k_datum['branch_id'];
+                    $dataArray['khaata_id'] = $bnaam_khaata_id;
+                    $dataArray['khaata_no'] = $bnaam_khaata_no;
+                    $dataArray['amount'] = $final_amount;
+                    $dataArray['dr_cr'] = 'cr';
+                    $str .= "<span class='badge bg-dark mx-2'>Cr." . $bnaam_khaata_no . "</span>";
+                }
+                $transferred = insert('roznamchaas', $dataArray);
+            }
+        }
+        if ($transferred) {
+            $msg .= ' And transferred to Roznamcha successfully. ';
+//$preData = array('khaata_adv' => $post_json);\
+        } else {
+            $msg .= ' Transfer Error :(';
+            $msgType = 'danger';
+        }
+    } else {
+        $msg = 'Technical Problem. Contact Admin';
+        $msgType = 'warning';
+    }
+    message($msgType, $url, $msg);
+}
+if (isset($_POST['transferRemToFull'])) {
     $type = 'danger';
     $msg = 'DB Failed';
-    $url_ = "purchases";
     $p_id_hidden = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
-    $done = mysqli_query($connect, "DELETE FROM `purchase_details` WHERE parent_id='$p_id_hidden'");
-    $done = mysqli_query($connect, "DELETE FROM `purchases` WHERE id='$p_id_hidden'");
-    if ($done) {
-        $msg = " Deleted Booking Purchase #" . $p_id_hidden;
+    $data = array('transfer_level' => 6);
+    // $data = array('transfer' => 2, 't_date2' => date('Y-m-d'));
+    $locked = update('transactions', $data, array('id' => $p_id_hidden));
+    if ($locked) {
+        $type = 'success';
+        $msg = 'Transferred to Full Payment Form. ';
+    }
+    message($type, $pageURL, $msg);
+}
+if (isset($_POST['deleteRemPaymentAndRozSubmit'])) {
+    $type = 'danger';
+    $msg = 'DB Failed';
+    $p_id_hidden = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
+    $url_ = "purchase-rem?view=1&p_id=" . $p_id_hidden;
+    $p_type_hidden = mysqli_real_escape_string($connect, $_POST['p_type_hidden']);
+    $purchase_pays_id = mysqli_real_escape_string($connect, $_POST['purchase_pays_id_hidden']);
+    $r_id_hidden = json_decode($_POST['r_id_hidden'], true);
+    $pays_del = mysqli_query($connect, "DELETE FROM `purchase_pays` WHERE id='$purchase_pays_id'");
+    foreach ($r_id_hidden as $r_id) {
+        $done = mysqli_query($connect, "DELETE FROM `roznamchaas` WHERE r_id='$r_id'");
+    }
+    if ($pays_del) {
+        $msg = " Payment Deleted for Purchase #" . $p_id_hidden;
         $type = "success";
     }
     message($type, $url_, $msg);
@@ -380,21 +538,7 @@ if (isset($_POST['t_id_hidden_attach'])) {
     }
     messageNew($type, $url_, $msg);
 }
-if (isset($_POST['transferPurchase'])) {
-    $type = 'danger';
-    $msg = 'DB Failed';
-    $p_id_hidden = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
-    $data = array('locked' => 1, 'transfer_level' => 1);
-    $locked = update('transactions', $data, array('id' => $p_id_hidden));
-    if ($locked) {
-        $type = 'success';
-        $msg = 'Purchase Successfully transferred.';
-    } else {
-        $type = 'failed';
-        $msg = 'Purchase transfer Failed.';
-    }
-    messageNew($type, $pageURL, $msg);
-}
+
 if (isset($_GET['t_id']) && is_numeric($_GET['t_id'])) {/*&& isset($_GET['view']) && $_GET['view'] == 1*/
     $t_id = mysqli_real_escape_string($connect, $_GET['t_id']);
     echo "<script>jQuery(document).ready(function ($) {  $('#KhaataDetails').modal('show');});</script>";
@@ -404,57 +548,13 @@ if (isset($_GET['t_id']) && is_numeric($_GET['t_id'])) {/*&& isset($_GET['view']
 if (isset($_POST['purchaseReports'])) {
     $type = 'danger';
     $msg = 'DB Failed';
-    $id = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
+    $p_id_hidden = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
     $reportType = mysqli_real_escape_string($connect, $_POST['reportType']);
-    $report = htmlspecialchars($_POST['reportBox']);
-    $report = str_replace(array( "\n", "\r", "\r\n"), ' ', $report);
-    if (is_numeric($id) && recordExists('transactions', ['id' => $id])) {
-        $records = fetch('transactions', ['id' => $id]);
-        $record = mysqli_fetch_assoc($records);
-        $reports = isset($record['reports']) && !empty($record['reports']) ? json_decode($record['reports'], true) : [];
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            $msg = 'JSON Decode Error: ' . json_last_error_msg();
-            messageNew('danger', $pageURL, $msg);
-            return;
-        }
-        $reports[$reportType] = $report;
-        $data = ['reports' => json_encode($reports)];
-        error_log("Updating Reports Data: " . print_r($data, true));
-        if (update('transactions', $data, ['id' => $id])) {
-            $type = 'success';
-            $msg = 'Report Successfully Updated.';
-        } else {
-            $msg = 'DB Update Failed';
-        }
-    }
-    messageNew($type, $pageURL, $msg);
-}
-
-if (isset($_GET['deletePurchaseReport'])) {
-    $id = isset($_GET['p_hidden_id']) ? $_GET['p_hidden_id'] : '';
-    $deleteReport = isset($_GET['deletePurchaseReport']) ? $_GET['deletePurchaseReport'] : '';
-
-    if (is_numeric($id) && recordExists('transactions', ['id' => $id])) {
-        $records = fetch('transactions', ['id' => $id]);
-        $record = mysqli_fetch_assoc($records);
-        $reports = isset($record['reports']) ? json_decode($record['reports'], true) : [];
-
-        // Check if the report exists and delete it
-        if (isset($reports[$deleteReport])) {
-            unset($reports[$deleteReport]);
-            $data = ['reports' => json_encode($reports)];
-
-            if (update('transactions', $data, ['id' => $id])) {
-                messageNew('success', $pageURL, 'Report Deleted Successfully!');
-            } else {
-                messageNew('failed', $pageURL, 'Error in Deleting Report!');
-            }
-        } else {
-            messageNew('failed', $pageURL, 'Report Type Not Found!');
-        }
-    }
+    $report = mysqli_real_escape_string($connect, $_POST['reportBox']);
+    purchaseReports($p_id_hidden, $reportType, $report);
 }
 ?>
+
 <script>
     $(document).ready(function() {
         // Function to get the query parameter value
@@ -463,14 +563,17 @@ if (isset($_GET['deletePurchaseReport'])) {
             return urlParams.get(name);
         }
 
-        if (getQueryParameter('s_khaata_id')) {
-            var s_khaata_id = getQueryParameter('s_khaata_id').toUpperCase();
-            $('td.s_khaata_id_row').each(function() {
-                var cellText = $(this).text().trim();
-                if (cellText !== s_khaata_id && s_khaata_id !== '') {
-                    $(this).closest('tr').hide();
-                }
-            });
-        }
+        // Get the value of 's_khaata_id' parameter from the URL
+        var s_khaata_id = getQueryParameter('s_khaata_id').toUpperCase();
+
+        // Iterate over all the <td> elements with class 's_khaata_id_row'
+        $('td.s_khaata_id_row').each(function() {
+            // Get the text content of the current <td>
+            var cellText = $(this).text().trim();
+            // If the text doesn't match the 's_khaata_id' parameter, hide the parent <tr>
+            if (cellText !== s_khaata_id && s_khaata_id !== '') {
+                $(this).closest('tr').hide();
+            }
+        });
     });
 </script>

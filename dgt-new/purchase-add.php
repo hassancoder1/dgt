@@ -88,9 +88,9 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                 </a>
             </div>
             <div class="card-body">
-                <form method="post" class="table-form collapse show" id="collapseFirst">
-                    <div class="row">
-                        <div class="col-md-8">
+                <div class="row">
+                    <div class="col-md-8">
+                        <form method="post" class="table-form collapse show" id="collapseFirst">
                             <div class="row">
                                 <div class="col-md-12 mb-2">
                                     <div class="d-flex align-items-center justify-content-between flex-wrap">
@@ -224,45 +224,45 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                                     </div>
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="col-md-4 border-start">
-                            <form method="post">
-                            <div class="modal-footer">
-                                    <button type="submit" name="notifyPartyDetailsSubmit" id="notifyPartyDetailsSubmit" class="btn btn-sm m-2 btn-dark">Submit</button>
-                                </div>
-                                <div class="input-group my-2 py-1">
-                                    <label for="np_acc" class="text-danger fw-bold">ACC No.</label>
-                                    <input type="text" id="np_acc" name="np_acc" class="form-control"
-                                        required value="<?= isset($NP_details['np_acc']) ? $NP_details['np_acc'] : ''; ?>">
-                                    <input value="<?= isset($NP_details['np_acc_name']) ? $NP_details['np_acc_name'] : ''; ?>" id="np_acc_name"
-                                        name="np_acc_name" class="form-control w-50" readonly
-                                        tabindex="-1">
-                                </div>
-                                <input value="<?= isset($NP_details['np_acc_id']) ? $NP_details['np_acc_id'] : ''; ?>" type="hidden"
-                                    name="np_acc_id" id="np_acc_id">
-                                <div class="input-group mb-0">
-                                    <select class="form-select" name="np_acc_kd_id" id="np_acc_kd_id">
-                                        <option hidden value="">Company</option>
-                                        <?php $run_query = fetch('khaata_details', array('khaata_id' => isset($NP_details['np_acc_id']) ? $NP_details['np_acc_id'] : '', 'type' => 'company'));
-                                        while ($row = mysqli_fetch_array($run_query)) {
-                                            $row_data = json_decode($row['json_data']);
-                                            $sel_kd2 = $row['id'] == $NP_details['np_acc_kd_id'] ? 'selected' : '';
-                                            echo '<option ' . $sel_kd2 . ' value=' . $row['id'] . '>' . $row_data->company_name . '</option>';
-                                        } ?>
-                                    </select>
-                                </div>
-                                <div class="mb-2">
-                                    <textarea class="form-control form-control-sm" name="np_acc_details"
-                                        id="np_acc_details" rows="7"
-                                        placeholder="Company Details"><?= isset($NP_details['np_acc_details']) ? $NP_details['np_acc_details'] : ''; ?></textarea>
-                                </div>
-                               
-                                <input type="hidden" name="hidden_id" value="<?= isset($id) ? $id : ''; ?>">
-                            </form>
-                        </div>
+                        </form>
                     </div>
-                </form>
+
+                    <div class="col-md-4 border-start">
+                        <form method="post">
+                            <div class="modal-footer">
+                                <button type="submit" name="notifyPartyDetailsSubmit" id="notifyPartyDetailsSubmit" class="btn btn-sm m-2 btn-dark">Submit</button>
+                            </div>
+                            <div class="input-group my-2 py-1">
+                                <label for="np_acc" class="text-danger fw-bold">ACC No.</label>
+                                <input type="text" id="np_acc" name="np_acc" class="form-control"
+                                    required value="<?= isset($NP_details['np_acc']) ? $NP_details['np_acc'] : ''; ?>">
+                                <input value="<?= isset($NP_details['np_acc_name']) ? $NP_details['np_acc_name'] : ''; ?>" id="np_acc_name"
+                                    name="np_acc_name" class="form-control w-50" readonly
+                                    tabindex="-1">
+                            </div>
+                            <input value="<?= isset($NP_details['np_acc_id']) ? $NP_details['np_acc_id'] : ''; ?>" type="hidden"
+                                name="np_acc_id" id="np_acc_id">
+                            <div class="input-group mb-0">
+                                <select class="form-select" name="np_acc_kd_id" id="np_acc_kd_id">
+                                    <option hidden value="">Company</option>
+                                    <?php $run_query = fetch('khaata_details', array('khaata_id' => isset($NP_details['np_acc_id']) ? $NP_details['np_acc_id'] : '', 'type' => 'company'));
+                                    while ($row = mysqli_fetch_array($run_query)) {
+                                        $row_data = json_decode($row['json_data']);
+                                        $sel_kd2 = $row['id'] == $NP_details['np_acc_kd_id'] ? 'selected' : '';
+                                        echo '<option ' . $sel_kd2 . ' value=' . $row['id'] . '>' . $row_data->company_name . '</option>';
+                                    } ?>
+                                </select>
+                            </div>
+                            <div class="mb-2">
+                                <textarea class="form-control form-control-sm" name="np_acc_details"
+                                    id="np_acc_details" rows="7"
+                                    placeholder="Company Details"><?= isset($NP_details['np_acc_details']) ? $NP_details['np_acc_details'] : ''; ?></textarea>
+                            </div>
+
+                            <input type="hidden" name="hidden_id" value="<?= isset($id) ? $id : ''; ?>">
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
         <?php if ($id > 0) { ?>

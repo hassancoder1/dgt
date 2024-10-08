@@ -450,7 +450,7 @@ if (isset($_POST['ttrFirstSubmit'])) {
         }
         if ($done) {
             $url .= '&view=1';
-            $preData = array('khaata_tr1' => $post_json);
+            $preData = array('khaata_tr1' => $post_json, 'transfer_level' => 2);
             $tlUpdated = update('transactions', $preData, array('id' => $p_id));
             $msg = 'Transferred to Business Roznamcha ' . $str;
             $msgType = 'success';
