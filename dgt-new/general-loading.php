@@ -1,6 +1,7 @@
+<!-- When we will press transfer button from bill transfer form the enteries along with accoutn transfer will alse be shown in Ship -> General Loading -->
 <?php
-$page_title = 'FBill Payment';
-$pageURL = 'purchase-final';
+$page_title = 'G. Loading';
+$pageURL = 'general-loading';
 include("header.php");
 $remove = $size = $brand = $goods_name = $start_print = $end_print = $is_transferred = $s_khaata_id = '';
 $is_search = false;
@@ -9,7 +10,7 @@ $sql = "SELECT * FROM `transactions` WHERE p_s='p'";
 $conditions = []; // Store all conditions here
 $print_filters = [];
 if ($_GET) {
-    $remove = removeFilter('purchase-final');
+    $remove = removeFilter('general-loading');
     $is_search = true;
 
     // Filter by goods_name
@@ -56,7 +57,7 @@ if ($_GET) {
 if (count($conditions) > 0) {
     $sql .= ' AND ' . implode(' AND ', $conditions);
 } else {
-    $sql .= " AND locked = '1' AND transfer_level >= '6'";
+    $sql .= " AND locked = '1' AND transfer_level >= '2'";
 }
 
 $sql .= " ORDER BY id DESC";
@@ -191,14 +192,15 @@ $mypageURL = $pageURL;
                                 <th>Qty</th>
                                 <th>KGs</th>
                                 <!-- <th>AMOUNT</th>
-                                <th>Advance Payment</th> Updated Column
-                                <th>Remaining Payment</th> Updated Column -->
-                                <th class="text-success">Grand Total</th> <!-- Updated Column -->
-                                <th class="text-danger">Balance</th>
-                                <th>Transferred From</th>
+                                <th>Advance Payment</th>  Updated Column -->
+                                <!-- <th>Remaining Payment</th> Updated Column -->
+                                <!-- <th class="text-success">Total</th> Updated Column -->
+                                <!-- <th class="text-danger">Balance</th> Updated Column -->
                                 <th>ROAD</th>
-                                <th>Loading Date</th>
-                                <th>Receiving Date</th>
+                                <th>LOADING COUNTRY | DATE</th>
+                                <th>RECEIVING COUNTRY | DATE</th>
+                                <!-- <th>Loading Date</th>
+                                <th>Receiving Date</th> -->
                             </tr>
                         </thead>
                         <tbody>
@@ -251,42 +253,20 @@ $mypageURL = $pageURL;
                                     }
                                 }
 
-                                // $rowColor = $locked == 0 ? ($is_doc == 0 ? ' text-danger ' : ' text-warning ') : '';
-                                $trans_from = ucwords(str_replace('purchase-', '',$purchase['from']));
-                                $type = '';
-                                $my_amount = '';
-                                if($purchase['from'] === 'purchase-advance'){
-                                    $type='adv';
-                                    $my_amount = $payments['partial_amount1'];
-                                }elseif($purchase['from'] === 'purchase-remaining'){
-                                    $type='rem';
-                                    $my_amount = $payments['partial_amount2'];
-                                }elseif($purchase['from'] === 'purchase-credit'){
-                                    $type='crdt';
-                                    $my_amount = $payments['p_total_amount'];
-                                }elseif($purchase['from'] === 'bill-transfer'){
-                                    $type='';
-                                    $trans_from = "Bill Transfer";
-                                }
-                                if($purchase['from'] !== 'bill-transfer'){
-                                $paid_final = purchaseSpecificData($id, $type.'_paid_total');
-                                $paid_final = (float)$paid_final;
-                                $bal = (float)$my_amount - $paid_final;
+                                $adv_paid_final = purchaseSpecificData($id, 'adv_paid_total');
+                                $bal = 100 - $adv_paid_final;
                                 $bal = $bal < 0.5 ? 0 : $bal;
 
                                 // Determine the row color based on the conditions
-                                if ($paid_final <= 0) {
+                                if ($adv_paid_final <= 0) {
                                     $rowColor = 'text-danger'; // Red color for zero or near zero advance paid
                                 } elseif ($bal == 0) {
                                     $rowColor = 'text-dark'; // No color if balance is zero
-                                } elseif ($paid_final > 0) {
+                                } elseif ($adv_paid_final > 0) {
                                     $rowColor = 'text-warning'; // Warning color if there's some total
                                 } else {
                                     $rowColor = ''; // Default case (no color)
                                 }
-                            }else{
-                                $rowColor = '';
-                            }
                             ?>
                                 <tr class="text-nowrap">
                                     <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $id; ?>)"
@@ -311,27 +291,24 @@ $mypageURL = $pageURL;
                                     <!-- New Advance Payment column displaying partial_amount1 -->
                                     <!-- <td class="<?php echo $rowColor; ?>">
                                         <?php echo isset($payments['partial_amount1']) ? $payments['partial_amount1'] : "No Advance Alloted"; ?>
-                                    </td>
-                                    <td class="<?php echo $rowColor; ?>">
-                                        <?php echo isset($payments['partial_amount2']) ? $payments['partial_amount2'] : "No Advance Alloted"; ?>
                                     </td> -->
-                                    <td class="text-success"><?= round((float)$payments['p_total_amount'], 2); ?></td>
-                                    <td class="text-danger"><?= round($bal, 2); ?></td>
-                                    <td class="<?php echo $rowColor; ?>"><?= $trans_from; ?></td> <!-- Transferred From -->
-
+                                    <!-- <td class="text-success"><?= round($adv_paid_final, 2); ?></td>
+                                    <td class="text-danger"><?= round($bal, 2); ?></td> -->
                                     <?php if ($sea_road == '') { ?>
                                         <td class="<?php echo $rowColor; ?>" colspan="3"></td>
                                     <?php } else { ?>
                                         <td class="<?php echo $rowColor; ?>"><?php echo $sea_road; ?></td>
-                                        <td class="<?php echo $rowColor; ?>"><?php echo my_date($_fields_sr['l_date']); ?></td>
-                                        <td class="<?php echo $rowColor; ?>"><?php echo my_date($_fields_sr['r_date']); ?></td>
-                                    <?php } ?>
+                                    <?php
+                                        echo '<td class="' . $rowColor . '">' . $_fields_sr['l_country'] . ' ' . my_date($_fields_sr['l_date']) . '</td>';
+                                        echo '<td class="' . $rowColor . '">' . $_fields_sr['r_country'] . ' ' . my_date($_fields_sr['r_date']) . '</td>';
+                                    } ?>
                                 </tr>
                             <?php
                                 $row_count++;
                             }
                             ?>
                         </tbody>
+
                     </table>
 
                     <input type="hidden" id="row_count" value="<?php echo $row_count; ?>">
@@ -361,15 +338,20 @@ $mypageURL = $pageURL;
     </div>
 </div>
 <script>
-    function viewPurchase(id = null) {
+    function viewPurchase(id = null, purchase_pays_id = null) {
         if (id) {
+            var pp_id = 0;
+            if (purchase_pays_id) {
+                pp_id = purchase_pays_id;
+            }
             $.ajax({
-                url: 'ajax/viewPurchaseFinal.php',
+                url: 'ajax/viewGeneralLoading.php',
                 type: 'post',
                 data: {
                     id: id,
                     level: 1,
-                    page: "purchase-remaining"
+                    page: "purchase-advance",
+                    purchase_pays_id: pp_id
                 },
                 success: function(response) {
                     $('#viewDetails').html(response);
@@ -381,13 +363,12 @@ $mypageURL = $pageURL;
     }
 </script>
 <?php
-
-if (isset($_POST['tRemSubmit'])) {
+if (isset($_POST['tAdvSubmit'])) {
     $msg = 'DB Error';
     $msgType = 'danger';
     $p_id = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
     $p_type = mysqli_real_escape_string($connect, $_POST['p_type_hidden']);
-    $url = 'purchase-remaining?p_id=' . $p_id;
+    $url = 'purchase-advance?p_id=' . $p_id . '&view=1';
     $jmaa_khaata_no = mysqli_real_escape_string($connect, $_POST['dr_khaata_no']);
     $jmaa_khaata_id = mysqli_real_escape_string($connect, $_POST['dr_khaata_id']);
     $bnaam_khaata_no = mysqli_real_escape_string($connect, $_POST['cr_khaata_no']);
@@ -400,9 +381,9 @@ if (isset($_POST['tRemSubmit'])) {
     $final_amount = mysqli_real_escape_string($connect, $_POST['final_amount']);
     $transfer_date = mysqli_real_escape_string($connect, $_POST['transfer_date']);
     $report = mysqli_real_escape_string($connect, $_POST['report']);
-    $details = 'Amount: ' . $amount . $currency1 . ' Rate: ' . $rate . '/' . $currency2 . ' TransferDate' . $transfer_date . ' ' . $report;
+    $details = $report . ' Amount: ' . $amount . $currency1 . ' Rate: ' . $rate . '/' . $currency2 . ' TransferDate' . $transfer_date;
     $data = array(
-        'type' => 'p_rem',
+        'type' => 'p_adv',
         'purchase_id' => $p_id,
         'dr_khaata_no' => $jmaa_khaata_no,
         'dr_khaata_id' => $jmaa_khaata_id,
@@ -428,12 +409,13 @@ if (isset($_POST['tRemSubmit'])) {
         $adv_payment_added = insert('purchase_pays', $data);
         $purchase_pays_id = $connect->insert_id;
     }
+
     $r_type = 'Business';
-    $transfered_from = 'purchase_rem';
-    $type = 'P.R';
+    $transfered_from = 'purchase_advance';
+    $type = 'P.A';
     if ($adv_payment_added) {
-        $msg = 'Payment saved in DB. ';
-//$msg = 'Transferred to Business Roznamcha ' . $str . ' Also, transferred Loading form.';
+        $msg = 'Advance payment saved in DB. ';
+        //$msg = 'Transferred to Business Roznamcha ' . $str . ' Also, transferred Loading form.';
         $msgType = 'success';
         $pdQ = fetch('transactions', array('id' => $p_id));
         $p_data = mysqli_fetch_assoc($pdQ);
@@ -484,15 +466,13 @@ if (isset($_POST['tRemSubmit'])) {
                 $transferred = update('roznamchaas', $dataArrayUpdate, array('r_id' => $r_id));
             }
         } else {
-            for ($i = 1;
-                 $i <= 2;
-                 $i++) {
+            for ($i = 1; $i <= 2; $i++) {
                 if ($i == 1) {
                     $k_data = fetch('khaata', array('id' => $jmaa_khaata_id));
                     $k_datum = mysqli_fetch_assoc($k_data);
                     $dataArray['branch_serial'] = $branch_serial;
-                    $dataArray['cat_id'] = $k_datum['cat_id'];
-                    $dataArray['khaata_branch_id'] = $k_datum['branch_id'];
+                    $dataArray['cat_id'] = isset($k_datum['cat_id']) ? $k_datum['cat_id'] : '';
+                    $dataArray['khaata_branch_id'] = isset($k_datum['branch_id']) ? $k_datum['branch_id'] : '';
                     $dataArray['khaata_id'] = $jmaa_khaata_id;
                     $dataArray['khaata_no'] = $jmaa_khaata_no;
                     $dataArray['amount'] = $final_amount;
@@ -511,12 +491,13 @@ if (isset($_POST['tRemSubmit'])) {
                     $dataArray['dr_cr'] = 'cr';
                     $str .= "<span class='badge bg-dark mx-2'>Cr." . $bnaam_khaata_no . "</span>";
                 }
+                $dataArray['transferred_from_id'] = $p_id;
                 $transferred = insert('roznamchaas', $dataArray);
             }
         }
         if ($transferred) {
             $msg .= ' And transferred to Roznamcha successfully. ';
-//$preData = array('khaata_adv' => $post_json);\
+            //$preData = array('khaata_adv' => $post_json);\
         } else {
             $msg .= ' Transfer Error :(';
             $msgType = 'danger';
@@ -527,24 +508,11 @@ if (isset($_POST['tRemSubmit'])) {
     }
     message($msgType, $url, $msg);
 }
-if (isset($_POST['transferRemToFull'])) {
+if (isset($_POST['deletePaymentAndRozSubmit'])) {
     $type = 'danger';
     $msg = 'DB Failed';
     $p_id_hidden = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
-    $data = array('transfer_level' => 6);
-    // $data = array('transfer' => 2, 't_date2' => date('Y-m-d'));
-    $locked = update('transactions', $data, array('id' => $p_id_hidden));
-    if ($locked) {
-        $type = 'success';
-        $msg = 'Transferred to Full Payment Form. ';
-    }
-    message($type, $pageURL, $msg);
-}
-if (isset($_POST['deleteRemPaymentAndRozSubmit'])) {
-    $type = 'danger';
-    $msg = 'DB Failed';
-    $p_id_hidden = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
-    $url_ = "purchase-rem?view=1&p_id=" . $p_id_hidden;
+    $url_ = "purchase-advance?view=1&p_id=" . $p_id_hidden;
     $p_type_hidden = mysqli_real_escape_string($connect, $_POST['p_type_hidden']);
     $purchase_pays_id = mysqli_real_escape_string($connect, $_POST['purchase_pays_id_hidden']);
     $r_id_hidden = json_decode($_POST['r_id_hidden'], true);
@@ -552,12 +520,14 @@ if (isset($_POST['deleteRemPaymentAndRozSubmit'])) {
     foreach ($r_id_hidden as $r_id) {
         $done = mysqli_query($connect, "DELETE FROM `roznamchaas` WHERE r_id='$r_id'");
     }
+    $done = update('transactions', array('transfer_level' => 2), array('id' => $p_id_hidden));
     if ($pays_del) {
         $msg = " Payment Deleted for Purchase #" . $p_id_hidden;
         $type = "success";
     }
     message($type, $url_, $msg);
 }
+
 if (isset($_POST['t_id_hidden_attach'])) {
     $type = 'danger';
     $msg = 'DB Failed';
@@ -580,20 +550,31 @@ if (isset($_POST['t_id_hidden_attach'])) {
     }
     messageNew($type, $url_, $msg);
 }
-
-if (isset($_GET['t_id']) && is_numeric($_GET['t_id'])) {/*&& isset($_GET['view']) && $_GET['view'] == 1*/
-    $t_id = mysqli_real_escape_string($connect, $_GET['t_id']);
+if (isset($_GET['p_id']) && is_numeric($_GET['p_id']) && isset($_GET['view']) && $_GET['view'] == 1) {
+    $p_id = mysqli_real_escape_string($connect, $_GET['p_id']);
+    if (isset($_GET['purchase_pays_id']) && is_numeric($_GET['purchase_pays_id'])) {
+        $purchase_pays_id = mysqli_real_escape_string($connect, $_GET['purchase_pays_id']);
+    } else {
+        $purchase_pays_id = 0;
+    }
     echo "<script>jQuery(document).ready(function ($) {  $('#KhaataDetails').modal('show');});</script>";
-    echo "<script>jQuery(document).ready(function ($) {  viewPurchase($t_id); });</script>";
+    echo "<script>jQuery(document).ready(function ($) {  viewPurchase($p_id,$purchase_pays_id); });</script>";
 }
 
-if (isset($_POST['purchaseReports'])) {
+if (isset($_POST['transferAdvanceToRem'])) {
+?>
+<?php
     $type = 'danger';
     $msg = 'DB Failed';
     $p_id_hidden = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
-    $reportType = mysqli_real_escape_string($connect, $_POST['reportType']);
-    $report = mysqli_real_escape_string($connect, $_POST['reportBox']);
-    purchaseReports($p_id_hidden, $reportType, $report);
+    $data = array('transfer_level' => 4);
+    // $data = array('transfer_level' => 4, 't2_date' => date('Y-m-d'));
+    $locked = update('transactions', $data, array('id' => $p_id_hidden));
+    if ($locked) {
+        $type = 'success';
+        $msg = 'Purchase Advance transferred ';
+    }
+    message($type, $pageURL, $msg);
 }
 ?>
 

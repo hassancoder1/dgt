@@ -383,6 +383,14 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                                 <b>Date:</b> <?= $payments->full_date; ?><br>
                                 <b>Report:</b> <?= ucfirst($payments->full_report); ?><br>
                             <?php
+                            } elseif (isset($payments->full_advance) && $payments->full_advance === 'credit') {
+                            ?>
+                                <!-- Show full payment details if type is 'full' -->
+                                <b>Type:</b> Credit Payment<br>
+                                <b>Total Amount:</b> <?= number_format($total_amount, 2); ?><br>
+                                <b>Date:</b> <?= $payments->credit_date; ?><br>
+                                <b>Report:</b> <?= ucfirst($payments->credit_report); ?><br>
+                            <?php
                             } else {
                                 // Show default or empty values if no type is selected
                                 echo "<b>No payment details available.</b>";
@@ -1181,7 +1189,8 @@ if (isset($_POST['purchaseSubmit'])) {
         'active' => 1,
         '_date' => $_POST['_date'],
         'country' => mysqli_real_escape_string($connect, $_POST['country']),
-        'branch_id' => mysqli_real_escape_string($connect, $_POST['branch_id'])
+        'branch_id' => mysqli_real_escape_string($connect, $_POST['branch_id']),
+        'from' => "purchase-add"
     ];
 
     $dr_acc = mysqli_real_escape_string($connect, $_POST['dr_acc']);
@@ -1696,53 +1705,69 @@ if (isset($_POST['deletePDSubmit'])) {
                     <a href="<?php echo $pageURL . '?id=' . $id; ?>" class="btn-close" aria-label="Close"></a>
                 </div>
                 <div class="modal-body table-form">
-                    <?php $t = $_fields['items_sum']['sum_final_amount'];
-                    $bees = Percentage(20, $t);
-                    $assi = Percentage(80, $t); ?>
-                    <div class="row">
-                        <div class="col-md-9 border-end">
-                            <div class="row gx-1 mb-4 align-items-center">
-                                <div class="col-md-auto">
-                                    <div class="bg-light border pt-1 ps-2">
-                                        <div class="form-check form-check-inline form-switch mb-0 h-auto">
-                                            <input class="form-check-input" type="radio" name="full_advance" id="cash"
-                                                value="full">
-                                            <label class="form-check-label" for="cash">Full Payment</label>
+                    <?php
+                    if (isset($_fields['items_sum'])) {
+                        $t = $_fields['items_sum']['sum_final_amount'];
+                        $bees = Percentage(20, $t);
+                        $assi = Percentage(80, $t); ?>
+                        <div class="row">
+                            <div class="col-md-9 border-end">
+                                <div class="row gx-1 mb-4 align-items-center">
+                                    <div class="col-md-auto">
+                                        <div class="bg-light border pt-1 ps-2">
+                                            <?php
+                                            $payment_type = isset($record['payments']) ?
+                                                (json_decode($record['payments'], true)['full_advance'] ?? '')
+                                                : '';
+                                            ?>
+
+                                            <div class="form-check form-check-inline form-switch mb-0 h-auto">
+                                                <input <?= $payment_type === 'credit' ? 'checked' : 'checked'; ?> class="form-check-input" type="radio" name="full_advance" id="credit"
+                                                    value="credit">
+                                                <label class="form-check-label" for="credit">Credit Payment</label>
+                                            </div>
+                                            <div class="form-check form-check-inline form-switch mb-0 h-auto">
+                                                <input <?= $payment_type === 'full' ? 'checked' : ''; ?> class="form-check-input" type="radio" name="full_advance" id="cash"
+                                                    value="full">
+                                                <label class="form-check-label" for="cash">Full Payment</label>
+                                            </div>
+                                            <div class="form-check form-check-inline form-switch mb-0 h-auto">
+                                                <input <?= $payment_type === 'advance' ? 'checked' : ''; ?> class="form-check-input" type="radio" name="full_advance"
+                                                    id="advance" value="advance">
+                                                <label class="form-check-label" for="advance">Advance</label>
+                                            </div>
                                         </div>
-                                        <div class="form-check form-check-inline form-switch mb-0 h-auto">
-                                            <input checked class="form-check-input" type="radio" name="full_advance"
-                                                id="credit" value="advance">
-                                            <label class="form-check-label" for="credit">Advance</label>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="input-group">
+                                            <label for="pct_value">% Value</label>
+                                            <input type="number" min="1" step="any" id="pct_value" name="pct_value"
+                                                class="form-control" value="<?= isset($_fields['payment_details']->pct_value) ? $_fields['payment_details']->pct_value : '20'; ?>" max="90">
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-2">
-                                    <div class="input-group">
-                                        <label for="pct_value">% Value</label>
-                                        <input type="number" min="1" step="any" id="pct_value" name="pct_value"
-                                            class="form-control" value="<?= isset($_fields['payment_details']->pct_value) ? $_fields['payment_details']->pct_value : '20'; ?>" max="90">
-                                    </div>
-                                </div>
+                                <div id="date-report-inputs"></div>
                             </div>
-                            <div id="date-report-inputs"></div>
+                            <div class="col-md-3">
+                                <table class="table table-sm">
+                                    <tbody>
+                                        <?php echo '<tr><td>TOTAL PAYMENT </td><th>' . $t . '</th></tr>'; ?>
+                                        <tr id="adv_values1"></tr>
+                                        <tr id="adv_values2"></tr>
+                                    </tbody>
+                                </table>
+                                <input type="hidden" id="p_total_amount" name="p_total_amount" value="<?php echo $t; ?>">
+                                <input id="partial_amount1" name="partial_amount1" type="hidden">
+                                <input id="partial_amount2" name="partial_amount2" type="hidden">
+                            </div>
                         </div>
-                        <div class="col-md-3">
-                            <table class="table table-sm">
-                                <tbody>
-                                    <?php echo '<tr><td>TOTAL PAYMENT </td><th>' . $t . '</th></tr>'; ?>
-                                    <tr id="adv_values1"></tr>
-                                    <tr id="adv_values2"></tr>
-                                </tbody>
-                            </table>
-                            <input type="hidden" id="p_total_amount" name="p_total_amount" value="<?php echo $t; ?>">
-                            <input id="partial_amount1" name="partial_amount1" type="hidden">
-                            <input id="partial_amount2" name="partial_amount2" type="hidden">
-                        </div>
-                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="submit" name="paymentDetailsSubmit" class="btn btn-dark">Submit</button>
                 </div>
+            <?php } else {
+                        echo "<mark>Please Add Goods Details First!</mark>";
+                    } ?>
             </div>
             <input type="hidden" name="hidden_id" value="<?php echo $id; ?>">
         </form>
@@ -2016,6 +2041,21 @@ if (isset($_POST['notifyPartyDetailsSubmit'])) {
 
                 $('#pct_value').closest('.input-group').show();
                 $('#pct_value').attr('required', true);
+            } else if (selectedValue === 'credit') {
+                $('#adv_values1').html('');
+                $('#adv_values2').html('');
+
+                $("#date-report-inputs").html('<div class="row gx-1 mt-3">' +
+                    '<div class="col-md-auto"><div class="input-group"><label for="credit_date">Credit Payment Date</label>' +
+                    '<input type="date" class="form-control" id="credit_date" name="credit_date" value="<?= isset($_fields['payment_details']->credit_date) ? $_fields['payment_details']->credit_date : ''; ?>" required>' +
+                    '</div></div>' +
+                    '<div class="col-md"><div class="input-group"><label for="credit_report">Report</label>' +
+                    '<input type="text" class="form-control" id="credit_report" name="credit_report" value="<?= isset($_fields['payment_details']->credit_report) ? $_fields['payment_details']->credit_report : ''; ?>" required>' +
+                    '</div></div></div>');
+
+                $('#pct_value').closest('.input-group').hide();
+                $('#pct_value').attr('required', false);
+
             }
 
         }

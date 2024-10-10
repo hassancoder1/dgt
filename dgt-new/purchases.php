@@ -384,7 +384,7 @@ if (isset($_POST['transferPurchase'])) {
     $type = 'danger';
     $msg = 'DB Failed';
     $p_id_hidden = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
-    $data = array('locked' => 1, 'transfer_level' => 1);
+    $data = array('locked' => 1, 'transfer_level' => 1, '`from`' => 'purchase-orders');
     $locked = update('transactions', $data, array('id' => $p_id_hidden));
     if ($locked) {
         $type = 'success';

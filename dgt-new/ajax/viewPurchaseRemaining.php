@@ -5,6 +5,7 @@ $purchase_pays_id = $_POST['purchase_pays_id'];
 if ($id > 0) {
     $records = fetch('transactions', array('id' => $id));
     $record = mysqli_fetch_assoc($records);
+    $purchase_type = $record['type'];
     $_fields = transactionSingle($id);
     $notify_party = isset($record['notify_party_details']) ? json_decode($record['notify_party_details'], true) : false;
     if (!empty($_fields)) { ?>
@@ -162,6 +163,16 @@ if ($id > 0) {
                                                 'Total Amount' => number_format($total_amount, 2),
 
                                             ];
+                                        } elseif (isset($payments->full_advance) && $payments->full_advance === 'credit') {
+                                            echo '<b>Type:</b> Credit Payment<br>';
+                                            echo '<b>Total Amount:</b> ' . number_format($total_amount, 2) . '<br>';
+
+
+                                            $paymentDetails = [
+                                                'Type' => 'Credit Payment',
+                                                'Total Amount' => number_format($total_amount, 2),
+
+                                            ];
                                         } else {
                                             echo "<b>No payment details available.</b>";
                                         }
@@ -312,7 +323,7 @@ if ($id > 0) {
                     ?>
                     <hr class="my-0">
                     <div class="m-3">
-                        <b>Advance Details</b>
+                        <b>Details</b>
                         <table class="table mb-2 table-hover table-sm">
                             <thead>
                                 <tr>
@@ -507,10 +518,10 @@ if ($id > 0) {
                             </tbody>
                         </table>
                     </div>
-                </div>
+                
 
                 <div class="collapse show" id="collapseExample">
-                    <input type="hidden" id="balance" value="<?php echo $bal; ?>">
+                    <input type="hidden" id="balance" value="<?php echo $balREM; ?>">
                     <?php
                     $p_khaata_id = json_decode($record['khaata_tr1'], true)['dr_khaata_no'];
                     $s_khaata_id = json_decode($record['khaata_tr1'], true)['cr_khaata_no'];
@@ -548,7 +559,7 @@ if ($id > 0) {
                         }
                     }
                     $rid_delete_array = array(); ?>
-                    <div class="card">
+                    <div class="card mt-3">
                         <div class="card-body p-2">
                             <form method="post" onsubmit="return confirm('Are you sure?');" class="table-form <?php echo $adv_arr['finish']['div_class'] ?>">
                                 <?php echo $adv_arr['finish']['back']; ?>
@@ -696,16 +707,6 @@ if ($id > 0) {
                                         </table>
                                 <?php }
                                 } ?>
-                                <?php if ($purchase_pays_id > 0) { ?>
-                                    <!-- <form method="post"
-                                            onsubmit="return confirm('Are you sure to delete Payment?\nThe record will be delete from Roznamcha too.\nPress OK to Delete');">
-                                            <input type="hidden" name="r_id_hidden" value="<?php echo htmlspecialchars(json_encode($rid_delete_array)); ?>">
-                                            <input type="hidden" name="p_id_hidden" value="<?php echo $purchase_id; ?>">
-                                            <input type="hidden" name="p_type_hidden" value="<?php echo $purchase_type; ?>">
-                                            <input type="hidden" name="purchase_pays_id_hidden" value="<?php echo $purchase_pays_id; ?>">
-                                            <button name="deleteRemPaymentAndRozSubmit" type="submit" class="btn btn-danger btn-sm">Delete This Payment</button>
-                                        </form> -->
-                                <?php } ?>
                             </form>
                             <?php if ($purchase_pays_id > 0) { ?>
                                 <form method="post"
@@ -817,27 +818,38 @@ if ($id > 0) {
                 function lastAmount() {
                     let amount = $("#amount").val();
                     let rate = $("#rate").val();
-
-
                     let operator = $('#opr').find(":selected").val();
-
                     let final_amount;
-                    if (operator === "/") {
-                        final_amount = Number(amount) / Number(rate);
-                    } else {
-                        final_amount = Number(amount) * Number(rate);
-                    }
-                    final_amount = final_amount.toFixed(3);
-                    $("#final_amount").val(final_amount);
-                    var balance = $("#balance").val();
-                    /*if (Number(balance) >= 1) {
-                        if (Number(balance) <= Number(final_amount)) {
-                            disableButton('recordSubmit');
+
+                    if (amount && rate) { // Ensure both amount and rate have values
+                        if (operator === "/") {
+                            final_amount = Number(amount) / Number(rate);
                         } else {
-                            enableButton('recordSubmit');
+                            final_amount = Number(amount) * Number(rate);
                         }
-                    } else {
-                        disableButton('recordSubmit');
-                    }*/
+                        final_amount = final_amount.toFixed(2);
+                        $("#final_amount").val(final_amount);
+
+                        let balance = $("#balance").val();
+                        balance = parseFloat(balance);
+                        // if (balance !== 0) {
+                        //     if (final_amount > balance) {
+                        //         disableButton('recordSubmit');
+                        //     } else {
+                        //         enableButton('recordSubmit');
+                        //     }
+                        // } else {
+                        //     disableButton('recordSubmit');
+                        // }
+                        if (balance >= 1) {
+                            if (final_amount <= balance+0.5) {
+                                enableButton('recordSubmit');
+                            } else {
+                                disableButton('recordSubmit');
+                            }
+                        } else {
+                            disableButton('recordSubmit');
+                        }
+                    }
                 }
             </script>

@@ -1009,8 +1009,14 @@ function purchaseSpecificData($purchaseId, $type)
         case 'adv':
             $data = purchasePaysArray($purchaseId, 'p_adv');
             break;
+        case 'crdt':
+            $data = purchasePaysArray($purchaseId, 'p_crdt');
+            break;
         case 'adv_paid_total':
             $data = purchasePaysArray($purchaseId, 'p_adv', true);
+            break;
+        case 'crdt_paid_total':
+            $data = purchasePaysArray($purchaseId, 'p_crdt', true);
             break;
         case 'rem_paid_total':
             $data = purchasePaysArray($purchaseId, 'p_rem', true);

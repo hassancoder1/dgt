@@ -167,6 +167,18 @@ if ($id > 0) {
                                                 'Date' => $payments->full_date,
                                                 'Report' => ucfirst($payments->full_report)
                                             ];
+                                        } elseif (isset($payments->full_advance) && $payments->full_advance === 'credit') {
+                                            echo '<b>Type:</b> Credit Payment<br>';
+                                            echo '<b>Total Amount:</b> ' . number_format($total_amount, 2) . '<br>';
+                                            // echo '<b>Date:</b> ' . $payments->full_date . '<br>';
+                                            // echo '<b>Report:</b> ' . ucfirst($payments->full_report) . '<br>';
+
+                                            $paymentDetails = [
+                                                'Type' => 'Credit Payment',
+                                                'Total Amount' => number_format($total_amount, 2),
+                                                'Date' => $payments->credit_date,
+                                                'Report' => ucfirst($payments->credit_report)
+                                            ];
                                         } else {
                                             echo "<b>No payment details available.</b>";
                                         }
@@ -179,7 +191,7 @@ if ($id > 0) {
 
 
                                 <!-- Report Section -->
-                                 <duv class="mt-3"></duv>
+                                <duv class="mt-3"></duv>
                                 <!-- <?php if (isset($_fields['sea_road_report'])): ?>
                                     <div class="col-md-12">
                                         <div class="fs-6 fw-bold">Report</div>
@@ -478,6 +490,7 @@ if ($id > 0) {
                                         </div>
                                     </div>
                                     <div class="col-2">
+                                        <input type="hidden" name="check_full_payment" value="<?= $payments->full_advance === 'full' ? 'true' : 'false'; ?>">
                                         <button name="ttrFirstSubmit" type="submit"
                                             class="btn btn-primary w-100 btn-sm"><i class="fa fa-upload"></i>Transfer
                                         </button>
@@ -563,16 +576,31 @@ if ($id > 0) {
                 <?php } ?>
 
                 <?php if ($_fields['locked'] == 0 && $_fields['is_doc'] > 0) { ?>
-                    <form method="post" onsubmit="return confirm('Lock this purchase.\nPress OK to transfer')" action>
+                    <form method="post" onsubmit="return validateForm()" action="">
                         <input type="hidden" name="p_id_hidden" value="<?php echo $id; ?>">
                         <button name="transferPurchase" type="submit" class="btn btn-dark btn-sm w-100 mt-3">
                             TRANSFER
                         </button>
                     </form>
-                <?php }
-                if ($_POST['page'] !== "bill-transfer") { ?>
+                    <script>
+                        function validateForm() {
+                            const seaRoad = <?= json_encode($record['sea_road']); ?>;
+                            const thirdPartyBank = <?= json_encode($record['third_party_bank']); ?>;
+                            const notifyParty = <?= json_encode($record['notify_party_details']); ?>;
+                            const payments = <?= json_encode($record['payments']); ?>;
+                            if (!seaRoad || !thirdPartyBank || !notifyParty || !payments) {
+                                alert('Please Fill Routes, Third Party Bank, Notify Party Details & Payment Details To transfer');
+                                return false;
+                            }
+                            return confirm('Lock this purchase.\nPress OK to transfer');
+                        }
+                    </script>
+                <?php } ?>
+
+                <?php if ($_POST['page'] !== "bill-transfer") { ?>
                     <button class="btn btn-dark btn-sm w-100 mt-3" onclick="openModal('', '')">Add Reports</button>
                 <?php } ?>
+
                 <div id="customModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); z-index: 1000;">
                     <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 75%; padding: 20px; background-color: white; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
                         <button style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 24px; cursor: pointer;" onclick="closeModal()">

@@ -306,16 +306,14 @@ if ($id > 0) {
                         );
                         $roz_arr4 = array(
                             array('Total Amount', round($final_amount, 2)),
-                            array('Percent', $percentage . '%'),
-                            array('Advance', round($partial_amount1, 2)),
                         );
                     }
-                    $adv_paid_final = purchaseSpecificData($record['id'], 'adv_paid_total');
-                    $bal = $partial_amount1 - $adv_paid_final;
+                    $crdt_paid_final = purchaseSpecificData($record['id'], 'crdt_paid_total');
+                    $bal = $total_amount - $crdt_paid_final;
                     ?>
                     <hr class="my-0">
                     <div class="m-3">
-                        <b>Advance Details</b>
+                        <b>Credit Details</b>
                         <table class="table mb-2 table-hover table-sm">
                             <thead>
                                 <tr>
@@ -324,10 +322,8 @@ if ($id > 0) {
                                     <th class="border bg-warning border-dark">ID</th>
                                     <th class="border bg-warning border-dark">Branch</th>
                                     <th class="border bg-warning border-dark">Roz#</th>
-                                    <th class="border bg-warning border-dark">No</th>
+                                    <th class="border bg-warning border-dark">Name</th>
                                     <th class="border bg-warning border-dark">Total Amount</th>
-                                    <th class="border bg-warning border-dark">Percent</th>
-                                    <th class="border bg-warning border-dark">Advance</th>
                                     <th class="border bg-warning border-dark text-success">Total</th>
                                     <th class="border bg-warning border-dark text-danger">BALANCE</th>
                                     <th class="border bg-warning border-dark">Transferred</th>
@@ -342,23 +338,21 @@ if ($id > 0) {
                                     <td class="border border-dark"><?php echo $roz_arr2[0][1]; ?></td> <!-- Roz# -->
                                     <td class="border border-dark"><?php echo $roz_arr2[1][1]; ?></td> <!-- Name -->
                                     <td class="border border-dark"><?php echo $roz_arr4[0][1]; ?></td> <!-- Total Amount -->
-                                    <td class="border border-dark"><?php echo $roz_arr4[1][1]; ?></td> <!-- Percent -->
-                                    <td class="border border-dark"><?php echo $roz_arr4[2][1]; ?></td> <!-- Advance -->
-                                    <td class="border border-dark text-success"><?php echo round($adv_paid_final); ?></td> <!-- Total -->
-                                    <td class="border border-dark text-danger" id="#balance"><?php echo round($bal); ?></td> <!-- BALANCE -->
+                                    <td class="border border-dark text-success"><?php echo round($crdt_paid_final); ?></td> <!-- Total -->
+                                    <td class="border border-dark text-danger"><?php echo round($bal); ?></td> <!-- BALANCE -->
                                     <td class="border border-dark">
                                         <?php
                                         if ($bal <= 10 && $record['transfer_level'] < 3) {
                                             update('transactions', array('transfer_level' => 3), array('id' => $record['id']));
                                         ?><script>
-                                                window.location.href = '<?= "purchase-advance?view=1&p_id=" . $id ?>';
+                                                window.location.href = '<?= "purchase-credit?view=1&p_id=" . $id ?>';
                                             </script><?php
                                                     }
                                                     if ($bal <= 10) {
                                                         if ($record['transfer_level'] > 2 && $record['transfer_level'] < 4) { ?>
-                                                <form method="post" onsubmit="return confirm('Transfer to Remaining 80% Form.\n Press OK to transfer')">
+                                                <form method="post" onsubmit="return confirm('Transfer to Final.\n Press OK to transfer')">
                                                     <input type="hidden" name="p_id_hidden" value="<?php echo $record['id']; ?>">
-                                                    <button name="transferAdvanceToRem" type="submit" class="btn btn-dark btn-sm">
+                                                    <button name="transferCreditToFinal" type="submit" class="btn btn-dark btn-sm">
                                                         TRANSFER
                                                     </button>
                                                 </form>
@@ -389,7 +383,7 @@ if ($id > 0) {
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php $adv_paid = purchaseSpecificData($record['id'], 'adv');
+                                <?php $adv_paid = purchaseSpecificData($record['id'], 'crdt');
                                 $i = 1;
                                 foreach ($adv_paid as $item) {
                                     // $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $purchase_id, 'transfered_from' => 'purchase_' . $record['type']));
@@ -398,7 +392,7 @@ if ($id > 0) {
                                     echo '<td class="border border-dark">' . $i++ . '</td>';
                                     echo '<td class="border border-dark">' . my_date($item['created_at']) . '</td>';
 
-                                    echo '<td class="border border-dark"><a href="purchase-advance?view=1&p_id=' . $record['id'] . '&purchase_pays_id=' . $item['id'] . '">' . $item['dr_khaata_no'] . '</a></td>';
+                                    echo '<td class="border border-dark"><a href="purchase-credit?view=1&p_id=' . $record['id'] . '&purchase_pays_id=' . $item['id'] . '">' . $item['dr_khaata_no'] . '</a></td>';
                                     echo '<td class="border border-dark">' . $item['cr_khaata_no'] . '</td>';
                                     echo '<td class="border border-dark">' . $item['report'] . '</td>';
                                     echo '<td class="border border-dark">' . round($item['amount']) . '<sub>' . $item['currency1'] . '</sub></td>';
@@ -433,7 +427,7 @@ if ($id > 0) {
                             if (mysqli_num_rows($purchase_paysQ) > 0) {
                                 $pps = mysqli_fetch_assoc($purchase_paysQ);
                                 $adv_arr = array(
-                                    'finish' => array('div_class' => 'border border-danger', 'btn_text' => 'Update', 'btn_class' => 'btn-warning', 'back' => '<a href="purchase-advance?view=1&p_id=' . $id . '">Back</a>', 'purchase_pays_id' => $purchase_pays_id, 'action' => 'update'),
+                                    'finish' => array('div_class' => 'border border-danger', 'btn_text' => 'Update', 'btn_class' => 'btn-warning', 'back' => '<a href="purchase-credit?view=1&p_id=' . $id . '">Back</a>', 'purchase_pays_id' => $purchase_pays_id, 'action' => 'update'),
                                     'dr_khaata_no' => $pps['dr_khaata_no'],
                                     'cr_khaata_no' => $pps['cr_khaata_no'],
                                     'currency1' => $pps['currency1'],
@@ -538,7 +532,7 @@ if ($id > 0) {
                                             </div>
                                         </div>
                                         <div class="col-md-2 mt-3 text-end">
-                                            <button name="tAdvSubmit" id="recordSubmit" type="submit"
+                                            <button name="tCrdtSubmit" id="recordSubmit" type="submit"
                                                 class="btn <?php echo $adv_arr['finish']['btn_class']; ?> btn-sm  rounded-0"><i
                                                     class="fa fa-paper-plane"></i> <?php echo $adv_arr['finish']['btn_text']; ?>
                                             </button>
@@ -548,9 +542,8 @@ if ($id > 0) {
                                     <input type="hidden" name="p_type_hidden" value="<?php echo $purchase_type; ?>">
                                     <input type="hidden" name="purchase_pays_id_hidden" value="<?php echo $adv_arr['finish']['purchase_pays_id']; ?>">
                                     <input type="hidden" name="action" value="<?php echo $adv_arr['finish']['action']; ?>">
-                                    <?php
-                                     if ($purchase_pays_id > 0) {
-                                        $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'transfered_from_id' => $purchase_pays_id, 'transfered_from' => 'purchase_advance'));
+                                    <?php if ($purchase_pays_id > 0) {
+                                        $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'transfered_from_id' => $purchase_pays_id, 'transfered_from' => 'purchase_credit'));
                                         if (mysqli_num_rows($rozQ) > 0) { ?>
                                             <table class="table table-sm table-bordered">
                                                 <thead>
@@ -585,9 +578,9 @@ if ($id > 0) {
                                                             <td><?php echo $roz['r_no']; ?></td>
                                                             <td class="small"><?php echo $roz['details']; ?></td>
                                                             <?php if ($roz['dr_cr'] == "dr") {
-                                                                $dr = $roz['amount'];
+                                                                $dr = round($roz['amount']);
                                                             } else {
-                                                                $cr = $roz['amount'];
+                                                                $cr = round($roz['amount']);
                                                             } ?>
                                                             <td class="text-success"><?php echo $dr; ?></td>
                                                             <td class="text-danger"><?php echo $cr; ?></td>
