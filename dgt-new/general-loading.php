@@ -76,7 +76,7 @@ $mypageURL = $pageURL;
 <div class="fixed-top">
     <?php require_once('nav-links.php'); ?>
     <div class="bg-light shadow p-2 border-bottom border-warning d-flex gap-0 align-items-center justify-content-between mb-md-2">
-        <div class="fs-5 text-uppercase"><?php echo $page_title; ?></div>
+        <div class="fs-7 text-uppercase" style="text-wrap:nowrap;"><?php echo $page_title; ?></div>
         <div class="text-nowrap">
             <div class="lh-1">
                 <b>Rows</b><span id="rows_count_span"></span>
@@ -329,10 +329,43 @@ $mypageURL = $pageURL;
     role="dialog" aria-labelledby="staticBackdropLabel" aria-hidden="true">
     <div class="modal-dialog modal-fullscreen -modal-xl -modal-dialog-centered" role="document">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="staticBackdropLabel">PURCHASE ADVANCE</h5>
-                <a href="<?php echo $mypageURL; ?>" class="btn-close" aria-label="Close"></a>
+            <div class="modal-header d-flex justify-content-between align-items-center">
+                <h5 class="modal-title" id="staticBackdropLabel">GENERAL LOADING</h5>
+                <div class="d-flex align-items-center">
+                    <!-- Print Button -->
+                    <a href="print/purchase-single?t_id=<?php echo $id; ?>&action=order&secret=<?php echo base64_encode('powered-by-upsol') . "&print_type=full"; ?>"
+                        target="_blank" class="btn btn-dark btn-sm me-2">PRINT</a>
+
+                    <!-- Contract File Upload -->
+                    <form id="attachmentSubmit" method="post" enctype="multipart/form-data" class="d-flex align-items-center me-2">
+                        <input type="hidden" name="t_id_hidden_attach" value="<?php echo $id; ?>">
+                        <input type="file" id="attachments" name="attachments[]" class="d-none" multiple>
+                        <input type="button" class="form-control rounded-1 bg-dark btn btn-sm text-white" value="+ Contract File"
+                            onclick="document.getElementById('attachments').click();" />
+                    </form>
+
+                    <script>
+                        document.getElementById("attachments").onchange = function() {
+                            document.getElementById("attachmentSubmit").submit();
+                        }
+                    </script>
+
+                    <!-- Attachments List -->
+                    <div class="">
+                        <?php
+                        $atts = getAttachments($id, 'purchase_contract');
+                        $no = 0;
+                        foreach ($atts as $att) {
+                            echo ++$no . '.<a class="text-decoration-underline me-2" href="attachments/' . $att['attachment'] . '" title="' . $att['created_at'] . '" target="_blank">' . readMore($att['attachment'], 20) . '</a><br>';
+                        } ?>
+                    </div>
+
+                    <!-- Close Button -->
+                    <a href="<?php echo $mypageURL; ?>" class="btn-close ms-3" aria-label="Close"></a>
+                </div>
             </div>
+
+
             <div class="modal-body bg-light pt-0" id="viewDetails"></div>
         </div>
     </div>
@@ -340,21 +373,27 @@ $mypageURL = $pageURL;
 <script>
     function viewPurchase(id = null, purchase_pays_id = null) {
         if (id) {
-            var pp_id = 0;
-            if (purchase_pays_id) {
-                pp_id = purchase_pays_id;
-            }
+            var pp_id = purchase_pays_id || 0; // Default to 0 if purchase_pays_id is null
+            let action = '<?= isset($_GET['action']) ? $_GET['action'] : '' ?>'; // Check if action exists
+            let lp_id = '<?= isset($_GET['lp_id']) ? $_GET['lp_id'] : '' ?>'; // Check if lp_id exists
+
             $.ajax({
                 url: 'ajax/viewGeneralLoading.php',
                 type: 'post',
                 data: {
                     id: id,
                     level: 1,
-                    page: "purchase-advance",
-                    purchase_pays_id: pp_id
+                    page: "purchase-general-loading",
+                    purchase_pays_id: pp_id,
+                    lp_id: lp_id,
+                    action: action
                 },
                 success: function(response) {
                     $('#viewDetails').html(response);
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    console.error("AJAX Error: ", textStatus, errorThrown);
+                    alert('An error occurred while processing your request. Please try again.');
                 }
             });
         } else {
@@ -363,219 +402,206 @@ $mypageURL = $pageURL;
     }
 </script>
 <?php
-if (isset($_POST['tAdvSubmit'])) {
+if (isset($_POST['GLoadingSubmit'])) {
     $msg = 'DB Error';
     $msgType = 'danger';
-    $p_id = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
-    $p_type = mysqli_real_escape_string($connect, $_POST['p_type_hidden']);
-    $url = 'purchase-advance?p_id=' . $p_id . '&view=1';
-    $jmaa_khaata_no = mysqli_real_escape_string($connect, $_POST['dr_khaata_no']);
-    $jmaa_khaata_id = mysqli_real_escape_string($connect, $_POST['dr_khaata_id']);
-    $bnaam_khaata_no = mysqli_real_escape_string($connect, $_POST['cr_khaata_no']);
-    $bnaam_khaata_id = mysqli_real_escape_string($connect, $_POST['cr_khaata_id']);
-    $currency1 = mysqli_real_escape_string($connect, $_POST['currency1']);
-    $amount = mysqli_real_escape_string($connect, $_POST['amount']);
-    $currency2 = mysqli_real_escape_string($connect, $_POST['currency2']);
-    $rate = mysqli_real_escape_string($connect, $_POST['rate']);
-    $opr = mysqli_real_escape_string($connect, $_POST['opr']);
-    $final_amount = mysqli_real_escape_string($connect, $_POST['final_amount']);
-    $transfer_date = mysqli_real_escape_string($connect, $_POST['transfer_date']);
+
+    // General Details
+    $sr_no = mysqli_real_escape_string($connect, $_POST['sr_no']);
+    $p_id = mysqli_real_escape_string($connect, $_POST['p_id']);
+    $p_type = mysqli_real_escape_string($connect, $_POST['p_type']);
+    $p_branch = mysqli_real_escape_string($connect, $_POST['p_branch']);
+    $p_date = mysqli_real_escape_string($connect, $_POST['p_date']);
+    $p_cr_acc = mysqli_real_escape_string($connect, $_POST['p_cr_acc']);
+    $p_cr_acc_name = mysqli_real_escape_string($connect, $_POST['p_cr_acc_name']);
+    $bl_no = mysqli_real_escape_string($connect, $_POST['bl_no']);
     $report = mysqli_real_escape_string($connect, $_POST['report']);
-    $details = $report . ' Amount: ' . $amount . $currency1 . ' Rate: ' . $rate . '/' . $currency2 . ' TransferDate' . $transfer_date;
-    $data = array(
-        'type' => 'p_adv',
-        'purchase_id' => $p_id,
-        'dr_khaata_no' => $jmaa_khaata_no,
-        'dr_khaata_id' => $jmaa_khaata_id,
-        'cr_khaata_no' => $bnaam_khaata_no,
-        'cr_khaata_id' => $bnaam_khaata_id,
-        'currency1' => $currency1,
-        'amount' => $amount,
-        'currency2' => $currency2,
-        'rate' => $rate,
-        'opr' => $opr,
-        'final_amount' => $final_amount,
-        'transfer_date' => $transfer_date,
-        'report' => $details
-    );
-    if (isset($_POST['action']) && $_POST['action'] == 'update') {
-        $purchase_pays_id = mysqli_real_escape_string($connect, $_POST['purchase_pays_id_hidden']);
-        $data['updated_at'] = date('Y-m-d H:i:s');
-        $data['updated_by'] = $userId;
-        $adv_payment_added = update('purchase_pays', $data, array('id' => $purchase_pays_id));
-    } else {
-        $data['created_at'] = date('Y-m-d H:i:s');
-        $data['created_by'] = $userId;
-        $adv_payment_added = insert('purchase_pays', $data);
-        $purchase_pays_id = $connect->insert_id;
-    }
 
-    $r_type = 'Business';
-    $transfered_from = 'purchase_advance';
-    $type = 'P.A';
-    if ($adv_payment_added) {
-        $msg = 'Advance payment saved in DB. ';
-        //$msg = 'Transferred to Business Roznamcha ' . $str . ' Also, transferred Loading form.';
-        $msgType = 'success';
-        $pdQ = fetch('transactions', array('id' => $p_id));
-        $p_data = mysqli_fetch_assoc($pdQ);
-        $branch_serial = getBranchSerial($p_data['branch_id'], $r_type);
-        $dataArray = array(
-            'r_type' => $r_type,
-            'transfered_from' => $transfered_from,
-            'transfered_from_id' => $purchase_pays_id,
-            'branch_id' => $p_data['branch_id'],
-            'user_id' => $p_data['created_by'],
-            'username' => $userName,
-            'r_date' => $transfer_date,
-            'roznamcha_no' => $purchase_pays_id,
-            'r_name' => $type,
-            'r_no' => $p_id,
-            'details' => $details
-        );
-        $str = ucfirst($p_data['type']) . " Purchase#" . $p_id . " ";
-        $transferred = false;
-        if (isset($_POST['r_id'])) {
-            $r_ids = $_POST['r_id'];
-            $i = 0;
-            $dataArrayUpdate = array();
-            foreach ($r_ids as $r_id) {
-                $i++;
-                if ($i == 1) {
-                    $k_data = fetch('khaata', array('id' => $jmaa_khaata_id));
-                    $k_datum = mysqli_fetch_assoc($k_data);
-                    $dataArrayUpdate['cat_id'] = $k_datum['cat_id'];
-                    $dataArrayUpdate['khaata_branch_id'] = $k_datum['branch_id'];
-                    $dataArrayUpdate['khaata_id'] = $jmaa_khaata_id;
-                    $dataArrayUpdate['khaata_no'] = $jmaa_khaata_no;
-                    $dataArrayUpdate['amount'] = $final_amount;
-                    $dataArrayUpdate['dr_cr'] = 'dr';
-                    $str .= "<span class='badge bg-dark mx-2'> Dr. " . $jmaa_khaata_no . "</span>";
-                }
-                if ($i == 2) {
-                    $k_data = fetch('khaata', array('id' => $bnaam_khaata_id));
-                    $k_datum = mysqli_fetch_assoc($k_data);
-                    $dataArrayUpdate['cat_id'] = $k_datum['cat_id'];
-                    $dataArrayUpdate['khaata_branch_id'] = $k_datum['branch_id'];
-                    $dataArrayUpdate['khaata_id'] = $bnaam_khaata_id;
-                    $dataArrayUpdate['khaata_no'] = $bnaam_khaata_no;
-                    $dataArrayUpdate['amount'] = $final_amount;
-                    $dataArrayUpdate['dr_cr'] = 'cr';
-                    $str .= "<span class='badge bg-dark mx-2'> Cr. " . $bnaam_khaata_no . "</span>";
-                }
-                $transferred = update('roznamchaas', $dataArrayUpdate, array('r_id' => $r_id));
-            }
-        } else {
-            for ($i = 1; $i <= 2; $i++) {
-                if ($i == 1) {
-                    $k_data = fetch('khaata', array('id' => $jmaa_khaata_id));
-                    $k_datum = mysqli_fetch_assoc($k_data);
-                    $dataArray['branch_serial'] = $branch_serial;
-                    $dataArray['cat_id'] = isset($k_datum['cat_id']) ? $k_datum['cat_id'] : '';
-                    $dataArray['khaata_branch_id'] = isset($k_datum['branch_id']) ? $k_datum['branch_id'] : '';
-                    $dataArray['khaata_id'] = $jmaa_khaata_id;
-                    $dataArray['khaata_no'] = $jmaa_khaata_no;
-                    $dataArray['amount'] = $final_amount;
-                    $dataArray['dr_cr'] = 'dr';
-                    $str .= "<span class='badge bg-dark mx-2'>Dr." . $jmaa_khaata_no . "</span>";
-                }
-                if ($i == 2) {
-                    $k_data = fetch('khaata', array('id' => $bnaam_khaata_id));
-                    $k_datum = mysqli_fetch_assoc($k_data);
-                    $dataArray['branch_serial'] = $branch_serial + 1;
-                    $dataArray['cat_id'] = $k_datum['cat_id'];
-                    $dataArray['khaata_branch_id'] = $k_datum['branch_id'];
-                    $dataArray['khaata_id'] = $bnaam_khaata_id;
-                    $dataArray['khaata_no'] = $bnaam_khaata_no;
-                    $dataArray['amount'] = $final_amount;
-                    $dataArray['dr_cr'] = 'cr';
-                    $str .= "<span class='badge bg-dark mx-2'>Cr." . $bnaam_khaata_no . "</span>";
-                }
-                $dataArray['transferred_from_id'] = $p_id;
-                $transferred = insert('roznamchaas', $dataArray);
+
+    // Process uploaded files
+    $uploadedFiles = [];
+    $uploadDir = 'attachments/'; // Directory to store uploaded files
+
+    if (!empty($_FILES['entry_file']['name'][0])) {
+        foreach ($_FILES['entry_file']['name'] as $key => $filename) {
+            $tmpName = $_FILES['entry_file']['tmp_name'][$key];
+            $newFilename = time() . '_' . basename($filename); // Unique file name
+
+            // Move the file to the desired directory
+            if (move_uploaded_file($tmpName, $uploadDir . $newFilename)) {
+                $uploadedFiles[] = [$key, $newFilename];
             }
         }
-        if ($transferred) {
-            $msg .= ' And transferred to Roznamcha successfully. ';
-            //$preData = array('khaata_adv' => $post_json);\
-        } else {
-            $msg .= ' Transfer Error :(';
-            $msgType = 'danger';
-        }
-    } else {
-        $msg = 'Technical Problem. Contact Admin';
-        $msgType = 'warning';
+    }else{
+        $uploadedFiles = [];
     }
-    message($msgType, $url, $msg);
-}
-if (isset($_POST['deletePaymentAndRozSubmit'])) {
-    $type = 'danger';
-    $msg = 'DB Failed';
-    $p_id_hidden = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
-    $url_ = "purchase-advance?view=1&p_id=" . $p_id_hidden;
-    $p_type_hidden = mysqli_real_escape_string($connect, $_POST['p_type_hidden']);
-    $purchase_pays_id = mysqli_real_escape_string($connect, $_POST['purchase_pays_id_hidden']);
-    $r_id_hidden = json_decode($_POST['r_id_hidden'], true);
-    $pays_del = mysqli_query($connect, "DELETE FROM `purchase_pays` WHERE id='$purchase_pays_id'");
-    foreach ($r_id_hidden as $r_id) {
-        $done = mysqli_query($connect, "DELETE FROM `roznamchaas` WHERE r_id='$r_id'");
-    }
-    $done = update('transactions', array('transfer_level' => 2), array('id' => $p_id_hidden));
-    if ($pays_del) {
-        $msg = " Payment Deleted for Purchase #" . $p_id_hidden;
-        $type = "success";
-    }
-    message($type, $url_, $msg);
-}
 
-if (isset($_POST['t_id_hidden_attach'])) {
-    $type = 'danger';
-    $msg = 'DB Failed';
-    $ppp_id = mysqli_real_escape_string($connect, $_POST['t_id_hidden_attach']);
-    $url_ = $pageURL . "?t_id=" . $ppp_id . "&attach=1";
-    $dato = array('is_doc' => 1);
-    foreach ($_FILES["attachments"]["tmp_name"] as $key => $tmp_name) {
-        if ($_FILES['attachments']['error'][$key] == 4 || ($_FILES['attachments']['size'][$key] == 0 && $_FILES['attachments']['error'][$key] == 0)) {
-        } else {
-            $att = saveAttachment($ppp_id, 'purchase_contract', basename($_FILES["attachments"]["name"][$key]));
-            $location = 'attachments/' . basename($_FILES["attachments"]["name"][$key]);
-            $moved = move_uploaded_file($_FILES["attachments"]["tmp_name"][$key], $location);
-            $dd = update('transactions', $dato, array('id' => $ppp_id));
-            if ($moved && $dd) {
-                $type = 'success';
-                $msg = 'Attachment Saved ';
-                $msg .= $att ? basename($_FILES["attachments"]["name"][$key]) . ', ' : '';
-            }
-        }
-    }
-    messageNew($type, $url_, $msg);
-}
-if (isset($_GET['p_id']) && is_numeric($_GET['p_id']) && isset($_GET['view']) && $_GET['view'] == 1) {
-    $p_id = mysqli_real_escape_string($connect, $_GET['p_id']);
-    if (isset($_GET['purchase_pays_id']) && is_numeric($_GET['purchase_pays_id'])) {
-        $purchase_pays_id = mysqli_real_escape_string($connect, $_GET['purchase_pays_id']);
-    } else {
-        $purchase_pays_id = 0;
-    }
-    echo "<script>jQuery(document).ready(function ($) {  $('#KhaataDetails').modal('show');});</script>";
-    echo "<script>jQuery(document).ready(function ($) {  viewPurchase($p_id,$purchase_pays_id); });</script>";
-}
+    // Loading Details
+    $loading_details = [
+        'loading_date' => mysqli_real_escape_string($connect, $_POST['loading_date']),
+        'loading_country' => mysqli_real_escape_string($connect, $_POST['loading_country']),
+        'loading_port_name' => mysqli_real_escape_string($connect, $_POST['loading_port_name']),
+    ];
 
-if (isset($_POST['transferAdvanceToRem'])) {
-?>
-<?php
-    $type = 'danger';
-    $msg = 'DB Failed';
-    $p_id_hidden = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
-    $data = array('transfer_level' => 4);
-    // $data = array('transfer_level' => 4, 't2_date' => date('Y-m-d'));
-    $locked = update('transactions', $data, array('id' => $p_id_hidden));
-    if ($locked) {
+    // Receiving Details
+    $receiving_details = [
+        'receiving_date' => mysqli_real_escape_string($connect, $_POST['receiving_date']),
+        'receiving_country' => mysqli_real_escape_string($connect, $_POST['receiving_country']),
+        'receiving_port_name' => mysqli_real_escape_string($connect, $_POST['receiving_port_name']),
+    ];
+
+    // Importer Details
+    $importer_details = [
+        'im_acc_id' => mysqli_real_escape_string($connect, $_POST['im_acc_id']),
+        'im_acc_no' => mysqli_real_escape_string($connect, $_POST['im_acc_no']),
+        'im_acc_name' => mysqli_real_escape_string($connect, $_POST['im_acc_name']),
+        'im_acc_kd_id' => mysqli_real_escape_string($connect, $_POST['im_acc_kd_id']),
+        'im_acc_details' => mysqli_real_escape_string($connect, $_POST['im_acc_details'])
+    ];
+
+    // Notify Party Details
+    $notify_party_details = [
+        'np_acc_id' => mysqli_real_escape_string($connect, $_POST['np_acc_id']),
+        'np_acc_no' => mysqli_real_escape_string($connect, $_POST['np_acc_no']),
+        'np_acc_name' => mysqli_real_escape_string($connect, $_POST['np_acc_name']),
+        'np_acc_kd_id' => mysqli_real_escape_string($connect, $_POST['np_acc_kd_id']),
+        'np_acc_details' => mysqli_real_escape_string($connect, $_POST['np_acc_details'])
+    ];
+
+    // Exporter Details
+    $exporter_details = [
+        'xp_acc_id' => mysqli_real_escape_string($connect, $_POST['xp_acc_id']),
+        'xp_acc_no' => mysqli_real_escape_string($connect, $_POST['xp_acc_no']),
+        'xp_acc_name' => mysqli_real_escape_string($connect, $_POST['xp_acc_name']),
+        'xp_acc_kd_id' => mysqli_real_escape_string($connect, $_POST['xp_acc_kd_id']),
+        'xp_acc_details' => mysqli_real_escape_string($connect, $_POST['xp_acc_details'])
+    ];
+
+    // Goods Details
+    $goods_details = [
+        'goods_id' => mysqli_real_escape_string($connect, $_POST['goods_id']),
+        'quantity_no' => mysqli_real_escape_string($connect, $_POST['quantity_no']),
+        'quantity_name' => mysqli_real_escape_string($connect, $_POST['quantity_name']),
+        'size' => mysqli_real_escape_string($connect, $_POST['size']),
+        'brand' => mysqli_real_escape_string($connect, $_POST['brand']),
+        'origin' => mysqli_real_escape_string($connect, $_POST['origin']),
+        'net_weight' => mysqli_real_escape_string($connect, $_POST['net_weight']),
+        'gross_weight' => mysqli_real_escape_string($connect, $_POST['gross_weight']),
+        'container_no' => mysqli_real_escape_string($connect, $_POST['container_no'])
+    ];
+
+    // Shipping Details
+    $shipping_details = [
+        'shipping_name' => mysqli_real_escape_string($connect, $_POST['shipping_name']),
+        'shipping_phone' => mysqli_real_escape_string($connect, $_POST['shipping_phone']),
+        'shipping_whatsapp' => mysqli_real_escape_string($connect, $_POST['shipping_whatsapp']),
+        'shipping_email' => mysqli_real_escape_string($connect, $_POST['shipping_email']),
+        'shipping_address' => mysqli_real_escape_string($connect, $_POST['shipping_address']),
+        'transfer_by' => mysqli_real_escape_string($connect, $_POST['transfer_by'])
+    ];
+
+    $data = [
+        'sr_no' => $sr_no,
+        'p_id' => $p_id,
+        'p_type' => $p_type,
+        'p_branch' => $p_branch,
+        'p_date' => $p_date,
+        'p_cr_acc' => $p_cr_acc,
+        'p_cr_acc_name' => $p_cr_acc_name,
+        'loading_details' => json_encode($loading_details),
+        'receiving_details' => json_encode($receiving_details),
+        'bl_no' => $bl_no,
+        'report' => $report,
+        'importer_details' => json_encode($importer_details),
+        'notify_party_details' => json_encode($notify_party_details),
+        'exporter_details' => json_encode($exporter_details),
+        'goods_details' => json_encode($goods_details),
+        'shipping_details' => json_encode($shipping_details),
+        'attachments' => json_encode($uploadedFiles)
+    ];
+    if(isset($_POST['action']) && isset($_POST['id'])){
+    $url_ = $pageURL . "?p_id=" . $p_id."&view=1";
+    $done = update('general_loading', $data, array('id' => $_POST['id']));
+    if ($done) {
         $type = 'success';
-        $msg = 'Purchase Advance transferred ';
+        $msg = 'Entry Updated!';
     }
-    message($type, $pageURL, $msg);
+    }else{
+    $url_ = $pageURL . "?p_id=" . $p_id."&view=1";
+    $done = insert('general_loading', $data);
+    if ($done) {
+        $type = 'success';
+        $msg = 'New Goods Loading Added!';
+    }
 }
+    messageNew($type, $url_, $msg);
+    // Debugging (optional)
+?><script>
+        // alert("<?php echo $p_id; ?>");
+    </script><?php
+            }
+
+            if (isset($_GET['deleteLoadingEntry']) && isset($_GET['lp_id']) && !empty($_GET['lp_id'])) {
+                $type = 'danger';
+                $msg = 'DB Failed';
+                $id = mysqli_real_escape_string($connect, $_GET['lp_id']);
+                $p_id = mysqli_real_escape_string($connect, $_GET['p_id']);
+                $url_ = "general-loading?view=1&p_id=" . $p_id;
+                $done = mysqli_query($connect, "DELETE FROM `general_loading` WHERE id='$id'");
+                if ($done) {
+                    $msg = " Loading Entry Deleted for Purchase #" . $p_id;
+                    $type = "success";
+                }
+                message($type, $url_, $msg);
+            }
+            if (isset($_POST['t_id_hidden_attach'])) {
+                $type = 'danger';
+                $msg = 'DB Failed';
+                $ppp_id = mysqli_real_escape_string($connect, $_POST['t_id_hidden_attach']);
+                $url_ = $pageURL . "?t_id=" . $ppp_id . "&attach=1";
+                $dato = array('is_doc' => 1);
+                foreach ($_FILES["attachments"]["tmp_name"] as $key => $tmp_name) {
+                    if ($_FILES['attachments']['error'][$key] == 4 || ($_FILES['attachments']['size'][$key] == 0 && $_FILES['attachments']['error'][$key] == 0)) {
+                    } else {
+                        $att = saveAttachment($ppp_id, 'purchase_contract', basename($_FILES["attachments"]["name"][$key]));
+                        $location = 'attachments/' . basename($_FILES["attachments"]["name"][$key]);
+                        $moved = move_uploaded_file($_FILES["attachments"]["tmp_name"][$key], $location);
+                        $dd = update('transactions', $dato, array('id' => $ppp_id));
+                        if ($moved && $dd) {
+                            $type = 'success';
+                            $msg = 'Attachment Saved ';
+                            $msg .= $att ? basename($_FILES["attachments"]["name"][$key]) . ', ' : '';
+                        }
+                    }
+                }
+                messageNew($type, $url_, $msg);
+            }
+            if (isset($_GET['p_id']) && is_numeric($_GET['p_id']) && isset($_GET['view']) && $_GET['view'] == 1) {
+                $p_id = mysqli_real_escape_string($connect, $_GET['p_id']);
+                if (isset($_GET['purchase_pays_id']) && is_numeric($_GET['purchase_pays_id'])) {
+                    $purchase_pays_id = mysqli_real_escape_string($connect, $_GET['purchase_pays_id']);
+                } else {
+                    $purchase_pays_id = 0;
+                }
+                echo "<script>jQuery(document).ready(function ($) {  $('#KhaataDetails').modal('show');});</script>";
+                echo "<script>jQuery(document).ready(function ($) {  viewPurchase($p_id,$purchase_pays_id); });</script>";
+            }
+
+            if (isset($_POST['transferAdvanceToRem'])) {
+                ?>
+<?php
+                $type = 'danger';
+                $msg = 'DB Failed';
+                $p_id_hidden = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
+                $data = array('transfer_level' => 4);
+                // $data = array('transfer_level' => 4, 't2_date' => date('Y-m-d'));
+                $locked = update('transactions', $data, array('id' => $p_id_hidden));
+                if ($locked) {
+                    $type = 'success';
+                    $msg = 'Purchase Advance transferred ';
+                }
+                message($type, $pageURL, $msg);
+            }
 ?>
 
 <script>

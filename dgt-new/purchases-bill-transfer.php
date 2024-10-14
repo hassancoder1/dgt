@@ -327,7 +327,7 @@ $mypageURL = $pageURL;
     <div class="modal-dialog modal-fullscreen -modal-xl -modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="staticBackdropLabel">PURCHASE DETAILS</h5>
+                <h5 class="modal-title" id="staticBackdropLabel">PUCHASE BILL</h5>
                 <a href="<?php echo $mypageURL; ?>" class="btn-close" aria-label="Close"></a>
             </div>
             <div class="modal-body bg-light pt-0" id="viewDetails"></div>
