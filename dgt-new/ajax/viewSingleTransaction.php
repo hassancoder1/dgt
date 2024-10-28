@@ -597,11 +597,11 @@ if ($id > 0) {
                     </script>
                 <?php } ?>
 
-                <?php if ($_POST['page'] !== "bill-transfer") { ?>
+                <?php /* if ($_POST['page'] !== "bill-transfer" && $_POST['page'] !== "general-stock-form") { ?>
                     <button class="btn btn-dark btn-sm w-100 mt-3" onclick="openModal('', '')">Add Reports</button>
-                <?php } ?>
+                <?php } */?>
 
-                <div id="customModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); z-index: 1000;">
+                <!-- <div id="customModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); z-index: 1000;">
                     <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 75%; padding: 20px; background-color: white; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
                         <button style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 24px; cursor: pointer;" onclick="closeModal()">
                             <i class="fa fa-times"></i>
@@ -622,17 +622,17 @@ if ($id > 0) {
                         </form>
                     </div>
                 </div>
-                </div>
+                </div> -->
                 <div class="bottom-buttons">
                     <div class="px-2">
                         <?php $update_url = $_fields['type'] == 'booking' ? 'purchase-add' : ($_fields['type'] == 'market' ? 'purchase-market-add' : 'purchase-local-add');
-                        if ($_POST['page'] !== "bill-transfer") {
+                        if ($_POST['page'] !== "bill-transfer" && $_POST['page'] !== 'general-stock-form') {
                         ?>
-                            <a href="<?php echo $update_url . '?id=' . $id; ?>" class="btn btn-dark btn-sm w-100 mt-2">UPDATE</a>
+                            <a href="<?php echo $update_url . '?id=' . $id.'&type='.$_fields['type']; ?>" class="btn btn-dark btn-sm w-100 mt-2">UPDATE</a>
                         <?php } ?>
                         <a href="print/purchase-single?t_id=<?php echo $id; ?>&action=order&secret=<?php echo base64_encode('powered-by-upsol') . "&print_type=full"; ?>"
                             target="_blank" class="btn btn-dark btn-sm w-100 mt-2">PRINT</a>
-                        <?php if ($_fields['locked'] == 0) { ?>
+                        <?php if ($_fields['locked'] == 0 && $_POST['page'] !== 'general-stock-form') { ?>
                             <form method="post" onsubmit="return confirm('Are you sure to delete?');">
                                 <input type="hidden" name="p_id_hidden" value="<?php echo $id; ?>">
                                 <button name="deleteTransaction" type="submit" class="btn btn-danger btn-sm w-100 mt-2">

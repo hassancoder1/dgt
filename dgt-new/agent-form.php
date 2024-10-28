@@ -6,7 +6,11 @@ include("header.php");
 $remove = $size = $brand = $goods_name = $start_print = $end_print = $is_transferred = $s_khaata_id = '';
 $is_search = false;
 global $connect;
+$user = $_SESSION['username'];
 $sql = "SELECT * FROM `general_loading`";
+if ($user !== 'admin') {
+    $sql .= " WHERE JSON_EXTRACT(agent_details, '$.ag_id')='$user'";
+}
 $conditions = []; // Store all conditions here
 $print_filters = [];
 // if ($_GET) {
@@ -185,7 +189,7 @@ $mypageURL = $pageURL;
                     <table class="table table-bordered table-hover table-sm fix-head-table mb-0">
                         <thead>
                             <tr class="text-nowrap">
-                                <th>P#</th>
+                                <th><?= SuperAdmin() ? 'P' : ''; ?>#</th>
                                 <th>Sr#</th>
                                 <th>AG ID</th>
                                 <th>AG NAME</th>
@@ -221,35 +225,41 @@ $mypageURL = $pageURL;
                                 $id = $SingleLoading['id'];
                                 $agentDetails = json_decode($SingleLoading['agent_details'], true);
                                 if (!empty($agentDetails) && isset($agentDetails['transferred']) && $agentDetails['transferred'] === true) {
+                                    if(isset($agentDetails['bill_of_entry_no'])){
+                                        $rowColor = 'text-dark';
+                                    }else{
+                                        $rowColor = 'text-danger';
+                                    }
                             ?>
 
                                     <tr class="text-nowrap">
+
                                         <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $SingleLoading['id']; ?>)"
                                             data-bs-toggle="modal" data-bs-target="#KhaataDetails">
-                                            <?php echo '<b>P#', $SingleLoading['p_id']; ?>
+                                            <?= SuperAdmin() ? '<b>P#'. $SingleLoading['p_id'] : "#".$row_count+1; ?>
                                             <?php echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
                                         </td>
                                         <td class="<?php echo $rowColor; ?>"><?php echo $SingleLoading['sr_no']; ?></td>
-                                        <td><?= $agentDetails['ag_id']; ?></td>
-                                        <td><?= $agentDetails['ag_name']; ?></td>
-                                        <td><?= json_decode($SingleLoading['loading_details'], true)['loading_date']; ?></td>
-                                        <!-- <td><?= json_decode($SingleLoading['loading_details'], true)['loading_country']; ?></td> -->
-                                        <td><?= json_decode($SingleLoading['loading_details'], true)['loading_port_name']; ?></td>
-                                        <td><?= json_decode($SingleLoading['receiving_details'], true)['receiving_date']; ?></td>
-                                        <!-- <td><?= json_decode($SingleLoading['receiving_details'], true)['receiving_country']; ?></td> -->
-                                        <td><?= json_decode($SingleLoading['receiving_details'], true)['receiving_port_name']; ?></td>
-                                        <td><?= $SingleLoading['bl_no']; ?></td>
-                                        <td><?= json_decode($SingleLoading['goods_details'], true)['container_no']; ?></td>
-                                        <!-- <td><?= json_decode($SingleLoading['importer_details'], true)['im_acc_no']; ?></td>
+                                        <td class="<?php echo $rowColor; ?>"><?= $agentDetails['ag_id']; ?></td>
+                                        <td class="<?php echo $rowColor; ?>"><?= $agentDetails['ag_name']; ?></td>
+                                        <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['loading_details'], true)['loading_date']; ?></td>
+                                        <!-- <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['loading_details'], true)['loading_country']; ?></td> -->
+                                        <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['loading_details'], true)['loading_port_name']; ?></td>
+                                        <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['receiving_details'], true)['receiving_date']; ?></td>
+                                        <!-- <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['receiving_details'], true)['receiving_country']; ?></td> -->
+                                        <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['receiving_details'], true)['receiving_port_name']; ?></td>
+                                        <td class="<?php echo $rowColor; ?>"><?= $SingleLoading['bl_no']; ?></td>
+                                        <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['goods_details'], true)['container_no']; ?></td>
+                                        <!-- <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['importer_details'], true)['im_acc_no']; ?></td>
                                          
-                                <td><?= json_decode($SingleLoading['exporter_details'], true)['xp_acc_no']; ?></td>
-                                <td><?= json_decode($SingleLoading['notify_party_details'], true)['np_acc_no']; ?></td> -->
-                                        <td><?= goodsName(json_decode($SingleLoading['goods_details'], true)['goods_id']); ?></td>
-                                        <td><?= json_decode($SingleLoading['goods_details'], true)['origin']; ?></td>
-                                        <td><?= json_decode($SingleLoading['goods_details'], true)['quantity_name']; ?></td>
-                                        <td><?= json_decode($SingleLoading['goods_details'], true)['quantity_no']; ?></td>
-                                        <td><?= json_decode($SingleLoading['goods_details'], true)['gross_weight']; ?></td>
-                                        <td><?= json_decode($SingleLoading['goods_details'], true)['net_weight']; ?></td>
+                                <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['exporter_details'], true)['xp_acc_no']; ?></td>
+                                <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['notify_party_details'], true)['np_acc_no']; ?></td> -->
+                                        <td class="<?php echo $rowColor; ?>"><?= goodsName(json_decode($SingleLoading['goods_details'], true)['goods_id']); ?></td>
+                                        <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['goods_details'], true)['origin']; ?></td>
+                                        <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['goods_details'], true)['quantity_name']; ?></td>
+                                        <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['goods_details'], true)['quantity_no']; ?></td>
+                                        <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['goods_details'], true)['gross_weight']; ?></td>
+                                        <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['goods_details'], true)['net_weight']; ?></td>
                                     </tr>
                             <?php
                                     $row_count++;
@@ -324,7 +334,7 @@ $mypageURL = $pageURL;
     function viewPurchase(id = null, loading_id = null) {
         if (id) {
             $.ajax({
-                url: 'ajax/viewLoadingTransfer.php',
+                url: 'ajax/viewAgentForm.php',
                 type: 'post',
                 data: {
                     id: id,
@@ -366,3 +376,58 @@ $mypageURL = $pageURL;
         });
     });
 </script>
+
+<?php
+if (isset($_POST['AgentFormSubmit'])) {
+    $msg = 'DB Error';
+    $msgType = 'danger';
+    $url = 'agent-form';
+    $id = mysqli_real_escape_string($connect, $_POST['id']);
+    $agent = json_decode($_POST['existing_data'], true);
+    $uploadDir = 'attachments/';
+    $uploadedFiles = [];
+
+    if (!empty($_FILES['agent_file']['name'][0])) {
+        foreach ($_FILES['agent_file']['name'] as $key => $filename) {
+            $tmpName = $_FILES['agent_file']['tmp_name'][$key];
+            $newFilename = time() . '_' . basename($filename);
+
+            if (move_uploaded_file($tmpName, $uploadDir . $newFilename)) {
+                $uploadedFiles[$key] = $newFilename;
+            }
+        }
+    }
+    $ag_id = $agent['ag_id'];
+    $billNQ = mysqli_query($connect, "SELECT COUNT(*) as billCount FROM general_loading WHERE JSON_EXTRACT(agent_details, '$.ag_id') = '$ag_id' AND JSON_EXTRACT(agent_details, '$.ag_billNumber')");
+    $billNumber = 0;
+    if ($billNQ && $result = mysqli_fetch_assoc($billNQ)) {
+        $billNumber = $result['billCount'] + 1;
+    }
+    $data = [
+        "agent_details" => json_encode([
+            'ag_acc_no' => mysqli_real_escape_string($connect, $agent['ag_acc_no']),
+            'ag_name' => mysqli_real_escape_string($connect, $agent['ag_name']),
+            'ag_id' => mysqli_real_escape_string($connect, $agent['ag_id']),
+            'row_id' => mysqli_real_escape_string($connect, $agent['row_id']),
+            'transferred' => true,
+            'permission_to_edit' => 'no',
+            'ag_billNumber' => $billNumber,
+            'received_date' => mysqli_real_escape_string($connect, $_POST['received_date']),
+            'clearing_date' => mysqli_real_escape_string($connect, $_POST['clearing_date']),
+            'bill_of_entry_no' => (string)mysqli_real_escape_string($connect, $_POST['bill_of_entry_no']),
+            'loading_truck_number' => mysqli_real_escape_string($connect, $_POST['loading_truck_number']),
+            'truck_returning_date' => mysqli_real_escape_string($connect, $_POST['truck_returning_date']),
+            'report' => mysqli_real_escape_string($connect, $_POST['report']),
+            'attachments' => (object)$uploadedFiles
+        ], JSON_UNESCAPED_UNICODE)
+    ];
+
+    $done = update('general_loading', $data, ['id' => $id]);
+    $done = update('user_permissions', array('permission' => json_encode(['agent-form', 'agent-payments-form'])), array('id' => $agent['row_id']));
+    if ($done) {
+        $type = 'success';
+        $msg = 'Agent Form Updated!';
+    }
+    message($type, $url, $msg);
+}
+?>

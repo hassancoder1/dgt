@@ -159,6 +159,7 @@ if ($id > 0) {
                                 <div class="card-body">
                                     <form method="post" class="table-form">
                                         <input type="hidden" name="id" value="<?= $record['id']; ?>">
+                                        <input type="hidden" name="row_id" id="row_id" value="<?= isset($record['agent_details']) && !empty($record['agent_details']) ? json_decode($record['agent_details'], true)['row_id'] : ''; ?>">
                                         <h5 class="text-primary">Agent Details</h5>
                                         <div class="row g-3">
                                             <div class="col-md-2">
@@ -174,62 +175,91 @@ if ($id > 0) {
                                                 <label for="ag_id" class="form-label">AGENT ID</label>
                                                 <input type="text" name="ag_id" id="ag_id" required class="form-control form-control-sm" value="<?= isset($record['agent_details']) && !empty($record['agent_details']) ? json_decode($record['agent_details'], true)['ag_id'] : ''; ?>">
                                             </div>
+                                            <?php
+                                            $warehouse = !empty(json_decode($record['agent_details'], true)['cargo_transfer_warehouse']) ? json_decode($record['agent_details'], true)['cargo_transfer_warehouse'] : '';
+                                            $warehouseOptions = ['freezone', 'offsite', 'transit'];
+                                            ?>
+                                            <div class="col-md-3">
+                                                <label for="cargo_transfer" class="form-label">Cargo Transfer</label>
+                                                <select id="cargo_transfer" name="cargo_transfer" class="form-select form-control-sm" required>
+                                                    <option disabled <?= in_array($warehouse, $warehouseOptions) ? '' : 'selected' ?>>Select One</option>
+                                                    <option value="freezone" <?= $warehouse === 'freezone' ? 'selected' : '' ?>>Freezone Warehouse</option>
+                                                    <option value="offsite" <?= $warehouse === 'offsite' ? 'selected' : '' ?>>Offsite Warehouse</option>
+                                                    <option value="transit" <?= $warehouse === 'transit' ? 'selected' : '' ?>>Transit Warehouse</option>
+                                                </select>
+                                            </div>
 
-                                            <div class="row mt-4">
-                                                <div class="col-md-12 text-end">
-                                                    <?php if (isset($record['agent_details']) && !empty($record['agent_details'])) {
-                                                        $ag = json_decode($record['agent_details'], true);
-                                                        if (isset($ag['transferred']) && $ag['transferred'] === true) {
-                                                    ?>
-                                                            <b><i class="fa fa-check text-success"> Transferred to Agent</i></b>
-                                                        <?php } else { ?>
-                                                            <button name="TransferToAgent" id="TransferToAgent" type="submit"
+                                        </div>
+
+                                        <div class="row mt-4">
+                                            <div class="col-md-12 text-end">
+                                                <?php if (isset($record['agent_details']) && !empty($record['agent_details'])) {
+                                                    $ag = json_decode($record['agent_details'], true);
+                                                    if (isset($ag['transferred']) && $ag['transferred'] === true) {
+                                                ?>
+                                                        <b class="text-success"><i class="fa fa-check"> </i> Transferred to Agent</b><br>
+                                                        <!-- <b>LoadingID: #<?= $record['id'] ?></b><br> -->
+                                                        <?php
+                                                        if (SuperAdmin() && isset($ag['permission_to_edit'])) {
+                                                        ?>
+                                                            <label for="change_permission" class="form-label mt-3">Permission to Edit: </label>
+                                                            <input type="hidden" name="existing_agent_data" value='<?= $record['agent_details']; ?>'>
+                                                            <input type="checkbox" name="change_permission" <?= $ag['permission_to_edit'] === 'no' ? '' : 'checked';  ?> id="change_permission">
+                                                            <button name="UpdatePermission" id="UpdatePermission" type="submit"
                                                                 class="btn btn-primary btn-sm rounded-0">
-                                                                Transfer To Agent
+                                                                Update
                                                             </button>
                                                         <?php
                                                         }
                                                     } else { ?>
-                                                        <button name="LoadingTransfer" id="GLoadingSubmit" type="submit"
+                                                        <button name="TransferToAgent" id="TransferToAgent" type="submit"
                                                             class="btn btn-primary btn-sm rounded-0">
-                                                            Save
+                                                            Transfer To Agent
                                                         </button>
-
-                                                    <?php } ?>
-                                                </div>
+                                                    <?php
+                                                    }
+                                                } else { ?>
+                                                    <button name="LoadingTransfer" id="GLoadingSubmit" type="submit"
+                                                        class="btn btn-primary btn-sm rounded-0">
+                                                        Save
+                                                    </button>
+                                                <?php } ?>
                                             </div>
                                         </div>
-                                    </form>
                                 </div>
+                                </form>
                             </div>
-                    <?php }
-            }
-                    ?>
-                    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
-                    <script>
-                        function agentDetails() {
-                            var agentAccNo = $('#ag_acc_no').val().toUpperCase();
-                            $.ajax({
-                                type: 'POST',
-                                url: 'ajax/fetchAgentDetails.php',
-                                data: 'agent_acc_no=' + agentAccNo,
-                                success: function(html) {
-                                    let data = JSON.parse(html).data;
-                                    if (data.ag_acc_no !== '') {
-                                        $('#ag_acc_no').addClass('is-valid');
-                                        $('#ag_acc_no').removeClass('is-invalid');
-                                        $('#ag_name').val(data.ag_name);
-                                        $('#ag_id').val(data.ag_id);
-                                    } else {
-                                        $('#ag_acc_no').removeClass('is-valid');
-                                        $('#ag_acc_no').addClass('is-invalid');
-                                        $('#ag_name').val('');
-                                        $('#ag_id').val('');
-                                    }
-                                },
-                                error: function(err) {
-
+                        </div>
+                <?php }
+        }
+                ?>
+                <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+                <script>
+                    function agentDetails() {
+                        var agentAccNo = $('#ag_acc_no').val().toUpperCase();
+                        $.ajax({
+                            type: 'POST',
+                            url: 'ajax/fetchAgentDetails.php',
+                            data: 'agent_acc_no=' + agentAccNo,
+                            success: function(html) {
+                                let data = JSON.parse(html).data;
+                                if (data.ag_acc_no !== '') {
+                                    $('#ag_acc_no').addClass('is-valid');
+                                    $('#ag_acc_no').removeClass('is-invalid');
+                                    $('#ag_name').val(data.ag_name);
+                                    $('#ag_id').val(data.ag_id);
+                                    $('#row_id').val(data.row_id);
+                                } else {
+                                    $('#ag_acc_no').removeClass('is-valid');
+                                    $('#ag_acc_no').addClass('is-invalid');
+                                    $('#ag_name').val('');
+                                    $('#ag_id').val('');
+                                    $('#row_id').val('');
                                 }
-                            });
-                        }
-                    </script>
+                            },
+                            error: function(err) {
+
+                            }
+                        });
+                    }
+                </script>

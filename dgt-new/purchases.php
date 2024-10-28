@@ -142,8 +142,27 @@ $mypageURL = $pageURL;
         </form>
         <div class="d-flex gap-1">
             <?php // echo searchInput('1', 'form-control form-control-sm '); 
+            // echo addNew('purchase-add', '', 'btn-sm'); 
             ?>
-            <?php echo addNew('purchase-add', '', 'btn-sm'); ?>
+            <div class="dropdown me-2">
+                <button class="btn btn-dark btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown">
+                    New
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                    <?php
+                    // Fetch the types from the database
+                    $static_types = fetch('static_types', ['type_for' => 'ps_types']);
+
+                    // Loop through each type and render it as a dropdown item with links
+                    while ($static_type = mysqli_fetch_assoc($static_types)) {
+                        // Generate a URL parameter for each link based on `type_name`
+                        echo '<li><a class="dropdown-item" href="purchase-add?type=' . urlencode($static_type['type_name']) . '">' . htmlspecialchars($static_type['details']) . '</a></li>';
+                    }
+                    ?>
+                </ul>
+            </div>
+
+
             <form action="print/<?php echo $mypageURL; ?>" target="_blank" method="get">
                 <input type="hidden" name="start" value="<?php echo $start_print; ?>">
                 <input type="hidden" name="end" value="<?php echo $end_print; ?>">
@@ -350,8 +369,8 @@ $mypageURL = $pageURL;
     $msg = 'DB Failed';
     $url_ = "purchases";
     $p_id_hidden = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
-    $done = mysqli_query($connect, "DELETE FROM `purchase_details` WHERE parent_id='$p_id_hidden'");
-    $done = mysqli_query($connect, "DELETE FROM `purchases` WHERE id='$p_id_hidden'");
+    $done = mysqli_query($connect, "DELETE FROM `transaction_items` WHERE parent_id='$p_id_hidden'");
+    $done = mysqli_query($connect, "DELETE FROM `transactions` WHERE id='$p_id_hidden'");
     if ($done) {
         $msg = " Deleted Booking Purchase #" . $p_id_hidden;
         $type = "success";
@@ -407,7 +426,7 @@ if (isset($_POST['purchaseReports'])) {
     $id = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
     $reportType = mysqli_real_escape_string($connect, $_POST['reportType']);
     $report = htmlspecialchars($_POST['reportBox']);
-    $report = str_replace(array( "\n", "\r", "\r\n"), ' ', $report);
+    $report = str_replace(array("\n", "\r", "\r\n"), ' ', $report);
     if (is_numeric($id) && recordExists('transactions', ['id' => $id])) {
         $records = fetch('transactions', ['id' => $id]);
         $record = mysqli_fetch_assoc($records);

@@ -1,6 +1,6 @@
 <?php
-$page_title = 'G.Stock Form';
-$pageURL = 'general-stock-form';
+$page_title = 'Confirm Stock';
+$pageURL = 'confirm-stock';
 include("header.php");
 
 $resetFilters = $size = $brand = $origin = $goods_name = $date_from = $date_to = $net_kgs = $qty_no = '';
@@ -8,12 +8,12 @@ $is_search = false;
 global $connect;
 
 // Pagination settings
-$rows_per_page = 20;
+$rows_per_page = 50;
 $current_page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($current_page - 1) * $rows_per_page;
 
 // Build the SQL query
-$sql = 'SELECT * FROM transaction_items WHERE parent_id IN (SELECT id FROM transactions WHERE transfer_level >= 2)';
+$sql = 'SELECT * FROM general_loading WHERE agent_details IS NOT NULL';
 $conditions = [];
 
 // Handle filters
@@ -21,19 +21,19 @@ if ($_GET) {
     $resetFilters = removeFilter($pageURL);
     if (!empty($_GET['size'])) {
         $size = mysqli_real_escape_string($connect, $_GET['size']);
-        $conditions[] = "size='$size'";
+        $conditions[] = "JSON_EXTRACT(goods_details, '$.size')='$size'";
     }
     if (!empty($_GET['brand'])) {
         $brand = mysqli_real_escape_string($connect, $_GET['brand']);
-        $conditions[] = "brand='$brand'";
+        $conditions[] = "JSON_EXTRACT(goods_details, '$.brand')='$brand'";
     }
     if (!empty($_GET['origin'])) {
         $origin = mysqli_real_escape_string($connect, $_GET['origin']);
-        $conditions[] = "origin='$origin'";
+        $conditions[] = "JSON_EXTRACT(goods_details, '$.origin')='$origin'";
     }
-    if (!empty($_GET['goods_name'])) {
-        $goods_name = mysqli_real_escape_string($connect, $_GET['goods_name']);
-        $conditions[] = "goods_id IN (SELECT id FROM goods WHERE name='$goods_name')";
+    if (!empty($_GET['goods_id'])) {
+        $goods_id = mysqli_real_escape_string($connect, $_GET['goods_id']);
+        $conditions[] = "JSON_EXTRACT(goods_details, '$.goods_id')='$goods_id'";
     }
     if (!empty($_GET['date_from'])) {
         $date_from = mysqli_real_escape_string($connect, $_GET['date_from']);
@@ -45,11 +45,11 @@ if ($_GET) {
     }
     if (!empty($_GET['net_kgs'])) {
         $net_kgs = mysqli_real_escape_string($connect, $_GET['net_kgs']);
-        $conditions[] = "net_kgs='$net_kgs'";
+        $conditions[] = "JSON_EXTRACT(goods_details, '$.net_weight')='$net_kgs'";
     }
     if (!empty($_GET['qty_no'])) {
         $qty_no = mysqli_real_escape_string($connect, $_GET['qty_no']);
-        $conditions[] = "qty_no='$qty_no'";
+        $conditions[] = "JSON_EXTRACT(goods_details, '$.quantity_no')='$qty_no'";
     }
 }
 
@@ -61,12 +61,11 @@ if (!empty($conditions)) {
 $total_rows_result = mysqli_query($connect, $sql);
 $total_rows = mysqli_num_rows($total_rows_result);
 
-$sql .= " ORDER BY parent_id, created_at LIMIT $rows_per_page OFFSET $offset";
+$sql .= " ORDER BY p_id, created_at LIMIT $rows_per_page OFFSET $offset";
 
 $entries = mysqli_query($connect, $sql);
 $total_pages = ceil($total_rows / $rows_per_page);
 ?>
-
 
 <div class="fixed-top">
     <?php require_once('nav-links.php'); ?>
@@ -77,19 +76,17 @@ $total_pages = ceil($total_rows / $rows_per_page);
         <div class="col-md-12">
             <!-- 60% Section -->
             <div class="card mb-3">
-                <div class="card-header bg-dark text-white">
-                    <h5 class="card-title"><?php echo $page_title; ?></h5>
-                </div>
                 <div class="card-body">
+                <h5 class="card-title"><?php echo $page_title; ?></h5>
                     <div class="row mb-3">
                         <div class="col-md-3">
-                            <label for="goods_name" class="form-label">Goods</label>
-                            <select id="goods_name" name="goods_name" class="form-select form-select-sm">
+                            <label for="goods_id" class="form-label">Goods</label>
+                            <select id="goods_id" name="goods_id" class="form-select form-select-sm">
                                 <option value="">ALL GOODS</option>
                                 <?php $goods = fetch('goods');
                                 while ($good = mysqli_fetch_assoc($goods)) {
-                                    $g_selected = $good['name'] == $goods_name ? 'selected' : '';
-                                    echo '<option ' . $g_selected . ' value="' . $good['name'] . '">' . $good['name'] . '</option>';
+                                    $g_selected = $good['id'] == $goods_id ? 'selected' : '';
+                                    echo '<option ' . $g_selected . ' value="' . $good['id'] . '">' . $good['name'] . '</option>';
                                 } ?>
                             </select>
                         </div>
@@ -145,33 +142,7 @@ $total_pages = ceil($total_rows / $rows_per_page);
                             <input type="date" name="date_to" id="date_to" class="form-control form-control-sm" value="<?php echo $date_to; ?>">
                         </div>
 
-                        <div class="col-md-3 mt-4 d-flex justify-content-space-between align-items-center">
-                        <div>
-                                <?php if ($total_pages > 1): ?>
-                                    <nav aria-label="Page navigation">
-                                        <ul class="pagination pagination-sm mb-0">
-                                            <?php if ($current_page > 1): ?>
-                                                <li class="page-item">
-                                                    <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $current_page - 1])); ?>">Previous</a>
-                                                </li>
-                                            <?php endif; ?>
-                                            <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-                                                <li class="page-item <?php echo $i == $current_page ? 'active' : ''; ?>">
-                                                    <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $i])); ?>"><?php echo $i; ?></a>
-                                                </li>
-                                            <?php endfor; ?>
-                                            <?php if ($current_page < $total_pages): ?>
-                                                <li class="page-item">
-                                                    <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $current_page + 1])); ?>">Next</a>
-                                                </li>
-                                            <?php endif; ?>
-                                        </ul>
-                                    </nav>
-                                <?php endif; ?>
-                                <span class="text-muted small">
-                                    Showing <?php echo min($offset + 1, $total_rows); ?> to <?php echo min($offset + $rows_per_page, $total_rows); ?> of <?php echo $total_rows; ?> entries
-                                </span>
-                            </div>
+                        <div class="col-md-3 mt-4">
                             <div class="d-flex justify-content-end gap-1">
                                 <?= $resetFilters; ?>
                                 <button type="submit" class="btn btn-success btn-sm">Search</button>
@@ -194,16 +165,19 @@ $total_pages = ceil($total_rows / $rows_per_page);
                         <thead>
                             <tr class="text-nowrap">
                                 <th>No.</th>
+                                <th>Sr#</th>
                                 <th>P# (Count)</th>
                                 <th>Date</th>
-                                <th>Goods Name</th>
-                                <th>SIZE</th>
-                                <th>BRAND</th>
+                                <th>Container No</th>
+                                <th>B/L No</th>
+                                <th>Goods Name | SIZE | BRAND</th>
                                 <th>ORIGIN</th>
-                                <th>QTY.Ne</th>
-                                <th>QTY.No</th>
+                                <th>Qty.Name</th>
+                                <th>Qty No</th>
                                 <th>G.W.KGS</th>
                                 <th>N.W.KGS</th>
+                                <th>Loading</th>
+                                <th>Receiving</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -216,8 +190,8 @@ $total_pages = ceil($total_rows / $rows_per_page);
                                 $total_gross_weight_kgs = 0;
                                 $total_net_weight_kgs = 0;
                                 while ($entry = mysqli_fetch_assoc($entries)):
-                                    if ($entry['parent_id'] !== $current_parent_id) {
-                                        $current_parent_id = $entry['parent_id'];
+                                    if ($entry['p_id'] !== $current_parent_id) {
+                                        $current_parent_id = $entry['p_id'];
                                         $entry_count = 1;
                                     } else {
                                         $entry_count++;
@@ -225,24 +199,31 @@ $total_pages = ceil($total_rows / $rows_per_page);
                             ?>
                                     <tr class="text-nowrap">
                                         <td><?= htmlspecialchars($i); ?></td>
-                                        <td class="pointer" onclick="viewPurchase(<?php echo $entry['parent_id']; ?>)"
+                                        <td><?= $entry['sr_no']; ?></td>
+                                        <td class="pointer" onclick="viewPurchase(<?php echo $entry['p_id']; ?>)"
                                             data-bs-toggle="modal" data-bs-target="#KhaataDetails">
-                                            <b>P#</b> <?= htmlspecialchars($entry['parent_id']); ?> (<?= $entry_count; ?>)
+                                            <b>P#</b> <?= htmlspecialchars($entry['p_id']); ?> (<?= $entry_count; ?>)
                                         </td>
                                         <td><?= my_date(htmlspecialchars($entry['created_at'])); ?></td>
-                                        <td><?= goodsName(htmlspecialchars($entry['goods_id'])); ?></td>
-                                        <td><?= htmlspecialchars($entry['size']); ?></td>
-                                        <td><?= htmlspecialchars($entry['brand']); ?></td>
-                                        <td><?= htmlspecialchars($entry['origin']); ?></td>
-                                        <td><?= htmlspecialchars($entry['qty_name']); ?></td>
-                                        <td><?= round(htmlspecialchars($entry['qty_no'])); ?></td>
-                                        <td><?= round(htmlspecialchars($entry['total_kgs'])); ?></td>
-                                        <td><?= round(htmlspecialchars($entry['net_kgs'])); ?></td>
+                                        <td><?= htmlspecialchars(json_decode($entry['goods_details'], true)['container_no']); ?></td>
+                                        <td><?= htmlspecialchars($entry['bl_no']); ?></td>
+                                        <td><?= goodsName(htmlspecialchars(json_decode($entry['goods_details'], true)['goods_id'])) . '|' . htmlspecialchars(json_decode($entry['goods_details'], true)['size']) . '|' . htmlspecialchars(json_decode($entry['goods_details'], true)['brand']); ?> </td>
+                                        <td><?= htmlspecialchars(json_decode($entry['goods_details'], true)['origin']); ?></td>
+                                        <td><?= htmlspecialchars(json_decode($entry['goods_details'], true)['quantity_name']); ?></td>
+                                        <td><?= htmlspecialchars(json_decode($entry['goods_details'], true)['quantity_no']); ?></td>
+                                        <td><?= htmlspecialchars(json_decode($entry['goods_details'], true)['gross_weight']); ?></td>
+                                        <td><?= htmlspecialchars(json_decode($entry['goods_details'], true)['net_weight']); ?></td>
+                                        <td>
+                                            <b><?= htmlspecialchars(json_decode($entry['shipping_details'], true)['transfer_by']) === 'sea' ? 'Port' : 'Border'; ?>: </b> <?= htmlspecialchars(json_decode($entry['loading_details'], true)['loading_port_name']); ?>
+                                        </td>
+                                        <td>
+                                            <b><?= htmlspecialchars(json_decode($entry['shipping_details'], true)['transfer_by']) === 'sea' ? 'Port' : 'Border'; ?>: </b> <?= htmlspecialchars(json_decode($entry['receiving_details'], true)['receiving_port_name']); ?>
+                                        </td>
                                     </tr>
                                 <?php $i++;
-                                    $total_qty_no += round(htmlspecialchars($entry['qty_no']));
-                                    $total_gross_weight_kgs += round(htmlspecialchars($entry['total_kgs']));
-                                    $total_net_weight_kgs += round(htmlspecialchars($entry['net_kgs']));
+                                $total_qty_no += round(htmlspecialchars(json_decode($entry['goods_details'], true)['quantity_no']));
+                                $total_gross_weight_kgs += round(htmlspecialchars(json_decode($entry['goods_details'], true)['gross_weight']));
+                                $total_net_weight_kgs += round(htmlspecialchars(json_decode($entry['goods_details'], true)['net_weight']));
                                 endwhile; ?>
                                 <input type="hidden" id="total_qty_no" value="<?= $total_qty_no; ?>">
                                 <input type="hidden" id="total_gross_weight_kgs" value="<?= $total_gross_weight_kgs; ?>">
@@ -255,6 +236,13 @@ $total_pages = ceil($total_rows / $rows_per_page);
                         </tbody>
                     </table>
                 </div>
+            </div>
+            <!-- Pagination -->
+            <div class="card-footer d-flex justify-content-between align-items-center">
+                
+                <span class="text-muted small">
+                    Showing <?php echo min($offset + 1, $total_rows); ?> to <?php echo min($offset + $rows_per_page, $total_rows); ?> of <?php echo $total_rows; ?> entries
+                </span>
             </div>
         </div>
     </div>
@@ -286,7 +274,7 @@ $total_pages = ceil($total_rows / $rows_per_page);
                 data: {
                     id: id,
                     level: 1,
-                    page: "general-stock-form"
+                    page: "confirm-stock"
                 },
                 success: function(response) {
                     $('#viewDetails').html(response);

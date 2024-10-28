@@ -261,7 +261,7 @@ unset($_SESSION['response']); ?>
                     $_SESSION['branch_id'] = $value['branch_id'];
                     $_SESSION['pass'] = $password;
                     $str = "Welcome back! you're logged in as " . strtoupper($value['role']);
-                    $url = $value['role'] == "agent" ? "agent/" : "./";
+                    $url = $value['role'] == "agent" ? "agent-form" : "./";
                     $type = "success";
                 } else {
                     $str = "Your account is blocked. Contact Admin";

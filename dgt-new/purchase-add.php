@@ -3,6 +3,9 @@ $back_page_url = 'purchases';
 $pageURL = "purchase-add";
 include("header.php");
 $id = $item_id = 0;
+if (!isset($_GET['type'])) {
+    echo "<script>window.location.href='purchases';</script>";
+}
 global $userId, $userName, $branchId;
 $_fields = [
     'sr_no' => getAutoIncrement('transactions'),
@@ -73,7 +76,25 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
         <div class="fs-5 text-uppercase"><?php echo $page_title; ?></div>
         <div class="d-flex gap-1">
             <?php echo backUrl($back_page_url);
-            echo addNew($pageURL, '', 'btn-sm'); ?>
+            // echo addNew($pageURL, '', 'btn-sm'); 
+            ?>
+            <div class="dropdown me-2">
+                <button class="btn btn-dark btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown">
+                    New
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                    <?php
+                    // Fetch the types from the database
+                    $static_types = fetch('static_types', ['type_for' => 'ps_types']);
+
+                    // Loop through each type and render it as a dropdown item with links
+                    while ($static_type = mysqli_fetch_assoc($static_types)) {
+                        // Generate a URL parameter for each link based on `type_name`
+                        echo '<li><a class="dropdown-item" href="purchase-add?type=' . urlencode($static_type['type_name']) . '">' . htmlspecialchars($static_type['details']) . '</a></li>';
+                    }
+                    ?>
+                </ul>
+            </div>
         </div>
     </div>
 </div>
@@ -81,190 +102,135 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
 <div class="row">
     <div class="col-md-12">
         <div class="card mb-2">
-            <div class="position-absolute end-0 top-0">
-                <a class="btn btn-link text-dark" data-bs-toggle="collapse" href="#collapseFirst" role="button"
-                    aria-expanded="false" aria-controls="collapseFirst">
+            <div class="position-absolute end-0 top-0 m-2">
+                <a class="btn btn-link text-dark" data-bs-toggle="collapse" href="#collapseFirst" role="button" aria-expanded="false" aria-controls="collapseFirst">
                     <i class="fa fa-angle-down"></i>
                 </a>
             </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-8">
-                        <form method="post" class="table-form collapse show" id="collapseFirst">
-                            <div class="row">
-                                <div class="col-md-12 mb-2">
-                                    <div class="d-flex align-items-center justify-content-between flex-wrap">
-                                        <!-- Sr# -->
-                                        <div class="me-2"><b>Sr# </b> <?php echo $_fields['sr_no']; ?><br>
-                                            <b>User </b> <?php echo strtoupper($_fields['username']); ?>
-                                        </div>
-
-                                        <!-- User -->
-                                        <div class="me-2"></div>
-
-                                        <!-- Date -->
-                                        <div class="me-2">
-                                            <label for="_date"><b>Date</b></label>
-                                            <input type="date" value="<?php echo $_fields['_date']; ?>" id="_date" name="_date" class="form-control" required>
-                                        </div>
-
-                                        <!-- Type -->
-                                        <div class="me-2">
-                                            <label for="type"><b>Type</b></label>
-                                            <select id="type" name="type" class="form-select" style="width:100px;">
-                                                <?php $static_types = fetch('static_types', ['type_for' => 'ps_types']);
-                                                while ($static_type = mysqli_fetch_assoc($static_types)) {
-                                                    $sel_type = $static_type['type_name'] == $_fields['type'] ? 'selected' : '';
-                                                    echo '<option ' . $sel_type . ' value="' . $static_type['type_name'] . '">' . $static_type['details'] . '</option>';
-                                                } ?>
-                                            </select>
-                                        </div>
-
-                                        <!-- Country -->
-                                        <div class="me-2">
-                                            <label for="country"><b>Country</b></label>
-                                            <input value="<?php echo $_fields['country']; ?>" id="country" name="country" class="form-control" style="width:100px;" required>
-                                        </div>
-
-                                        <!-- Branch -->
-                                        <div class="me-2">
-                                            <label for="branch_id"><b>Branch</b></label>
-                                            <select id="branch_id" name="branch_id" class="form-select" style="width:100px;">
-                                                <?php
-                                                $branches = SuperAdmin() ? fetch('branches') : fetch('branches', ['id' => $_fields['branch_id']]);
-                                                while ($b = mysqli_fetch_assoc($branches)) {
-                                                    $b_select = $b['id'] == $_fields['branch_id'] ? 'selected' : '';
-                                                    echo '<option ' . $b_select . ' value="' . $b['id'] . '">' . $b['b_code'] . '</option>';
-                                                } ?>
-                                            </select>
-                                        </div>
-
-                                        <!-- Action Select -->
-                                        <div class="me-2">
-                                            <label for="actionSelect"><b>Action</b></label>
-                                            <select id="actionSelect" class="form-select">
-                                                <option value="" selected disabled>Select Action</option>
-                                                <option value="seaRoadBtn">Sea / Road (Open Popup)</option>
-                                                <option value="paymentsBtn">Payments (Open Popup)</option>
-                                                <option value="thirdPartyBankBtn">Third Party Bank (Open Popup)</option>
-                                            </select>
-                                        </div>
-
-                                        <!-- Submit Button -->
-                                        <button name="purchaseSubmit" id="submitBtn" type="submit" class="btn btn-dark btn-sm mt-3 me-2">Submit</button>
-
-                                        <!-- Notify Party Button -->
-                                        <!-- <a id="notifyPartyBtn" class="btn btn-outline-dark btn-sm" data-bs-toggle="modal" data-bs-target="#notifyPartyDetails">+ Notify Party</a> -->
-                                    </div>
-
-                                    <!-- Hidden Inputs -->
-                                    <input type="hidden" value="<?php echo $id; ?>" name="hidden_id">
-                                    <input type="hidden" value="<?php echo $_fields['transaction_accounts_dr_id']; ?>" name="transaction_accounts_dr_id">
-                                    <input type="hidden" value="<?php echo $_fields['transaction_accounts_cr_id']; ?>" name="transaction_accounts_cr_id">
-                                </div>
-
-                                <!-- <div class="col-md-8 border-end">
-                            <div class="row gx-3 gy-4"> -->
-                                <div class="col-md-6">
-                                    <!-- Because Client said that Dr. Account should be Cr. and Cr. should be Dr.
-                                    So it is much difficult to edit it from backend so what i'm doing i'm just labelling Dr. Acc from frontend as Cr. Acc. -->
-                                    <div class="input-group mb-2">
-                                        <label for="dr_acc" class="text-danger fw-bold">Cr. A/C.(PURCHASE)</label>
-                                        <input type="text" id="dr_acc" name="dr_acc" class="form-control" required
-                                            value="<?php echo $_fields['dr_acc']; ?>">
-                                        <input value="<?php echo $_fields['dr_acc_name']; ?>" id="dr_acc_name"
-                                            name="dr_acc_name" class="form-control w-50" readonly tabindex="-1">
-                                    </div>
-                                    <input value="<?php echo $_fields['dr_acc_id']; ?>" type="hidden"
-                                        name="dr_acc_id" id="dr_acc_id">
-                                    <div class="input-group mb-0">
-                                        <label for="dr_acc_kd_id">COMPANY</label>
-                                        <select class="form-select" name="dr_acc_kd_id" id="dr_acc_kd_id">
-                                            <option hidden value="">Company</option>
-                                            <?php $run_query = fetch('khaata_details', array('khaata_id' => $_fields['dr_acc_id'], 'type' => 'company'));
-                                            while ($row = mysqli_fetch_array($run_query)) {
-                                                $row_data = json_decode($row['json_data']);
-                                                $sel_kd1 = $row['id'] == $_fields['dr_acc_kd_id'] ? 'selected' : '';
-                                                echo '<option ' . $sel_kd1 . ' value=' . $row['id'] . '>' . $row_data->company_name . '</option>';
-                                            } ?>
-                                        </select>
-                                    </div>
-                                    <div class="mb-2">
-                                        <textarea class="form-control form-control-sm" name="dr_acc_details"
-                                            id="dr_acc_details" rows="7"
-                                            placeholder="Company Details"><?php echo $_fields['dr_acc_details']; ?></textarea>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="input-group mb-2">
-                                        <label for="cr_acc" class="text-success fw-bold">Dr. A/C.(SALE)</label>
-                                        <input type="text" id="cr_acc" name="cr_acc" class="form-control"
-                                            required value="<?php echo $_fields['cr_acc']; ?>">
-                                        <input value="<?php echo $_fields['cr_acc_name']; ?>" id="cr_acc_name"
-                                            name="cr_acc_name" class="form-control w-50" readonly
-                                            tabindex="-1">
-                                    </div>
-                                    <input value="<?php echo $_fields['cr_acc_id']; ?>" type="hidden"
-                                        name="cr_acc_id" id="cr_acc_id">
-                                    <div class="input-group mb-0">
-                                        <select class="form-select" name="cr_acc_kd_id" id="cr_acc_kd_id">
-                                            <option hidden value="">Company</option>
-                                            <?php $run_query = fetch('khaata_details', array('khaata_id' => $_fields['cr_acc_id'], 'type' => 'company'));
-                                            while ($row = mysqli_fetch_array($run_query)) {
-                                                $row_data = json_decode($row['json_data']);
-                                                $sel_kd2 = $row['id'] == $_fields['cr_acc_kd_id'] ? 'selected' : '';
-                                                echo '<option ' . $sel_kd2 . ' value=' . $row['id'] . '>' . $row_data->company_name . '</option>';
-                                            } ?>
-                                        </select>
-                                    </div>
-                                    <div class="mb-2">
-                                        <textarea class="form-control form-control-sm" name="cr_acc_details"
-                                            id="cr_acc_details" rows="7"
-                                            placeholder="Company Details"><?php echo $_fields['cr_acc_details']; ?></textarea>
-                                    </div>
-                                </div>
+                <form method="post" class="collapse show" id="collapseFirst">
+                    <div class="row g-3">
+                        <!-- Purchase Section -->
+                        <div class="col-lg-3 col-md-6">
+                            <!-- <h6 class="fw-bold text-danger"></h6> -->
+                            <div class="mb-2">
+                                <label for="dr_acc" class="form-label text-danger fw-semibold">Cr.A/C (PURCHASE)</label>
+                                <input type="text" id="dr_acc" name="dr_acc" class="form-control" required value="<?php echo $_fields['dr_acc']; ?>">
+                                <input type="text" id="dr_acc_name" name="dr_acc_name" class="form-control mt-1" value="<?php echo $_fields['dr_acc_name']; ?>" readonly tabindex="-1">
                             </div>
-                        </form>
-                    </div>
+                            <input type="hidden" name="dr_acc_id" id="dr_acc_id" value="<?php echo $_fields['dr_acc_id']; ?>">
+                            <div class="mb-2">
+                                <!-- <label for="dr_acc_kd_id" class="form-label">COMPANY</label> -->
+                                <select class="form-select" name="dr_acc_kd_id" id="dr_acc_kd_id">
+                                    <option hidden value="">Select Company</option>
+                                    <?php
+                                    $run_query = fetch('khaata_details', array('khaata_id' => $_fields['dr_acc_id'], 'type' => 'company'));
+                                    while ($row = mysqli_fetch_array($run_query)) {
+                                        $row_data = json_decode($row['json_data']);
+                                        $sel_kd1 = $row['id'] == $_fields['dr_acc_kd_id'] ? 'selected' : '';
+                                        echo '<option ' . $sel_kd1 . ' value=' . $row['id'] . '>' . $row_data->company_name . '</option>';
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+                            <div class="mb-2">
+                                <textarea class="form-control form-control-sm" name="dr_acc_details" id="dr_acc_details" rows="6" placeholder="Company Details"><?php echo $_fields['dr_acc_details']; ?></textarea>
+                            </div>
+                        </div>
 
-                    <div class="col-md-4 border-start">
-                        <form method="post">
-                            <div class="modal-footer">
-                                <button type="submit" name="notifyPartyDetailsSubmit" id="notifyPartyDetailsSubmit" class="btn btn-sm m-2 btn-dark">Submit</button>
+                        <!-- Sale Section -->
+                        <div class="col-lg-3 col-md-6">
+                            <!-- <h6 class="fw-bold text-success"></h6> -->
+                            <div class="mb-2">
+                                <label for="cr_acc" class="form-label text-success fw-bold">Dr.A/C (SALE)</label>
+                                <input type="text" id="cr_acc" name="cr_acc" class="form-control" required value="<?php echo $_fields['cr_acc']; ?>">
+                                <input type="text" id="cr_acc_name" name="cr_acc_name" class="form-control mt-1" value="<?php echo $_fields['cr_acc_name']; ?>" readonly tabindex="-1">
                             </div>
-                            <div class="input-group my-2 py-1">
-                                <label for="np_acc" class="text-danger fw-bold">ACC No.</label>
-                                <input type="text" id="np_acc" name="np_acc" class="form-control"
-                                    required value="<?= isset($NP_details['np_acc']) ? $NP_details['np_acc'] : ''; ?>">
-                                <input value="<?= isset($NP_details['np_acc_name']) ? $NP_details['np_acc_name'] : ''; ?>" id="np_acc_name"
-                                    name="np_acc_name" class="form-control w-50" readonly
-                                    tabindex="-1">
+                            <input type="hidden" name="cr_acc_id" id="cr_acc_id" value="<?php echo $_fields['cr_acc_id']; ?>">
+                            <div class="mb-2">
+                                <select class="form-select" name="cr_acc_kd_id" id="cr_acc_kd_id">
+                                    <option hidden value="">Select Company</option>
+                                    <?php
+                                    $run_query = fetch('khaata_details', array('khaata_id' => $_fields['cr_acc_id'], 'type' => 'company'));
+                                    while ($row = mysqli_fetch_array($run_query)) {
+                                        $row_data = json_decode($row['json_data']);
+                                        $sel_kd2 = $row['id'] == $_fields['cr_acc_kd_id'] ? 'selected' : '';
+                                        echo '<option ' . $sel_kd2 . ' value=' . $row['id'] . '>' . $row_data->company_name . '</option>';
+                                    }
+                                    ?>
+                                </select>
                             </div>
-                            <input value="<?= isset($NP_details['np_acc_id']) ? $NP_details['np_acc_id'] : ''; ?>" type="hidden"
-                                name="np_acc_id" id="np_acc_id">
-                            <div class="input-group mb-0">
+                            <div class="mb-2">
+                                <textarea class="form-control form-control-sm" name="cr_acc_details" id="cr_acc_details" rows="6" placeholder="Company Details"><?php echo $_fields['cr_acc_details']; ?></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Notify Party Section -->
+                        <div class="col-lg-3 col-md-6">
+                            <!-- <h6 class="fw-bold text-primary"></h6> -->
+                            <div class="mb-2">
+                                <label for="np_acc" class="form-label text-primary fw-bold">ACC No. (NOTIFY PARTY)</label>
+                                <input type="text" id="np_acc" name="np_acc" class="form-control" required value="<?= isset($NP_details['np_acc']) ? $NP_details['np_acc'] : ''; ?>">
+                                <input type="text" id="np_acc_name" name="np_acc_name" class="form-control mt-1" value="<?= isset($NP_details['np_acc_name']) ? $NP_details['np_acc_name'] : ''; ?>" readonly tabindex="-1">
+                            </div>
+                            <input type="hidden" name="np_acc_id" id="np_acc_id" value="<?= isset($NP_details['np_acc_id']) ? $NP_details['np_acc_id'] : ''; ?>">
+                            <div class="mb-2">
                                 <select class="form-select" name="np_acc_kd_id" id="np_acc_kd_id">
-                                    <option hidden value="">Company</option>
-                                    <?php $run_query = fetch('khaata_details', array('khaata_id' => isset($NP_details['np_acc_id']) ? $NP_details['np_acc_id'] : '', 'type' => 'company'));
+                                    <option hidden value="">Select Company</option>
+                                    <?php
+                                    $run_query = fetch('khaata_details', array('khaata_id' => isset($NP_details['np_acc_id']) ? $NP_details['np_acc_id'] : '', 'type' => 'company'));
                                     while ($row = mysqli_fetch_array($run_query)) {
                                         $row_data = json_decode($row['json_data']);
                                         $sel_kd2 = $row['id'] == $NP_details['np_acc_kd_id'] ? 'selected' : '';
                                         echo '<option ' . $sel_kd2 . ' value=' . $row['id'] . '>' . $row_data->company_name . '</option>';
-                                    } ?>
+                                    }
+                                    ?>
                                 </select>
                             </div>
                             <div class="mb-2">
-                                <textarea class="form-control form-control-sm" name="np_acc_details"
-                                    id="np_acc_details" rows="7"
-                                    placeholder="Company Details"><?= isset($NP_details['np_acc_details']) ? $NP_details['np_acc_details'] : ''; ?></textarea>
+                                <textarea class="form-control form-control-sm" name="np_acc_details" id="np_acc_details" rows="6" placeholder="Company Details"><?= isset($NP_details['np_acc_details']) ? $NP_details['np_acc_details'] : ''; ?></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Additional Details Section -->
+                        <div class="col-lg-3 col-md-6">
+                            <div class="d-flex justify-content-between mb-2">
+                                <div>
+                                    <p><b>Sr#</b> <?php echo $_fields['sr_no']; ?></p>
+                                    <p><b>User</b> <?php echo strtoupper($_fields['username']); ?></p>
+                                    <p><b>Type:</b> <?php echo strtoupper($_GET['type']); ?></p>
+                                </div>
+                                <div>
+                                    <label for="_date" class="form-label"><b>Date</b></label>
+                                    <input type="date" value="<?php echo $_fields['_date']; ?>" id="_date" name="_date" class="form-control">
+                                </div>
                             </div>
 
-                            <input type="hidden" name="hidden_id" value="<?= isset($id) ? $id : ''; ?>">
-                        </form>
+                            <div class="mb-2">
+                                <label for="branch_id" class="form-label"><b>Branch</b></label>
+                                <select id="branch_id" name="branch_id" class="form-select">
+                                    <?php
+                                    $branches = SuperAdmin() ? fetch('branches') : fetch('branches', ['id' => $_fields['branch_id']]);
+                                    while ($b = mysqli_fetch_assoc($branches)) {
+                                        $b_select = $b['id'] == $_fields['branch_id'] ? 'selected' : '';
+                                        echo '<option ' . $b_select . ' value="' . $b['id'] . '">' . $b['b_code'] . '</option>';
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+
+                            <div class="mb-2">
+                                <label for="country" class="form-label"><b>Delivery Terms</b></label>
+                                <input type="text" value="<?php echo $_fields['country']; ?>" id="country" name="country" class="form-control">
+                            </div>
+
+                            <button type="submit" class="btn btn-dark btn-sm w-100">Submit</button>
+                        </div>
                     </div>
-                </div>
+                </form>
             </div>
         </div>
+
         <?php if ($id > 0) { ?>
             <div class="card mb-2">
                 <div class="card-body">
@@ -1070,6 +1036,10 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
             var goods_id = $(this).val();
             goodDetails(goods_id);
         });
+        $("#type").change(function() {
+            $('#bookingForm').toggleClass('d-none row');
+            $('#localForm').toggleClass('d-none row');
+        });
     });
 
     function goodDetails(goods_id) {
@@ -1183,6 +1153,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
 if (isset($_POST['purchaseSubmit'])) {
     $type = mysqli_real_escape_string($connect, $_POST['type']);
     $hidden_id = mysqli_real_escape_string($connect, $_POST['hidden_id']);
+    $_POST['np_acc_details'] = str_replace(array("\r\n", "\r", "\n"), ' ', $_POST['np_acc_details']);
     $data = [
         'p_s' => 'p',
         'type' => $type,
@@ -1190,7 +1161,14 @@ if (isset($_POST['purchaseSubmit'])) {
         '_date' => $_POST['_date'],
         'country' => mysqli_real_escape_string($connect, $_POST['country']),
         'branch_id' => mysqli_real_escape_string($connect, $_POST['branch_id']),
-        'from' => "purchase-add"
+        'notify_party_details' => json_encode([
+            "np_acc" => $_POST['np_acc'],
+            "np_acc_name" => $_POST['np_acc_name'],
+            "np_acc_id" => $_POST['np_acc_id'],
+            "np_acc_kd_id" => $_POST['np_acc_kd_id'],
+            "np_acc_details" => $_POST['np_acc_details'],
+            "hidden_id" => $_POST['hidden_id']
+        ])
     ];
 
     $dr_acc = mysqli_real_escape_string($connect, $_POST['dr_acc']);
@@ -1209,6 +1187,7 @@ if (isset($_POST['purchaseSubmit'])) {
         $pageURL .= "?id=" . $hidden_id;
         $data['updated_at'] = date('Y-m-d H:i:s');
         $data['updated_by'] = $userId;
+        $data['`from`'] = 'purchase-add';
         $done = update('transactions', $data, array('id' => $hidden_id));
         $transaction_accounts_dr_id = mysqli_real_escape_string($connect, $_POST['transaction_accounts_dr_id']);
         $transaction_accounts_cr_id = mysqli_real_escape_string($connect, $_POST['transaction_accounts_cr_id']);
@@ -1242,6 +1221,7 @@ if (isset($_POST['purchaseSubmit'])) {
     } else {
         $data['created_at'] = date('Y-m-d H:i:s');
         $data['created_by'] = $userId;
+        $data['from'] = 'purchase-add';
         $done = insert('transactions', $data);
         if ($done) {
             $tr_id = $connect->insert_id;
@@ -1320,6 +1300,35 @@ if (isset($_POST['deletePDSubmit'])) {
         $info['type'] = 'success';
     }
     messageNew($info['type'], $pageURL, $info['msg']);
+}
+
+if (isset($_POST['purchaseReports'])) {
+    $type = 'danger';
+    $msg = 'DB Failed';
+    $id = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
+    $reportType = mysqli_real_escape_string($connect, $_POST['reportType']);
+    $report = htmlspecialchars($_POST['reportBox']);
+    $report = str_replace(array("\n", "\r", "\r\n"), ' ', $report);
+    if (is_numeric($id) && recordExists('transactions', ['id' => $id])) {
+        $records = fetch('transactions', ['id' => $id]);
+        $record = mysqli_fetch_assoc($records);
+        $reports = isset($record['reports']) && !empty($record['reports']) ? json_decode($record['reports'], true) : [];
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $msg = 'JSON Decode Error: ' . json_last_error_msg();
+            messageNew('danger', $pageURL, $msg);
+            return;
+        }
+        $reports[$reportType] = $report;
+        $data = ['reports' => json_encode($reports)];
+        error_log("Updating Reports Data: " . print_r($data, true));
+        if (update('transactions', $data, ['id' => $id])) {
+            $type = 'success';
+            $msg = 'Report Successfully Updated.';
+        } else {
+            $msg = 'DB Update Failed';
+        }
+    }
+    messageNew($type, $pageURL, $msg);
 }
 
 ?>
@@ -1829,24 +1838,24 @@ if (isset($_POST['thirdPartyBankSubmit'])) {
 
     // Show a message and redirect if update was successful
     if ($done) {
-        messageNew($msg_array['type'], $pageURL . '?id=' . $transaction_hidden_id, $msg_array['msg']);
+        messageNew($msg_array['type'], $pageURL . '?id=' . $transaction_hidden_id . "&type=" . $type, $msg_array['msg']);
     }
 }
 
 
 
-if (isset($_POST['notifyPartyDetailsSubmit'])) {
-    $_POST['np_acc_details'] = str_replace(array("\r\n", "\r", "\n"), ' ', $_POST['np_acc_details']);
-    $post = json_encode($_POST);
-    $data = array('notify_party_details' => $post);
-    $hidden_id = mysqli_real_escape_string($connect, $_POST['hidden_id']);
-    $done = update('transactions', $data, array('id' => $hidden_id));
-    if ($done) {
-        $msg_array['msg'] = 'Notify Party details Successfully Updated.';
-        $msg_array['type'] = 'success';
-    }
-    messageNew($msg_array['type'], $pageURL . '?id=' . $hidden_id, $msg_array['msg']);
-}
+// if (isset($_POST['purchaseSubmit'])) {
+
+//     $data = array('notify_party_details' => $post);
+//     $hidden_id = mysqli_real_escape_string($connect, $_POST['hidden_id']);
+//     $done = update('transactions', $data, array('id' => $hidden_id));
+//     if ($done) {
+//         $msg_array['msg'] = 'Notify Party details Successfully Updated.';
+//         $msg_array['type'] = 'success';
+//     }
+//     messageNew($msg_array['type'], $pageURL . '?id=' . $hidden_id, $msg_array['msg']);
+// }
+// 
 ?>
 <script>
     var staticOptionsCache = {};
@@ -1927,6 +1936,8 @@ if (isset($_POST['notifyPartyDetailsSubmit'])) {
             } else if (selectedAction === 'thirdPartyBankBtn') {
                 var thirdPartyModal = new bootstrap.Modal(document.getElementById('thirdPartyBank'));
                 thirdPartyModal.show();
+            } else if (selectedAction === 'addReportsBtn') {
+                openModal('', '');
             }
         });
 
@@ -2068,4 +2079,75 @@ if (isset($_POST['notifyPartyDetailsSubmit'])) {
             toggleInputs();
         });
     });
+</script>
+<script>
+    function presetValue(SelectValue = '') {
+        let reportType = SelectValue !== '' ? SelectValue : document.getElementById('reportType').value;
+        let reportTextArea = document.getElementById('reportBox');
+
+        let content = {};
+        if (reportType === 'goods_details') {
+            content = JSON.parse(document.getElementById('goodsTotalsJSON').value);
+        } else if (reportType === 'loading_details') {
+            content = JSON.parse(document.getElementById('loadingDetailsJSON').value);
+        } else if (reportType === 'payment_details') {
+            content = JSON.parse(document.getElementById('paymentDetailsJSON').value);
+        }
+
+        if (Object.keys(content).length > 0) {
+            let contentString = '';
+            for (const [key, value] of Object.entries(content)) {
+                contentString += `${key}: ${value} `;
+            }
+            contentString = contentString.trim();
+
+            let currentText = reportTextArea.value.trim();
+            // Check for duplication before prepending
+            if (!currentText.startsWith(contentString)) {
+                reportTextArea.value = contentString + ' ' + currentText;
+            }
+        } else {
+            reportTextArea.value = ''; // Clear the textarea if no content is found
+        }
+    }
+
+
+    // This listener will clear the textarea when the report type changes
+    document.getElementById('reportType').addEventListener('change', function() {
+        document.getElementById('reportBox').value = ''; // Clear the textarea
+        presetValue(this.value); // Set the preset value based on the new selection
+    });
+
+    function openModal(reportType = '', reportText = '') {
+        document.getElementById('customModal').style.display = 'block';
+        document.getElementById('reportType').value = reportType !== '' ? reportType : '';
+
+        // Set the textarea with the preset value
+        presetValue(reportType);
+
+        // Additional handling to get report details for editing
+        if (reportText !== '') {
+            let reportForEdit = document.getElementById(reportText).textContent.trim();
+            document.getElementById('reportBox').value = reportForEdit; // Set the textarea for editing
+        }
+
+        if (reportType === '' && reportText === '') {
+            document.getElementById('modalHeading').innerText = 'Add Report';
+            document.getElementById('modalButton').innerText = 'Add Report';
+            document.getElementById('reportBox').value = ''; // Clear the textarea for new report
+        } else {
+            document.getElementById('modalHeading').innerText = 'Update Report';
+            document.getElementById('modalButton').innerText = 'Update Report';
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('customModal').style.display = 'none';
+    }
+
+    window.onclick = event => {
+        if (event.target === document.getElementById('customModal')) closeModal();
+    };
+
+    // let reportsData;
 </script>

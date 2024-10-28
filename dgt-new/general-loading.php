@@ -376,6 +376,7 @@ $mypageURL = $pageURL;
             var pp_id = purchase_pays_id || 0; // Default to 0 if purchase_pays_id is null
             let action = '<?= isset($_GET['action']) ? $_GET['action'] : '' ?>'; // Check if action exists
             let lp_id = '<?= isset($_GET['lp_id']) ? $_GET['lp_id'] : '' ?>'; // Check if lp_id exists
+            let sr_no = '<?= isset($_GET['sr_no']) ? $_GET['sr_no'] : '' ?>'; // Check if lp_id exists
 
             $.ajax({
                 url: 'ajax/viewGeneralLoading.php',
@@ -386,7 +387,8 @@ $mypageURL = $pageURL;
                     page: "purchase-general-loading",
                     purchase_pays_id: pp_id,
                     lp_id: lp_id,
-                    action: action
+                    action: action,
+                    sr_no: sr_no
                 },
                 success: function(response) {
                     $('#viewDetails').html(response);
@@ -432,7 +434,7 @@ if (isset($_POST['GLoadingSubmit'])) {
                 $uploadedFiles[] = [$key, $newFilename];
             }
         }
-    }else{
+    } else {
         $uploadedFiles = [];
     }
 
@@ -487,7 +489,8 @@ if (isset($_POST['GLoadingSubmit'])) {
         'origin' => mysqli_real_escape_string($connect, $_POST['origin']),
         'net_weight' => mysqli_real_escape_string($connect, $_POST['net_weight']),
         'gross_weight' => mysqli_real_escape_string($connect, $_POST['gross_weight']),
-        'container_no' => mysqli_real_escape_string($connect, $_POST['container_no'])
+        'container_no' => mysqli_real_escape_string($connect, $_POST['container_no']),
+        'container_name' => mysqli_real_escape_string($connect, $_POST['container_name'])
     ];
 
     // Shipping Details
@@ -519,21 +522,21 @@ if (isset($_POST['GLoadingSubmit'])) {
         'shipping_details' => json_encode($shipping_details),
         'attachments' => json_encode($uploadedFiles)
     ];
-    if(isset($_POST['action']) && isset($_POST['id'])){
-    $url_ = $pageURL . "?p_id=" . $p_id."&view=1";
-    $done = update('general_loading', $data, array('id' => $_POST['id']));
-    if ($done) {
-        $type = 'success';
-        $msg = 'Entry Updated!';
+    if (isset($_POST['action']) && isset($_POST['id'])) {
+        $url_ = "general-loading?p_id=" . $p_id . "&view=1";
+        $done = update('general_loading', $data, array('id' => $_POST['id']));
+        if ($done) {
+            $type = 'success';
+            $msg = 'Entry Updated!';
+        }
+    } else {
+        $url_ = "general-loading?p_id=" . $p_id . "&view=1";
+        $done = insert('general_loading', $data);
+        if ($done) {
+            $type = 'success';
+            $msg = 'New Goods Loading Added!';
+        }
     }
-    }else{
-    $url_ = $pageURL . "?p_id=" . $p_id."&view=1";
-    $done = insert('general_loading', $data);
-    if ($done) {
-        $type = 'success';
-        $msg = 'New Goods Loading Added!';
-    }
-}
     messageNew($type, $url_, $msg);
     // Debugging (optional)
 ?><script>
@@ -607,22 +610,18 @@ if (isset($_POST['GLoadingSubmit'])) {
 <script>
     $(document).ready(function() {
         // Function to get the query parameter value
-        function getQueryParameter(name) {
-            const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get(name);
-        }
-
-        // Get the value of 's_khaata_id' parameter from the URL
-        var s_khaata_id = getQueryParameter('s_khaata_id').toUpperCase();
-
-        // Iterate over all the <td> elements with class 's_khaata_id_row'
-        $('td.s_khaata_id_row').each(function() {
-            // Get the text content of the current <td>
-            var cellText = $(this).text().trim();
-            // If the text doesn't match the 's_khaata_id' parameter, hide the parent <tr>
-            if (cellText !== s_khaata_id && s_khaata_id !== '') {
-                $(this).closest('tr').hide();
-            }
-        });
     });
+    // function getQueryParameter(name) {
+    //         const urlParams = new URLSearchParams(window.location.search);
+    //         return urlParams.get(name);
+    //     }
+
+    //     var s_khaata_id = getQueryParameter('s_khaata_id').toUpperCase();
+
+    //     $('td.s_khaata_id_row').each(function() {
+    //         var cellText = $(this).text().trim();
+    //         if (cellText !== s_khaata_id && s_khaata_id !== '') {
+    //             $(this).closest('tr').hide();
+    //         }
+    //     });
 </script>
