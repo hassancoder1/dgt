@@ -21,6 +21,7 @@ if ($loading_id > 0 && !empty($bill_of_entry_no)) {
     $sql .= " AND JSON_EXTRACT(agent_details, '$.ag_billNumber') = '$billNumber' ORDER BY created_at DESC LIMIT 1";
     // Execute the query
     $Loadings = mysqli_query($connect, $sql);
+    echo $sql;
     // Fetch and process the result
     while ($SingleLoading = mysqli_fetch_assoc($Loadings)) {
         $id = $SingleLoading['id'];

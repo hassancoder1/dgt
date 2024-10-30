@@ -6,8 +6,6 @@ $remove = $size = $brand = $goods_name = $start_print = $end_print = $is_transfe
 $is_search = false;
 global $connect;
 $user = $_SESSION['username'];
-
-// Base SQL query to fetch the latest record for each bill_of_entry_no
 $sql = "
     SELECT * 
     FROM (
@@ -17,258 +15,138 @@ $sql = "
         GROUP BY JSON_EXTRACT(agent_details, '$.bill_of_entry_no')
     ) AS latest_loadings
 ";
-
 $mypageURL = $pageURL;
 ?>
-
-
-
 <div class="fixed-top">
     <?php require_once('nav-links.php'); ?>
-    <div class="bg-light shadow p-2 border-bottom border-warning d-flex gap-0 align-items-center justify-content-between mb-md-2">
-        <div class="fs-5 text-uppercase"><?php echo $page_title; ?></div>
-        <div class="text-nowrap">
-            <div class="lh-1">
-                <b>Rows</b><span id="rows_count_span"></span>
-                <b>Qty </b><span id="p_qty_total_span"></span>
-                <br>
-                <b>KGs</b><span id="p_kgs_total_span"></span>
-            </div>
-        </div>
-        <form name="datesSubmit" method="get">
-            <div class="input-group input-group-sm">
-                <!-- <input type="date" name="start" value="<?php echo $start_print; ?>" class="form-control">
-                <input type="date" name="end" value="<?php echo $end_print; ?>" class="form-control">
-                <select id="goods_name" name="goods_name" class="form-select">
-                    <option value="">ALL GOODS</option>
-                    <?php
-                    // $goods = fetch('goods');
-                    // while ($good = mysqli_fetch_assoc($goods)) {
-                    //     $g_selected = $good['name'] == $goods_name ? 'selected' : '';
-                    //     echo '<option ' . $g_selected . ' value="' . $good['name'] . '">' . $good['name'] . '</option>';
-                    // } 
-                    ?>
-                </select> -->
-                <!--<select class="form-select" name="size" id="size">
-                            <option value="">ALL SIZE</option>
-                            <?php /*$goods_sizes = mysqli_query($connect, "SELECT DISTINCT size, goods_id FROM `good_details` ");
-                            while ($size_s = mysqli_fetch_assoc($goods_sizes)) {
-                                $G_NAME = goodsName($size_s['goods_id']);
-                                if ($goods_name != '') {
-                                    if ($G_NAME != $goods_name) continue;
-                                }
-                                $size_selected = $size_s['size'] == $size ? 'selected' : '';
-                                echo '<option ' . $size_selected . ' value="' . $size_s['size'] . '">' . $size_s['size'] . '</option>';
-                            } */ ?>
-                        </select>
-                        <select class="form-select" name="brand" id="brand">
-                            <option value="">ALL BRAND</option>
-                            <?php /*$goods_brands = mysqli_query($connect, "SELECT DISTINCT brand, goods_id FROM `good_details` ");
-                            while ($g_brand = mysqli_fetch_assoc($goods_brands)) {
-                                $G_NAME2 = goodsName($g_brand['goods_id']);
-                                if ($goods_name != '') {
-                                    if ($G_NAME2 != $goods_name) continue;
-                                }
-                                $brand_selected = $g_brand['brand'] == $brand ? 'selected' : '';
-                                echo '<option ' . $brand_selected . ' value="' . $g_brand['brand'] . '">' . $g_brand['brand'] . '</option>';
-                            } */ ?>
-                        </select>-->
-                <!-- <select class="form-select" name="is_transferred">
-                    <option <?= isset($is_transferred) && $is_transferred == 1 ? 'selected' : 'selected'; ?> value="1">Transferred</option>
-                    <option <?= isset($is_transferred) && $is_transferred == 0 ? 'selected' : ''; ?> value="0">Not Transferred</option>
-                </select> -->
-
-
-
-
-                <!-- <select class="form-select" name="is_transferred">
-                    <option value="">All</option>
-                    <?php
-                    //  $imp_exp_array = array(1 => 'transferred', 0 => 'not transferred');
-                    // foreach ($imp_exp_array as $item => $value) {
-                    //     $sel_tran = $is_transferred == $item ? 'selected' : '';
-                    //     echo '<option ' . $sel_tran . '  value="' . $item . '">' . strtoupper($value) . '</option>';
-                    // } 
-                    ?>
-                </select> -->
-                <!-- <select name="s_khaata_id" class="form-select">
-                    <option value="">Seller A/c</option>
-                    <?php /* $accounts_query = fetch('khaata');
-                    while ($aa = mysqli_fetch_assoc($accounts_query)) {
-                        $sel = $s_khaata_id == $aa['id'] ? 'selected' : '';
-                        echo '<option ' . $sel . ' value="' . $aa['id'] . '">' . $aa['khaata_no'] . '</option>';
-                    } */ ?>
-                </select> -->
-
-                <!-- <input type="text" class="form-control" name="s_khaata_id" placeholder="Account No." value="<?= $s_khaata_id ?>">
-                <?php echo $remove; ?>
-                <button type="submit" class="btn btn-success btn-sm">
-                    Search
-                </button> -->
-            </div>
-        </form>
-        <!-- <div class="d-flex gap-1">
-            <?php // echo addNew('purchase-add', '', 'btn-sm'); 
-            ?>
-            <form action="print/<?php echo $mypageURL; ?>" target="_blank" method="get">
-                <input type="hidden" name="start" value="<?php echo $start_print; ?>">
-                <input type="hidden" name="end" value="<?php echo $end_print; ?>">
-                <input type="hidden" name="goods_name" value="<?php echo $goods_name; ?>">
-                 <input type="hidden" name="size" value="<?php echo $size; ?>">
-                <input type="hidden" name="brand" value="<?php echo $brand; ?>"> -->
-        <!-- <input type="hidden" name="is_transferred" value="<?php echo $is_transferred; ?>">
-                <input type="hidden" name="s_khaata_id" value="<?php echo $s_khaata_id; ?>">
-                <input type="hidden" name="secret" value="<?= base64_encode("powered-by-upsol"); ?>">
-                <button type="submit" class="btn btn-success btn-sm">
-                    <i class="fa fa-print"></i>
-                </button>
-            </form> -->
-
-        <!-- </div> -->
-    </div>
 </div>
-<div class="row">
-    <div class="col-lg-12">
-        <div class="card">
-            <div class="card-body p-0">
-                <div class="table-responsive" style="height: 83vh">
-                    <table class="table table-bordered table-hover table-sm fix-head-table mb-0">
-                        <thead>
-                            <tr class="text-nowrap">
-                                <?php if (SuperAdmin()): ?>
-                                    <th>P#</th>
-                                    <th>AGENT ACC</th>
-                                    <th>AGENT ID</th>
-                                    <th>AGENT NAME</th>
-                                <?php else: ?>
-                                    <th>#</th>
-                                <?php endif; ?>
-                                <th>Bill Of Entry</th>
-                                <?php if (!SuperAdmin()): ?>
-                                    <th>AGENT ACC</th>
-                                    <th>AGENT ID</th>
-                                    <th>AGENT NAME</th>
-                                <?php endif; ?>
-                                <th>Received Date</th>
-                                <th>Clearing Date</th>
-                                <th>L Truck No</th>
-                                <th>Truck Returning Date</th>
-                                <th>Total Bill Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php
-                            $Loadings = mysqli_query($connect, $sql); // Load initial rows
-                            $row_count = $p_kgs_total = $p_qty_total = 0;
+<div class="mx-5 bg-white p-3">
+    <h1 class="mb-2">Agent Payments</h1>
 
-                            // Fetch all relevant rows from agent_payments table
-                            $agentPaymentsData = mysqli_query($connect, "
+    <div class="table-responsive mt-4">
+        <table class="table table-bordered">
+            <thead>
+                <tr class="text-nowrap">
+                    <?php if (SuperAdmin()): ?>
+                        <th>P#</th>
+                        <th>AGENT ACC</th>
+                        <th>AGENT ID</th>
+                        <th>AGENT NAME</th>
+                    <?php else: ?>
+                        <th>#</th>
+                    <?php endif; ?>
+                    <th>Bill Of Entry</th>
+                    <?php if (!SuperAdmin()): ?>
+                        <th>AGENT ACC</th>
+                        <th>AGENT ID</th>
+                        <th>AGENT NAME</th>
+                    <?php endif; ?>
+                    <th>Received Date</th>
+                    <th>Clearing Date</th>
+                    <th>L Truck No</th>
+                    <th>Truck Returning Date</th>
+                    <th>Total Bill Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                $Loadings = mysqli_query($connect, $sql); // Load initial rows
+                $row_count = $p_kgs_total = $p_qty_total = 0;
+
+                // Fetch all relevant rows from agent_payments table
+                $agentPaymentsData = mysqli_query($connect, "
     SELECT id, loading_id, grand_total, JSON_UNQUOTE(JSON_EXTRACT(transfer_details, '$.parent_id')) AS parent_id, 
            JSON_UNQUOTE(JSON_EXTRACT(transfer_details, '$.transferred_to_admin')) AS transferred_to_admin 
     FROM agent_payments
 ");
 
-                            // Group agent_payments by loading_id
-                            $loadingStatus = [];
-                            while ($payment = mysqli_fetch_assoc($agentPaymentsData)) {
-                                $loadingId = $payment['loading_id'];
-                                $parentId = $payment['parent_id'] ?? null;
+                // Group agent_payments by loading_id
+                $loadingStatus = [];
+                while ($payment = mysqli_fetch_assoc($agentPaymentsData)) {
+                    $loadingId = $payment['loading_id'];
+                    $parentId = $payment['parent_id'] ?? null;
 
-                                // If this is the parent row (no parent_id), store it under the parent
-                                if (!$parentId) {
-                                    $loadingStatus[$loadingId]['parent'] = $payment;
-                                } else {
-                                    $loadingStatus[$loadingId]['children'][] = $payment;
-                                }
-                            }
+                    // If this is the parent row (no parent_id), store it under the parent
+                    if (!$parentId) {
+                        $loadingStatus[$loadingId]['parent'] = $payment;
+                    } else {
+                        $loadingStatus[$loadingId]['children'][] = $payment;
+                    }
+                }
 
-                            $rows = [];
-                            $agentEntryCount = [];
-                            $billCounters = [];
+                $rows = [];
+                $agentEntryCount = [];
+                $billCounters = [];
 
-                            // Step 2: Fetch and process each SingleLoading row
-                            while ($SingleLoadings = mysqli_fetch_assoc($Loadings)) {
-                                $rows[] = $SingleLoadings;
-                                $agentDetails = json_decode($SingleLoadings['agent_details'], true);
-                                $agentId = $agentDetails['ag_id'] ?? null;
-                                if ($agentId) {
-                                    $agentEntryCount[$agentId] = ($agentEntryCount[$agentId] ?? 0) + 1;
-                                    $billCounters[$agentId] = $billCounters[$agentId] ?? 0;
-                                }
-                            }
+                // Step 2: Fetch and process each SingleLoading row
+                while ($SingleLoadings = mysqli_fetch_assoc($Loadings)) {
+                    $rows[] = $SingleLoadings;
+                    $agentDetails = json_decode($SingleLoadings['agent_details'], true);
+                    $agentId = $agentDetails['ag_id'] ?? null;
+                    if ($agentId) {
+                        $agentEntryCount[$agentId] = ($agentEntryCount[$agentId] ?? 0) + 1;
+                        $billCounters[$agentId] = $billCounters[$agentId] ?? 0;
+                    }
+                }
 
-                            // Step 3: Display the rows and calculate grand total
-                            foreach ($rows as $SingleLoading) {
-                                $agentDetails = json_decode($SingleLoading['agent_details'], true);
-                                $agentId = $agentDetails['ag_id'] ?? null;
-                                $loadingId = $SingleLoading['id'];
+                // Step 3: Display the rows and calculate grand total
+                foreach ($rows as $SingleLoading) {
+                    $agentDetails = json_decode($SingleLoading['agent_details'], true);
+                    $agentId = $agentDetails['ag_id'] ?? null;
+                    $loadingId = $SingleLoading['id'];
 
-                                // Determine row color
-                                $rowColor = !isset($loadingStatus[$loadingId]['parent'])
-                                    ? 'text-danger'
-                                    : ($loadingStatus[$loadingId]['parent']['transferred_to_admin'] === 'true' ? 'text-dark' : 'text-warning');
+                    // Determine row color
+                    $rowColor = !isset($loadingStatus[$loadingId]['parent'])
+                        ? 'text-danger'
+                        : ($loadingStatus[$loadingId]['parent']['transferred_to_admin'] === 'true' ? 'text-dark' : 'text-warning');
 
-                                // Calculate grand total (including parent and children)
-                                $grandTotal = 0;
-                                if (isset($loadingStatus[$loadingId])) {
-                                    $parent = $loadingStatus[$loadingId]['parent'];
-                                    $children = $loadingStatus[$loadingId]['children'] ?? [];
+                    // Calculate grand total (including parent and children)
+                    $grandTotal = 0;
+                    if (isset($loadingStatus[$loadingId])) {
+                        $parent = $loadingStatus[$loadingId]['parent'];
+                        $children = $loadingStatus[$loadingId]['children'] ?? [];
 
-                                    // Sum grand total for parent and child rows
-                                    $grandTotal += $parent['grand_total'];
-                                    foreach ($children as $child) {
-                                        $grandTotal += $child['grand_total'];
-                                    }
-                                }
+                        // Sum grand total for parent and child rows
+                        $grandTotal += $parent['grand_total'];
+                        foreach ($children as $child) {
+                            $grandTotal += $child['grand_total'];
+                        }
+                    }
 
-                                if ($agentId && isset($agentDetails['bill_of_entry_no'])) {
-                                    $currentBillNumber = ++$billCounters[$agentId];
-                                    $SuperCode = $rowColor . ' pointer" onclick="window.location.href = \'agent-payments-form?loadingID=' . $loadingId . '&bill_of_entry_no=' . $agentDetails['bill_of_entry_no'] . '&billNumber=' . $currentBillNumber . '\';"';
-                                    if (SuperAdmin()) {
-                                        $SuperCode .= ' data-bs-toggle="modal" data-bs-target="#KhaataDetails"';
-                                    }
-                            ?>
-                                    <tr class="text-nowrap">
-                                        <?php if (!SuperAdmin()): ?>
-                                            <td class="<?= $rowColor; ?>"><?= $row_count + 1; ?></td>
-                                        <?php endif; ?>
-                                        <td class="<?= $SuperCode; ?>"><b><?= SuperAdmin() ? "P#" . $SingleLoading['p_id'] . " ($currentBillNumber)" : $agentDetails['bill_of_entry_no']; ?></b></td>
-                                        <td class="<?= $rowColor; ?>"><?= $agentDetails['ag_acc_no']; ?></td>
-                                        <td class="<?= $rowColor; ?>"><?= $agentDetails['ag_id']; ?></td>
-                                        <td class="<?= $rowColor; ?>"><?= $agentDetails['ag_name']; ?></td>
-                                        <?php if (SuperAdmin()): ?>
-                                            <td class="<?= $SuperCode; ?>"><b><?= $agentDetails['bill_of_entry_no']; ?></b></td>
-                                        <?php endif; ?>
-                                        <td class="<?= $rowColor; ?>"><?= $agentDetails['received_date']; ?></td>
-                                        <td class="<?= $rowColor; ?>"><?= $agentDetails['clearing_date']; ?></td>
-                                        <td class="<?= $rowColor; ?>"><?= $agentDetails['loading_truck_number']; ?></td>
-                                        <td class="<?= $rowColor; ?>"><?= $agentDetails['truck_returning_date']; ?></td>
-                                        <td class="<?= $rowColor; ?>"><?= $grandTotal; ?></td>
-                                    </tr>
-                            <?php
-                                }
-                                $row_count++;
-                            }
-                            ?>
-
-                        </tbody>
-
-
-                    </table>
-                    <input type="hidden" id="row_count" value="<?php echo $row_count; ?>">
-                    <input type="hidden" id="p_qty_total" value="<?php echo $p_qty_total; ?>">
-                    <input type="hidden" id="p_kgs_total" value="<?php echo $p_kgs_total; ?>">
-                </div>
-            </div>
-        </div>
+                    if ($agentId && isset($agentDetails['bill_of_entry_no'])) {
+                        $currentBillNumber = ++$billCounters[$agentId];
+                        $SuperCode = $rowColor . ' pointer" onclick="window.location.href = \'agent-payments-form?loadingID=' . $loadingId . '&bill_of_entry_no=' . $agentDetails['bill_of_entry_no'] . '&billNumber=' . $currentBillNumber . '\';"';
+                        if (SuperAdmin()) {
+                            $SuperCode .= ' data-bs-toggle="modal" data-bs-target="#KhaataDetails"';
+                        }
+                ?>
+                        <tr class="text-nowrap">
+                            <?php if (!SuperAdmin()): ?>
+                                <td class="<?= $rowColor; ?>"><?= $row_count + 1; ?></td>
+                            <?php endif; ?>
+                            <td class="<?= $SuperCode; ?>"><b><?= SuperAdmin() ? "P#" . $SingleLoading['p_id'] . " ($currentBillNumber)" : $agentDetails['bill_of_entry_no']; ?></b></td>
+                            <td class="<?= $rowColor; ?>"><?= $agentDetails['ag_acc_no']; ?></td>
+                            <td class="<?= $rowColor; ?>"><?= $agentDetails['ag_id']; ?></td>
+                            <td class="<?= $rowColor; ?>"><?= $agentDetails['ag_name']; ?></td>
+                            <?php if (SuperAdmin()): ?>
+                                <td class="<?= $SuperCode; ?>"><b><?= $agentDetails['bill_of_entry_no']; ?></b></td>
+                            <?php endif; ?>
+                            <td class="<?= $rowColor; ?>"><?= $agentDetails['received_date']; ?></td>
+                            <td class="<?= $rowColor; ?>"><?= $agentDetails['clearing_date']; ?></td>
+                            <td class="<?= $rowColor; ?>"><?= $agentDetails['loading_truck_number']; ?></td>
+                            <td class="<?= $rowColor; ?>"><?= $agentDetails['truck_returning_date']; ?></td>
+                            <td class="<?= $rowColor; ?>"><?= $grandTotal; ?></td>
+                        </tr>
+                <?php
+                    }
+                    $row_count++;
+                }
+                ?>
+            </tbody>
+        </table>
     </div>
 </div>
 <?php include("footer.php"); ?>
-<script>
-    $("#rows_count_span").text($("#row_count").val());
-    $("#p_qty_total_span").text($("#p_qty_total").val());
-    $("#p_kgs_total_span").text($("#p_kgs_total").val());
-</script>
 <div class="modal fade" id="KhaataDetails" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
     role="dialog" aria-labelledby="staticBackdropLabel" aria-hidden="true">
     <div class="modal-dialog modal-fullscreen -modal-xl -modal-dialog-centered" role="document">

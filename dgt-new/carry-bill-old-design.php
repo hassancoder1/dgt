@@ -8,155 +8,183 @@ global $connect;
 $user = $_SESSION['username'];
 $mypageURL = $pageURL;
 ?>
+
+
+
 <div class="fixed-top">
     <?php require_once('nav-links.php'); ?>
+    <div class="bg-light shadow p-2 border-bottom border-warning d-flex gap-0 align-items-center justify-content-between mb-md-2">
+        <div class="fs-5 text-uppercase"><?php echo $page_title; ?></div>
+        <div class="text-nowrap">
+            <div class="lh-1">
+                <b>Rows</b><span id="rows_count_span"></span>
+                <b>Qty </b><span id="p_qty_total_span"></span>
+                <br>
+                <b>KGs</b><span id="p_kgs_total_span"></span>
+            </div>
+        </div>
+    </div>
 </div>
-<div class="mx-5 bg-white p-3">
-    <h1 class="mb-2">Carry Bill</h1>
-    <div class="table-responsive mt-4">
-        <table class="table table-bordered">
-            <thead>
-                <tr class="text-nowrap">
-                    <?php if (SuperAdmin()): ?>
-                        <th>P#</th>
-                        <th>AGENT ACC</th>
-                        <th>AGENT ID</th>
-                        <th>AGENT NAME</th>
-                    <?php else: ?>
-                        <th>#</th>
-                    <?php endif; ?>
-                    <th>Bill Of Entry</th>
-                    <?php if (!SuperAdmin()): ?>
-                        <th>AGENT ACC</th>
-                        <th>AGENT ID</th>
-                        <th>AGENT NAME</th>
-                    <?php endif; ?>
-                    <th>Received Date</th>
-                    <th>Clearing Date</th>
-                    <th>L Truck No</th>
-                    <th>T.R Date</th>
-                    <th>T.Bill.Amt</th>
-                    <th>Transfer Date</th>
-                    <th colspan="2">#Sr.No</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php
-                $row_count = $p_qty_total = $p_kgs_total = 0;
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="table-responsive" style="height: 83vh">
+                    <table class="table table-bordered table-hover table-sm fix-head-table mb-0">
+                        <thead>
+                            <tr class="text-nowrap">
+                                <?php if (SuperAdmin()): ?>
+                                    <th>P#</th>
+                                    <th>AGENT ACC</th>
+                                    <th>AGENT ID</th>
+                                    <th>AGENT NAME</th>
+                                <?php else: ?>
+                                    <th>#</th>
+                                <?php endif; ?>
+                                <th>Bill Of Entry</th>
+                                <?php if (!SuperAdmin()): ?>
+                                    <th>AGENT ACC</th>
+                                    <th>AGENT ID</th>
+                                    <th>AGENT NAME</th>
+                                <?php endif; ?>
+                                <th>Received Date</th>
+                                <th>Clearing Date</th>
+                                <th>L Truck No</th>
+                                <th>T.R Date</th>
+                                <th>T.Bill.Amt</th>
+                                <th>Transfer Date</th>
+                                <th colspan="2">#Sr.No</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            $row_count = $p_qty_total = $p_kgs_total = 0;
 
-                // SQL query to fetch all records, sorted by bill_of_entry_no and created_at
-                $sql = "
+                            // SQL query to fetch all records, sorted by bill_of_entry_no and created_at
+                            $sql = "
             SELECT * 
             FROM general_loading 
             " . ($user !== 'admin' ? "WHERE JSON_EXTRACT(agent_details, '$.ag_id') = '$user'" : "") . "
             ORDER BY JSON_EXTRACT(agent_details, '$.bill_of_entry_no'), created_at DESC
         ";
 
-                $Loadings = mysqli_query($connect, $sql);
-                $groupedData = [];
+                            $Loadings = mysqli_query($connect, $sql);
+                            $groupedData = [];
 
-                // Group records by bill_of_entry_no
-                while ($row = mysqli_fetch_assoc($Loadings)) {
-                    $billNo = json_decode($row['agent_details'], true)['bill_of_entry_no'];
-                    if (!isset($groupedData[$billNo])) {
-                        $groupedData[$billNo] = [];
-                    }
-                    $groupedData[$billNo][] = $row;
-                }
+                            // Group records by bill_of_entry_no
+                            while ($row = mysqli_fetch_assoc($Loadings)) {
+                                $billNo = json_decode($row['agent_details'], true)['bill_of_entry_no'];
+                                if (!isset($groupedData[$billNo])) {
+                                    $groupedData[$billNo] = [];
+                                }
+                                $groupedData[$billNo][] = $row;
+                            }
 
-                // Fetch agent payments data and organize it by loading_id
-                $agentPaymentsData = mysqli_query($connect, "
+                            // Fetch agent payments data and organize it by loading_id
+                            $agentPaymentsData = mysqli_query($connect, "
             SELECT id, loading_id, grand_total, transfer_details,
                    JSON_UNQUOTE(JSON_EXTRACT(transfer_details, '$.parent_id')) AS parent_id,
                    JSON_UNQUOTE(JSON_EXTRACT(transfer_details, '$.transferred_to_admin')) AS transferred_to_admin
             FROM agent_payments
         ");
 
-                $loadingStatus = [];
-                while ($payment = mysqli_fetch_assoc($agentPaymentsData)) {
-                    $loadingId = $payment['loading_id'];
-                    $parentId = $payment['parent_id'] ?? null;
+                            $loadingStatus = [];
+                            while ($payment = mysqli_fetch_assoc($agentPaymentsData)) {
+                                $loadingId = $payment['loading_id'];
+                                $parentId = $payment['parent_id'] ?? null;
 
-                    if (!$parentId) {
-                        $loadingStatus[$loadingId]['parent'] = $payment;
-                    } else {
-                        $loadingStatus[$loadingId]['children'][] = $payment;
-                    }
-                }
-
-                // Display the grouped data with calculated grand total and Roznamcha details
-                foreach ($groupedData as $billNo => $entries) {
-                    $entry = $entries[0]; // Select only the first entry for each bill_of_entry_no
-
-                    $agentDetails = json_decode($entry['agent_details'], true);
-                    $loadingId = $entry['id'];
-                    $rowColor = isset($loadingStatus[$loadingId]['parent']) ?
-                        ($loadingStatus[$loadingId]['parent']['transferred_to_admin'] === 'true' ? 'text-dark' : 'text-warning')
-                        : 'text-danger';
-
-                    // Calculate grand total (including parent and children)
-                    $grandTotal = 0;
-                    $Rsr_no = [];
-                    $Rtrans_date = '';
-                    if (isset($loadingStatus[$loadingId])) {
-                        $parent = $loadingStatus[$loadingId]['parent'];
-                        $children = $loadingStatus[$loadingId]['children'] ?? [];
-
-                        $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'transfered_from_id' => $parent['id'], 'transfered_from' => 'agent_payments'));
-                        if (mysqli_num_rows($rozQ) > 0) {
-                            while ($roz = mysqli_fetch_assoc($rozQ)) {
-                                $Rsr_no[] = $roz['r_id'] . '-' . $roz['branch_serial'];
-                                $Rtrans_date = $roz['r_date'];
+                                if (!$parentId) {
+                                    $loadingStatus[$loadingId]['parent'] = $payment;
+                                } else {
+                                    $loadingStatus[$loadingId]['children'][] = $payment;
+                                }
                             }
-                        }
 
-                        $grandTotal += $parent['grand_total'];
-                        foreach ($children as $child) {
-                            $grandTotal += $child['grand_total'];
-                        }
-                    }
+                            // Display the grouped data with calculated grand total and Roznamcha details
+                            foreach ($groupedData as $billNo => $entries) {
+                                $entry = $entries[0]; // Select only the first entry for each bill_of_entry_no
 
-                    $billNumber = ++$row_count;
+                                $agentDetails = json_decode($entry['agent_details'], true);
+                                $loadingId = $entry['id'];
+                                $rowColor = isset($loadingStatus[$loadingId]['parent']) ?
+                                    ($loadingStatus[$loadingId]['parent']['transferred_to_admin'] === 'true' ? 'text-dark' : 'text-warning')
+                                    : 'text-danger';
 
-                ?>
-                    <tr class="text-nowrap <?= $rowColor; ?>">
-                        <?php if (SuperAdmin()): ?>
-                            <td class=" pointer" onclick="window.location.href = '<?= 'carry-bill?loadingID=' . $loadingId . '&bill_of_entry_no=' . $agentDetails['bill_of_entry_no'] . '&billNumber=' . $billNumber; ?>';"><?= "P#" . $entry['p_id'] . " ($billNumber)"; ?></td>
-                            <td><?= $agentDetails['ag_acc_no']; ?></td>
-                            <td><?= $agentDetails['ag_id']; ?></td>
-                            <td><?= $agentDetails['ag_name']; ?></td>
-                            <td><?= $agentDetails['bill_of_entry_no']; ?></td>
-                            <td><?= $agentDetails['received_date']; ?></td>
-                            <td><?= $agentDetails['clearing_date']; ?></td>
-                            <td><?= $agentDetails['loading_truck_number']; ?></td>
-                            <td><?= $agentDetails['truck_returning_date']; ?></td>
-                            <td><?= $grandTotal; ?></td>
-                            <td><?= $Rtrans_date; ?></td>
-                            <td><?= !empty($Rsr_no) ? implode("<br>", $Rsr_no) : ''; ?></td>
-                        <?php else: ?>
-                            <td><?= $row_count; ?></td>
-                            <td><?= $agentDetails['bill_of_entry_no']; ?></td>
-                            <td><?= $agentDetails['ag_acc_no']; ?></td>
-                            <td><?= $agentDetails['ag_id']; ?></td>
-                            <td><?= $agentDetails['ag_name']; ?></td>
-                            <td><?= $agentDetails['received_date']; ?></td>
-                            <td><?= $agentDetails['clearing_date']; ?></td>
-                            <td><?= $agentDetails['loading_truck_number']; ?></td>
-                            <td><?= $agentDetails['truck_returning_date']; ?></td>
-                            <td><?= $grandTotal; ?></td>
-                            <td><?= $Rtrans_date; ?></td>
-                            <td><?= !empty($Rsr_no) ? implode("<br>", $Rsr_no) : ''; ?></td>
-                        <?php endif; ?>
-                    </tr>
+                                // Calculate grand total (including parent and children)
+                                $grandTotal = 0;
+                                $Rsr_no = [];
+                                $Rtrans_date = '';
+                                if (isset($loadingStatus[$loadingId])) {
+                                    $parent = $loadingStatus[$loadingId]['parent'];
+                                    $children = $loadingStatus[$loadingId]['children'] ?? [];
 
-                <?php
-                }
-                ?>
-            </tbody>
-        </table>
+                                    $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'transfered_from_id' => $parent['id'], 'transfered_from' => 'agent_payments'));
+                                    if (mysqli_num_rows($rozQ) > 0) {
+                                        while ($roz = mysqli_fetch_assoc($rozQ)) {
+                                            $Rsr_no[] = $roz['r_id'] . '-' . $roz['branch_serial'];
+                                            $Rtrans_date = $roz['r_date'];
+                                        }
+                                    }
+
+                                    $grandTotal += $parent['grand_total'];
+                                    foreach ($children as $child) {
+                                        $grandTotal += $child['grand_total'];
+                                    }
+                                }
+
+                                $billNumber = ++$row_count;
+
+                            ?>
+                                <tr class="text-nowrap <?= $rowColor; ?>">
+                                    <?php if (SuperAdmin()): ?>
+                                        <td class=" pointer" onclick="window.location.href = '<?= 'carry-bill?loadingID=' . $loadingId . '&bill_of_entry_no=' . $agentDetails['bill_of_entry_no'] . '&billNumber=' . $billNumber; ?>';"><?= "P#" . $entry['p_id'] . " ($billNumber)"; ?></td>
+                                        <td><?= $agentDetails['ag_acc_no']; ?></td>
+                                        <td><?= $agentDetails['ag_id']; ?></td>
+                                        <td><?= $agentDetails['ag_name']; ?></td>
+                                        <td><?= $agentDetails['bill_of_entry_no']; ?></td>
+                                        <td><?= $agentDetails['received_date']; ?></td>
+                                        <td><?= $agentDetails['clearing_date']; ?></td>
+                                        <td><?= $agentDetails['loading_truck_number']; ?></td>
+                                        <td><?= $agentDetails['truck_returning_date']; ?></td>
+                                        <td><?= $grandTotal; ?></td>
+                                        <td><?= $Rtrans_date; ?></td>
+                                        <td><?= !empty($Rsr_no) ? implode("<br>", $Rsr_no) : ''; ?></td>
+                                    <?php else: ?>
+                                        <td><?= $row_count; ?></td>
+                                        <td><?= $agentDetails['bill_of_entry_no']; ?></td>
+                                        <td><?= $agentDetails['ag_acc_no']; ?></td>
+                                        <td><?= $agentDetails['ag_id']; ?></td>
+                                        <td><?= $agentDetails['ag_name']; ?></td>
+                                        <td><?= $agentDetails['received_date']; ?></td>
+                                        <td><?= $agentDetails['clearing_date']; ?></td>
+                                        <td><?= $agentDetails['loading_truck_number']; ?></td>
+                                        <td><?= $agentDetails['truck_returning_date']; ?></td>
+                                        <td><?= $grandTotal; ?></td>
+                                        <td><?= $Rtrans_date; ?></td>
+                                        <td><?= !empty($Rsr_no) ? implode("<br>", $Rsr_no) : ''; ?></td>
+                                    <?php endif; ?>
+                                </tr>
+
+                            <?php
+                            }
+                            ?>
+                        </tbody>
+                    </table>
+
+                    <input type="hidden" id="row_count" value="<?php echo $row_count; ?>">
+                    <input type="hidden" id="p_qty_total" value="<?php echo $p_qty_total; ?>">
+                    <input type="hidden" id="p_kgs_total" value="<?php echo $p_kgs_total; ?>">
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 <?php include("footer.php"); ?>
+<script>
+    $("#rows_count_span").text($("#row_count").val());
+    $("#p_qty_total_span").text($("#p_qty_total").val());
+    $("#p_kgs_total_span").text($("#p_kgs_total").val());
+</script>
 <div class="modal fade" id="KhaataDetails" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
     role="dialog" aria-labelledby="staticBackdropLabel" aria-hidden="true">
     <div class="modal-dialog modal-fullscreen -modal-xl -modal-dialog-centered" role="document">

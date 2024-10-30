@@ -1,62 +1,3 @@
-<style>
-    h1 {
-        font-size: 28px;
-        font-weight: bold;
-        color: #333;
-    }
-
-    .form-inline select,
-    .form-inline button {
-        height: 40px;
-    }
-
-    .btn-primary {
-        background-color: #007bff;
-        border: none;
-    }
-
-    .table thead th {
-        background-color: #f8f9fa;
-        font-weight: bold;
-    }
-
-    .table td,
-    .table th {
-        vertical-align: middle;
-    }
-
-    .table .status-estimated {
-        color: #6c757d;
-    }
-
-    .table .status-actual {
-        color: #28a745;
-    }
-
-    .table .status-skip {
-        color: #dc3545;
-    }
-
-    .note {
-        font-size: 13px;
-        color: #dc3545;
-        margin-top: 5px;
-    }
-
-    .close-page {
-        text-align: right;
-        font-size: 14px;
-    }
-
-    .close-page a {
-        color: #007bff;
-        text-decoration: none;
-    }
-
-    .close-page a:hover {
-        text-decoration: underline;
-    }
-</style>
 <?php
 $page_title = 'Cargo Final Lane';
 $pageURL = 'cargo-final-lane';
@@ -65,11 +6,11 @@ global $connect;
 $sql = "SELECT * FROM `general_loading`";
 $mypageURL = $pageURL;
 ?>
-<div class="container bg-white p-3">
-    <div class="close-page">
-        <a href="/">[Close Page]</a>
-    </div>
-    <h1>Cargo Final Lane</h1>
+<div class="fixed-top">
+    <?php require_once('nav-links.php'); ?>
+</div>
+<div class="mx-5 bg-white p-3">
+    <h1 class="mb-2">Cargo Final Lane</h1>
     <form class="row mb-3">
         <div class="col-md-3 row">
             <label for="sea_road" class="col-md-4">Sea/Road: </label>

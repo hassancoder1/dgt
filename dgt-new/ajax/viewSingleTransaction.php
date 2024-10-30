@@ -628,7 +628,7 @@ if ($id > 0) {
                         <?php $update_url = $_fields['type'] == 'booking' ? 'purchase-add' : ($_fields['type'] == 'market' ? 'purchase-market-add' : 'purchase-local-add');
                         if ($_POST['page'] !== "bill-transfer" && $_POST['page'] !== 'general-stock-form') {
                         ?>
-                            <a href="<?php echo $update_url . '?id=' . $id.'&type='.$_fields['type']; ?>" class="btn btn-dark btn-sm w-100 mt-2">UPDATE</a>
+                            <a href="<?php echo 'purchase-add?id=' . $id.'&type='.$_fields['type']; ?>" class="btn btn-dark btn-sm w-100 mt-2">UPDATE</a>
                         <?php } ?>
                         <a href="print/purchase-single?t_id=<?php echo $id; ?>&action=order&secret=<?php echo base64_encode('powered-by-upsol') . "&print_type=full"; ?>"
                             target="_blank" class="btn btn-dark btn-sm w-100 mt-2">PRINT</a>

@@ -14,11 +14,44 @@ if ($id > 0) {
     $Agent = isset($record['agent_details']) ? json_decode($record['agent_details'], true) : [];
     if (!empty($record)) { ?>
         <div class="row">
-            <div class="col-md-9">
+            <div class="col-md-10">
                 <div class="card my-2">
                     <div class="card-body">
                         <div class="row border-bottom pb-2">
+                            <div class="col-md-4">
+                                <div><b>Importer. A/c # </b><?php echo $Importer['im_acc_no']; ?></div>
+                                <div><b>Importer. A/c Name </b><?php echo $Importer['im_acc_name']; ?></div>
+                                <?php if (!empty($Importer['im_acc_details'])) {
+                                    echo '<div><b>Company Details </b>' . nl2br($Importer['im_acc_details']) . '</div>';
+                                } ?>
+                            </div>
 
+                            <div class="col-md-4 border-end border-start">
+                                <div><b>Exporter. A/c # </b><?php echo $Exporter['xp_acc_no']; ?></div>
+                                <div><b>Exporter. A/c Name </b><?php echo $Exporter['xp_acc_name']; ?></div>
+                                <?php if (!empty($Exporter['xp_acc_details'])) {
+                                    echo '<div><b>Company Details </b>' . nl2br($Exporter['xp_acc_details']) . '</div>';
+                                } ?>
+                            </div>
+
+                            <div class="col-md-4">
+                                <?php if ($Notify) { ?>
+                                    <div><b>Notify Party Acc No. </b><?= $Notify['np_acc_no']; ?></div>
+                                    <div><b>Acc Name </b><?php echo $Notify['np_acc_name']; ?></div>
+                                <?php
+                                    if (!empty($Notify['np_acc_details'])) {
+                                        $details = $Notify['np_acc_details'];
+                                        $countryPos = strpos($details, 'Country');
+                                        if ($countryPos !== false) {
+                                            $companyName = substr($details, 0, $countryPos);
+                                            echo '<div><b>Company Name: </b>' . trim($companyName) . '</div>';
+                                        }
+                                    }
+                                } else {
+                                    echo "Notify Party Details Not Added!";
+                                }
+                                ?>
+                            </div>
                         </div>
 
                         <div class="row gy-1 border-bottom py-1">
@@ -184,7 +217,7 @@ if ($id > 0) {
                             </table>
                         </div>
                         <?php if (($Agent['transferred']  === true && (!isset($Agent['permission_to_edit'])) || $Agent['permission_to_edit'] === 'yes')): ?>
-                            <div class="card mt-3">
+                            <div class="card mt-3 transfer-form  d-none">
                                 <div class="card-body">
                                     <form method="post" class="table-form" enctype="multipart/form-data">
                                         <input type="hidden" name="id" value="<?= $record['id']; ?>">
@@ -238,54 +271,21 @@ if ($id > 0) {
                     </div>
                 </div>
             </div>
-            <div class="col-md-3 card mt-2">
-
-                <div class="border-bottom my-2">
-                    <!-- <div class="d-flex align-items-center justify-content-between"> -->
+            <div class="col-md-2 card">
+                <div class="border-bottom px-2 pb-2 my-2">
                     <div><b><?= "Sr#" . $record['sr_no']; ?></b></div>
-                    <div><b>Purchase Date </b><?php echo my_date($record['p_date']); ?></div>
+                    <div><b>Date </b><?php echo my_date($record['created_at']); ?></div>
                     <div><b>Type </b><?php echo badge(strtoupper($record['p_type']), 'dark'); ?></div>
                     <div><b>Branch </b><?php echo $record['p_branch']; ?></div>
-                    <!-- </div> -->
                 </div>
-
-                <div class="px-1">
-                    <small class="fw-bold">Importer</small>
-                    <!-- <div><b>Importer. A/c # </b><?php echo $Importer['im_acc_no']; ?></div>
-                        <div><b>Importer. A/c Name </b><?php echo $Importer['im_acc_name']; ?></div> -->
-                    <?php if (!empty($Importer['im_acc_details'])) {
-                        echo '<div><b>Company Details </b>' . $Importer['im_acc_details'] . '</div>';
-                    } ?>
-                </div>
-
-                <div class="px-1">
-                <small class="fw-bold">Exporter</small>
-                    <!-- <div><b>Exporter. A/c # </b><?php echo $Exporter['xp_acc_no']; ?></div>
-                        <div><b>Exporter. A/c Name </b><?php echo $Exporter['xp_acc_name']; ?></div> -->
-                    <?php if (!empty($Exporter['xp_acc_details'])) {
-                        echo '<div><b>Company Details </b>' . $Exporter['xp_acc_details'] . '</div>';
-                    } ?>
-                </div>
-
-                <div class="px-1">
-                <small class="fw-bold">Notify</small>
-                    <?php if ($Notify) { ?>
-                        <!-- <div><b>Notify Party Acc No. </b><?= $Notify['np_acc_no']; ?></div>
-                            <div><b>Acc Name </b><?php echo $Notify['np_acc_name']; ?></div> -->
-                    <?php
-                        if (!empty($Notify['np_acc_details'])) {
-                            $details = $Notify['np_acc_details'];
-                            $countryPos = strpos($details, 'Country');
-                            if ($countryPos !== false) {
-                                $companyName = substr($details, 0, $countryPos);
-                                echo '<div><b>Company Name: </b>' . trim($companyName) . '</div>';
-                            }
-                        }
-                    } else {
-                        echo "Notify Party Details Not Added!";
-                    }
-                    ?>
-                </div>
+                <button class="btn btn-warning btn-sm mt-2" onclick="
+    let transferForm = document.querySelector('.transfer-form');
+    if (transferForm) {
+        transferForm.classList.toggle('d-none');
+    } else {
+        alert('Information has already been entered, and you have no permission to edit.');
+    }
+">Transfer in Accounts</button>
 
             </div>
         </div>
