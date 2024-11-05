@@ -395,14 +395,14 @@ if ($id > 0) {
                                                     <td class="text-nowrap fw-bold" colspan="4"><?php echo ucwords(str_replace('_', ' ', $key)); ?></td>
                                                     <td class="" colspan="7"><?php echo nl2br(htmlspecialchars($value)); ?></td>
                                                     <th colspan="1" class="text-nowrap">
-                                                        <a href="?deletePurchaseReport=<?= urlencode($key); ?>&p_hidden_id=<?= urlencode($record['id']); ?>" class="btn btn-sm btn-outline-danger py-0 px-1 mx-2">
+                                                        <a href="?deletePurchaseReport=<?= urlencode($key); ?>&p_hidden_id=<?= $record['id']; ?>&t_id=<?= $record['id']; ?>" class="btn btn-sm btn-outline-danger py-0 px-1 mx-2">
                                                             <i class="fa fa-trash-alt"></i>
                                                         </a>
                                                         <input type="hidden" id="<?= htmlspecialchars($key . $record['id']); ?>" value="<?= htmlspecialchars($key); ?>">
                                                         <textarea class="d-none" id="<?= htmlspecialchars($key . $record['id'] . '_report'); ?>"><?= htmlspecialchars($value); ?></textarea>
-                                                        <button onclick="openModal('<?= htmlspecialchars($key); ?>','<?= htmlspecialchars($key . $record['id'] . '_report'); ?>')" class="btn btn-sm btn-outline-primary py-0 px-1 mx-2">
+                                                        <a href="purchase-add?id=<?= $record['id']; ?>&type=<?= $record['type']; ?>" class="btn btn-sm btn-outline-primary py-0 px-1 mx-2">
                                                             <i class="fa fa-pencil"></i>
-                                                        </button>
+                                                        </a>
 
                                                     </th>
                                                 </tr>

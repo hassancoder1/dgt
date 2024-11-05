@@ -7,9 +7,9 @@ $remove = $size = $brand = $goods_name = $start_print = $end_print = $is_transfe
 $is_search = false;
 global $connect;
 $user = $_SESSION['username'];
-$sql = "SELECT * FROM `general_loading`";
+$sql = "SELECT * FROM `general_loading` WHERE JSON_EXTRACT(gloading_info, '$.parent_id') IS NULL";
 if ($user !== 'admin') {
-    $sql .= " WHERE JSON_EXTRACT(agent_details, '$.ag_id')='$user'";
+    $sql .= " AND JSON_EXTRACT(agent_details, '$.ag_id') = '$user'";
 }
 $mypageURL = $pageURL;
 ?>
@@ -17,29 +17,21 @@ $mypageURL = $pageURL;
     <?php require_once('nav-links.php'); ?>
 </div>
 <div class="mx-5 bg-white p-3">
-    <h1 class="mb-2">Custom Clearing Agent Form</h1>
+    <h4 class="mb-2">Custom Clearing Agent Form</h4>
     <div class="table-responsive mt-4">
         <table class="table table-bordered">
             <thead>
                 <tr class="text-nowrap">
                     <th><?= SuperAdmin() ? 'P' : ''; ?>#</th>
-                    <th>Sr#</th>
+                    <th>B/L No.</th>
                     <th>AG ID</th>
                     <th>AG NAME</th>
                     <th>L_DATE</th>
-                    <!-- <th>L_COUNTRY</th> -->
                     <th>L_PORT</th>
                     <th>R_DATE</th>
-                    <!-- <th>R_COUNTRY</th> -->
                     <th>R_PORT</th>
-                    <th>B/L No.</th>
                     <th>Container No</th>
-                    <!-- <th>Im.N</th>
-                                <th>Ex.N</th>
-                                <th>N.P.N</th> -->
                     <th>Goods Name</th>
-                    <!-- <th>SIZE</th>
-                                <th>BRAND</th> -->
                     <th>ORIGIN</th>
                     <th>QTY.Ne</th>
                     <th>QTY.No</th>
@@ -60,19 +52,27 @@ $mypageURL = $pageURL;
                     if (!empty($agentDetails) && isset($agentDetails['transferred']) && $agentDetails['transferred'] === true) {
                         if (isset($agentDetails['bill_of_entry_no'])) {
                             $rowColor = 'text-dark';
+                            $locked = 1;
                         } else {
                             $rowColor = 'text-danger';
                         }
                 ?>
 
                         <tr class="text-nowrap">
-
-                            <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $SingleLoading['id']; ?>)"
-                                data-bs-toggle="modal" data-bs-target="#KhaataDetails">
-                                <?= SuperAdmin() ? '<b>P#' . $SingleLoading['p_id'] : "#" . $row_count + 1; ?>
-                                <?php echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
-                            </td>
-                            <td class="<?php echo $rowColor; ?>"><?php echo $SingleLoading['sr_no']; ?></td>
+                            <?php if (SuperAdmin()) { ?>
+                                <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $SingleLoading['id']; ?>)"
+                                    data-bs-toggle="modal" data-bs-target="#KhaataDetails">
+                                    <?= '<b>P#' . $SingleLoading['p_id']; ?>
+                                    <?php echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
+                                </td>
+                            <?php } else { ?>
+                                <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $SingleLoading['id']; ?>)"
+                                    data-bs-toggle="modal" data-bs-target="#KhaataDetails">
+                                    <b><?= $i; ?></b>
+                                    <?php echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
+                                </td>
+                            <?php } ?>
+                            <td class="<?php echo $rowColor; ?>"><?= $SingleLoading['bl_no']; ?></td>
                             <td class="<?php echo $rowColor; ?>"><?= $agentDetails['ag_id']; ?></td>
                             <td class="<?php echo $rowColor; ?>"><?= $agentDetails['ag_name']; ?></td>
                             <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['loading_details'], true)['loading_date']; ?></td>
@@ -81,7 +81,6 @@ $mypageURL = $pageURL;
                             <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['receiving_details'], true)['receiving_date']; ?></td>
                             <!-- <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['receiving_details'], true)['receiving_country']; ?></td> -->
                             <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['receiving_details'], true)['receiving_port_name']; ?></td>
-                            <td class="<?php echo $rowColor; ?>"><?= $SingleLoading['bl_no']; ?></td>
                             <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['goods_details'], true)['container_no']; ?></td>
                             <!-- <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['importer_details'], true)['im_acc_no']; ?></td>
                                          
@@ -95,7 +94,8 @@ $mypageURL = $pageURL;
                             <td class="<?php echo $rowColor; ?>"><?= round(json_decode($SingleLoading['goods_details'], true)['net_weight']); ?></td>
                         </tr>
                 <?php
-                        $row_count++;
+                    $row_count++;
+                    $i++;
                     }
                 }
                 ?>
@@ -109,7 +109,8 @@ $mypageURL = $pageURL;
     <div class="modal-dialog modal-fullscreen -modal-xl -modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header d-flex justify-content-between align-items-center">
-                <h5 class="modal-title" id="staticBackdropLabel">AGENT CUSTOM CLEARNING FORM</h5>
+                <b class="" id="staticBackdropLabel"></b>
+                <h4 class="text-left">AGENT CUSTOM CLEARNING FORM</h4>
                 <div class="d-flex align-items-center">
                     <!-- Print Button -->
                     <a href="print/purchase-single?t_id=<?php echo $id; ?>&action=order&secret=<?php echo base64_encode('powered-by-upsol') . "&print_type=full"; ?>"

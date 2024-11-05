@@ -265,18 +265,12 @@ if (isset($_POST['GLoadingSubmit'])) {
     $p_cr_acc_name = mysqli_real_escape_string($connect, $_POST['p_cr_acc_name']);
     $bl_no = mysqli_real_escape_string($connect, $_POST['bl_no']);
     $report = mysqli_real_escape_string($connect, $_POST['report']);
-
-
-    // Process uploaded files
     $uploadedFiles = [];
-    $uploadDir = 'attachments/'; // Directory to store uploaded files
-
+    $uploadDir = 'attachments/';
     if (!empty($_FILES['entry_file']['name'][0])) {
         foreach ($_FILES['entry_file']['name'] as $key => $filename) {
             $tmpName = $_FILES['entry_file']['tmp_name'][$key];
-            $newFilename = time() . '_' . basename($filename); // Unique file name
-
-            // Move the file to the desired directory
+            $newFilename = time() . '_' . basename($filename);
             if (move_uploaded_file($tmpName, $uploadDir . $newFilename)) {
                 $uploadedFiles[] = [$key, $newFilename];
             }
@@ -284,22 +278,56 @@ if (isset($_POST['GLoadingSubmit'])) {
     } else {
         $uploadedFiles = [];
     }
+    $maxIdResult = mysqli_fetch_assoc(mysqli_query($connect, "SELECT MAX(id) AS max_id FROM general_loading"));
+    $maxId = $maxIdResult['max_id'] ? $maxIdResult['max_id'] : 0;
+    $parent_bl_data = mysqli_fetch_assoc(mysqli_query($connect, "
+    SELECT id, gloading_info, 
+           LENGTH(JSON_EXTRACT(gloading_info, '$.child_ids')) 
+           - LENGTH(REPLACE(JSON_EXTRACT(gloading_info, '$.child_ids'), ',', '')) + 1 AS child_ids_count
+    FROM general_loading 
+    WHERE bl_no = '$bl_no' 
+    AND JSON_EXTRACT(gloading_info, '$.child_ids') IS NOT NULL
+"));
 
-    // Loading Details
+if ($parent_bl_data) {
+    $data = json_decode($parent_bl_data['gloading_info'], true);
+    $existing_child_ids = isset($data['child_ids']) ? $data['child_ids'] : '';
+    $child_ids = $existing_child_ids . (!empty($existing_child_ids) ? ", " : "") . ($maxId + 1);
+    $child_ids_count = $existing_child_ids === '' ? 1 : substr_count($child_ids, ',') + 1;
+    $my = [
+        'parent_id' => $parent_bl_data['id'],
+        'bl_entry_no' => $child_ids_count + 1
+    ];
+    $data = array_merge($data, ['child_ids' => $child_ids, 'child_ids_count' => $child_ids_count]);
+    $updateData = ['gloading_info' => json_encode($data)];
+    print_r($updateData);
+    update('general_loading', $updateData, ['id' => $parent_bl_data['id']]);
+} else {
+    $my = [
+        'child_ids' => '',
+        'child_ids_count' => 0,
+        'bl_entry_no' => 1
+    ];
+}
+
+    if ($sr_no == 1) {
+        $my = array_merge($my, [
+            'total_quanity_no' => $_POST['total_quantity_no'],
+            'total_gross_weight' => $_POST['total_gross_weight'],
+            'total_net_weight' => $_POST['total_net_weight']
+        ]);
+    }
+
     $loading_details = [
         'loading_date' => mysqli_real_escape_string($connect, $_POST['loading_date']),
         'loading_country' => mysqli_real_escape_string($connect, $_POST['loading_country']),
         'loading_port_name' => mysqli_real_escape_string($connect, $_POST['loading_port_name']),
     ];
-
-    // Receiving Details
     $receiving_details = [
         'receiving_date' => mysqli_real_escape_string($connect, $_POST['receiving_date']),
         'receiving_country' => mysqli_real_escape_string($connect, $_POST['receiving_country']),
         'receiving_port_name' => mysqli_real_escape_string($connect, $_POST['receiving_port_name']),
     ];
-
-    // Importer Details
     $importer_details = [
         'im_acc_id' => mysqli_real_escape_string($connect, $_POST['im_acc_id']),
         'im_acc_no' => mysqli_real_escape_string($connect, $_POST['im_acc_no']),
@@ -307,8 +335,6 @@ if (isset($_POST['GLoadingSubmit'])) {
         'im_acc_kd_id' => mysqli_real_escape_string($connect, $_POST['im_acc_kd_id']),
         'im_acc_details' => mysqli_real_escape_string($connect, $_POST['im_acc_details'])
     ];
-
-    // Notify Party Details
     $notify_party_details = [
         'np_acc_id' => mysqli_real_escape_string($connect, $_POST['np_acc_id']),
         'np_acc_no' => mysqli_real_escape_string($connect, $_POST['np_acc_no']),
@@ -316,8 +342,6 @@ if (isset($_POST['GLoadingSubmit'])) {
         'np_acc_kd_id' => mysqli_real_escape_string($connect, $_POST['np_acc_kd_id']),
         'np_acc_details' => mysqli_real_escape_string($connect, $_POST['np_acc_details'])
     ];
-
-    // Exporter Details
     $exporter_details = [
         'xp_acc_id' => mysqli_real_escape_string($connect, $_POST['xp_acc_id']),
         'xp_acc_no' => mysqli_real_escape_string($connect, $_POST['xp_acc_no']),
@@ -325,8 +349,6 @@ if (isset($_POST['GLoadingSubmit'])) {
         'xp_acc_kd_id' => mysqli_real_escape_string($connect, $_POST['xp_acc_kd_id']),
         'xp_acc_details' => mysqli_real_escape_string($connect, $_POST['xp_acc_details'])
     ];
-
-    // Goods Details
     $goods_details = [
         'goods_id' => mysqli_real_escape_string($connect, $_POST['goods_id']),
         'quantity_no' => mysqli_real_escape_string($connect, $_POST['quantity_no']),
@@ -339,8 +361,6 @@ if (isset($_POST['GLoadingSubmit'])) {
         'container_no' => mysqli_real_escape_string($connect, $_POST['container_no']),
         'container_name' => mysqli_real_escape_string($connect, $_POST['container_name'])
     ];
-
-    // Shipping Details
     $shipping_details = [
         'shipping_name' => mysqli_real_escape_string($connect, $_POST['shipping_name']),
         'shipping_phone' => mysqli_real_escape_string($connect, $_POST['shipping_phone']),
@@ -349,7 +369,6 @@ if (isset($_POST['GLoadingSubmit'])) {
         'shipping_address' => mysqli_real_escape_string($connect, $_POST['shipping_address']),
         'transfer_by' => mysqli_real_escape_string($connect, $_POST['transfer_by'])
     ];
-
     $data = [
         'sr_no' => $sr_no,
         'p_id' => $p_id,
@@ -361,6 +380,7 @@ if (isset($_POST['GLoadingSubmit'])) {
         'loading_details' => json_encode($loading_details),
         'receiving_details' => json_encode($receiving_details),
         'bl_no' => $bl_no,
+        'gloading_info' => json_encode($my),
         'report' => $report,
         'importer_details' => json_encode($importer_details),
         'notify_party_details' => json_encode($notify_party_details),
@@ -369,6 +389,7 @@ if (isset($_POST['GLoadingSubmit'])) {
         'shipping_details' => json_encode($shipping_details),
         'attachments' => json_encode($uploadedFiles)
     ];
+
     if (isset($_POST['action']) && isset($_POST['id'])) {
         $url_ = "general-loading?p_id=" . $p_id . "&view=1";
         $done = update('general_loading', $data, array('id' => $_POST['id']));
@@ -385,7 +406,6 @@ if (isset($_POST['GLoadingSubmit'])) {
         }
     }
     messageNew($type, $url_, $msg);
-    // Debugging (optional)
 }
 
 if (isset($_GET['deleteLoadingEntry']) && isset($_GET['lp_id']) && !empty($_GET['lp_id'])) {

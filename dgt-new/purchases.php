@@ -355,6 +355,26 @@ if (isset($_POST['purchaseReports'])) {
     }
     messageNew($type, $pageURL, $msg);
 }
+if (isset($_GET['deletePurchaseReport'])) {
+    $id = isset($_GET['p_hidden_id']) ? $_GET['p_hidden_id'] : '';
+    $type = $_GET['type'];
+    $pageURL = $pageURL . '?t_id='.$id;
+    $deleteReport = isset($_GET['deletePurchaseReport']) ? $_GET['deletePurchaseReport'] : '';
+    $records = fetch('transactions', ['id' => $id]);
+    $record = mysqli_fetch_assoc($records);
+    $reports = isset($record['reports']) ? json_decode($record['reports'], true) : [];
+    if (isset($reports[$deleteReport])) {
+        unset($reports[$deleteReport]);
+        $data = ['reports' => json_encode($reports)];
+        if (update('transactions', $data, ['id' => $id])) {
+            messageNew('success', $pageURL, 'Report Deleted Successfully!');
+        } else {
+            messageNew('failed', $pageURL, 'Error in Deleting Report!');
+        }
+    } else {
+        messageNew('failed', $pageURL, 'Report Type Not Found!');
+    }
+}
 ?>
 <script>
     $(document).ready(function() {

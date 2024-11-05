@@ -179,15 +179,17 @@ if ($id > 0) {
                                                     </div>
                                                     <?php
                                                     $warehouse = !empty(json_decode($record['agent_details'], true)['cargo_transfer_warehouse']) ? json_decode($record['agent_details'], true)['cargo_transfer_warehouse'] : '';
-                                                    $warehouseOptions = ['freezone', 'offsite', 'transit'];
+                                                    $warehouseOptions = ['Free Zone', 'OFF Site', 'Transit'];
                                                     ?>
+
+                                                    <!-- Cargo Transfer Dropdown -->
                                                     <div class="col-md-3">
                                                         <label for="cargo_transfer" class="form-label">Cargo Transfer</label>
                                                         <select id="cargo_transfer" name="cargo_transfer" class="form-select form-control-sm" required>
                                                             <option disabled <?= in_array($warehouse, $warehouseOptions) ? '' : 'selected' ?>>Select One</option>
-                                                            <option value="freezone" <?= $warehouse === 'freezone' ? 'selected' : '' ?>>Freezone Warehouse</option>
-                                                            <option value="offsite" <?= $warehouse === 'offsite' ? 'selected' : '' ?>>Offsite Warehouse</option>
-                                                            <option value="transit" <?= $warehouse === 'transit' ? 'selected' : '' ?>>Transit Warehouse</option>
+                                                            <option value="Free Zone" <?= $warehouse === 'freezone' ? 'selected' : '' ?>>Freezone Warehouse</option>
+                                                            <option value="OFF Site" <?= $warehouse === 'offsite' ? 'selected' : '' ?>>Offsite Warehouse</option>
+                                                            <option value="Transit" <?= $warehouse === 'transit' ? 'selected' : '' ?>>Transit Warehouse</option>
                                                         </select>
                                                     </div>
 
@@ -237,7 +239,7 @@ if ($id > 0) {
                 </div>
             </div>
             <div class="col-md-2 card">
-            <button class="btn btn-warning btn-sm mt-2" onclick="document.querySelector('.transfer-form').classList.toggle('d-none');">Transfer to Agent</button>
+                <button class="btn btn-warning btn-sm mt-2" onclick="document.querySelector('.transfer-form').classList.toggle('d-none');">Transfer to Agent</button>
             </div>
         </div>
 <?php }

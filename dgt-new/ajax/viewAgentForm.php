@@ -53,13 +53,12 @@ if ($id > 0) {
                                 ?>
                             </div>
                         </div>
-
                         <div class="row gy-1 border-bottom py-1">
                             <div class="col-md-12">
                                 <span class="fs-6 fw-bold">By <?= ucwords($Shipping['transfer_by']); ?></span>
                             </div>
                             <?php if (!empty($Loading)): ?>
-                                <div class="col-md-2">
+                                <div class="col-md-3">
                                     <div class="fs-6 fw-bold">Loading Details</div>
                                     <div>
                                         <?php
@@ -71,6 +70,8 @@ if ($id > 0) {
                                             }
                                             echo '<b>' . ucwords(str_replace('_', ' ', $key)) . ': </b>' . $value . "<br>";
                                         }
+                                        echo '<b>B/L No: </b>' . $record['bl_no'] . "<br>";
+
                                         ?>
                                     </div>
                                 </div>
@@ -78,7 +79,7 @@ if ($id > 0) {
 
 
                             <?php if (!empty($Receiving)): ?>
-                                <div class="col-md-2">
+                                <div class="col-md-3">
                                     <div class="fs-6 fw-bold">Receiving Details</div>
                                     <div>
                                         <?php
@@ -96,12 +97,16 @@ if ($id > 0) {
 
 
                             <?php if (!empty($Shipping)): ?>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <div class="fs-6 fw-bold">Shipping Details</div>
                                     <div>
                                         <?php
                                         foreach ($Shipping as $key => $value) {
-                                            echo '<b>' . ucwords(str_replace('_', ' ', $key)) . ': </b>' . $value . "<br>";
+                                            if($key == 'transfer_by'){
+                                                continue;
+                                            }
+                                            echo '<b>' . ucwords(str_replace('shipping_', ' ', $key)) . ': </b>' . $value . "<br>";
+                                            
                                         }
                                         ?>
                                     </div>
@@ -114,9 +119,13 @@ if ($id > 0) {
                                     <div>
                                         <?php
                                         foreach ($Agent as $key => $value) {
-                                            if (in_array($key, ['ag_acc_no', 'ag_name', 'ag_id', 'cargo_transfer_warehouse'])) {
+                                            if (in_array($key, ['ag_acc_no', 'ag_name', 'ag_id'])) {
                                                 echo '<b>' . ucwords(str_replace('_', ' ', str_replace('ag_', 'Agent ', $key))) . ': </b>' . $value . "<br>";
-                                            };
+                                            }else{
+                                                if($key === 'cargo_transfer_warehouse'){
+                                                    echo '<b> Cargo WareHouse: </b>' . $value . "<br>";
+                                                }
+                                            }
                                         }
                                         ?>
                                     </div>

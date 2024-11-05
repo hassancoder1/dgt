@@ -8,6 +8,49 @@ if ($id > 0) {
     $_fields = transactionSingle($id);
     $notify_party = isset($record['notify_party_details']) ? json_decode($record['notify_party_details'], true) : false;
     if (!empty($_fields)) { ?>
+        <?php
+        $result = mysqli_query($connect, "SELECT * FROM general_loading where p_id=$id");
+        $all_records = [];
+        $firstRow = null;
+        $rows = [];
+        $max_sr_no = $total_loaded_quantity_no = $total_loaded_gross_weight = $total_loaded_net_weight = $next_bl_entry = 0;
+        $child_ids = "";
+        if ($result && mysqli_num_rows($result) > 0) {
+            while ($row = mysqli_fetch_assoc($result)) {
+                $rows[] = $row;
+                if ($firstRow === null) {
+                    $firstRow = $row;
+                    $current_bl_no = $firstRow['bl_no'];
+                    $bl_no_query = mysqli_query($connect, "
+                SELECT COUNT(*) AS bl_count, GROUP_CONCAT(id) AS child_ids 
+                FROM general_loading 
+                WHERE bl_no = '$current_bl_no'
+            ");
+                    $bl_no_result = mysqli_fetch_assoc($bl_no_query);
+
+                    $next_bl_entry = $bl_no_result['bl_count'] + 1;
+                    $child_ids = implode(',', array_filter(explode(',', $bl_no_result['child_ids']), fn($id) => $id != $firstRow['id']));
+                }
+                if ($row['sr_no'] > $max_sr_no) {
+                    $max_sr_no = $row['sr_no'];
+                }
+                $goods_details = json_decode($row['goods_details'], true);
+                $total_loaded_quantity_no += $goods_details['quantity_no'];
+                $total_loaded_gross_weight += $goods_details['gross_weight'];
+                $total_loaded_net_weight += $goods_details['net_weight'];
+            }
+        }
+        $next_sr_no = $max_sr_no + 1;
+        $total_quantity_no = $total_gross_weight = $total_net_weight = 0;
+        foreach ($_fields['items'] as $calcItem) {
+            $total_quantity_no += $calcItem['qty_no'];
+            $total_gross_weight += $calcItem['total_kgs'];
+            $total_net_weight += $calcItem['net_kgs'];
+        }
+        $remaining_quantity_no = $total_quantity_no - $total_loaded_quantity_no;
+        $remaining_gross_weight = $total_gross_weight - $total_loaded_gross_weight;
+        $remaining_net_weight = $total_net_weight - $total_loaded_net_weight;
+        ?>
         <style>
             #bl_suggestions {
                 z-index: 1000;
@@ -18,13 +61,13 @@ if ($id > 0) {
             #bl_suggestions .list-group-item {
                 cursor: pointer;
             }
- 
+
             #bl_suggestions .list-group-item:hover {
                 background-color: #f0f0f0;
             }
         </style>
         <div class="row">
-            <div class="col-md-9">
+            <div class="col-md-10">
                 <div class="card my-2">
                     <div class="card-body">
                         <?php if (!empty($_fields['sea_road_array'])): ?>
@@ -79,24 +122,24 @@ if ($id > 0) {
                                     <div class="fw-bold">Goods Calculations</div>
                                     <div class="d-flex">
                                         <div>
-                                            <b style="font-size:13px;">Goods Qty: <span id="show_goods_quantity" class="text-success"></span></b><br>
-                                            <b style="font-size:13px;">Loaded Qty: <span id="show_loaded_quantity" class="text-danger"></span></b><br>
+                                            <b style="font-size:13px;">Goods Qty: <span class="text-success"><?= $total_quantity_no; ?></span></b><br>
+                                            <b style="font-size:13px;">Loaded Qty: <span class="text-danger"><?= $total_loaded_quantity_no; ?></span></b><br>
                                             <hr class="my-1" style="width:130px;">
-                                            <b style="font-size:13px;">Remaining: <span id="show_total_quantity"></span></b>
+                                            <b style="font-size:13px;">Remaining: <span><?= $remaining_quantity_no; ?></span></b>
                                         </div>
 
                                         <div>
-                                            <b style="font-size:13px;">G.Weight: <span id="show_gross_weight" class="text-success"></span></b><br>
-                                            <b style="font-size:13px;">Loaded G.W: <span id="show_loaded_gross_weight" class="text-danger"></span></b><br>
+                                            <b style="font-size:13px;">G.Weight: <span class="text-success"><?= $total_gross_weight; ?></span></b><br>
+                                            <b style="font-size:13px;">Loaded G.W: <span class="text-danger"><?= $total_loaded_gross_weight; ?></span></b><br>
                                             <hr class="my-1" style="width:130px;">
-                                            <b style="font-size:13px;">Remaining: <span id="show_total_gross_weight"></span></b>
+                                            <b style="font-size:13px;">Remaining: <span><?= $remaining_gross_weight; ?></span></b>
                                         </div>
 
                                         <div>
-                                            <b style="font-size:13px;">N.Weight: <span id="show_net_weight" class="text-success"></span></b><br>
-                                            <b style="font-size:13px;">Loaded N.W: <span id="show_loaded_net_weight" class="text-danger"></span></b><br>
+                                            <b style="font-size:13px;">N.Weight: <span class="text-success"><?= $total_net_weight; ?></span></b><br>
+                                            <b style="font-size:13px;">Loaded N.W: <span class="text-danger"><?= $total_loaded_net_weight; ?></span></b><br>
                                             <hr class="my-1" style="width:130px;">
-                                            <b style="font-size:13px;">Remaining: <span id="show_total_net_weight"></span></b>
+                                            <b style="font-size:13px;">Remaining: <span><?= $remaining_net_weight; ?></span></b>
                                         </div>
                                     </div>
                                 </div>
@@ -173,92 +216,60 @@ if ($id > 0) {
                             </table>
                         <?php } ?>
                     </div>
-
-                    <?php
-                    $result = mysqli_query($connect, "SELECT * FROM general_loading");
-                    $all_records = [];
-                    $max_sr_no = 0;
-                    if ($result && mysqli_num_rows($result) > 0) {
-                        while ($row = mysqli_fetch_assoc($result)) {
-                            $all_records[] = $row;
-                            if ($row['sr_no'] > $max_sr_no) {
-                                $max_sr_no = $row['sr_no'];
-                            }
-                        }
-                    }
-                    $next_sr_no = $max_sr_no + 1;
-                    $all_records = array_filter($all_records, function ($record) use ($id) {
-                        return $record['p_id'] == $id;
-                    });
-                    ?>
                     <!-- HTML to display records in the table -->
                     <div class="table-responsive">
                         <table class="table mt-2 table-hover table-sm">
                             <thead>
                                 <tr>
                                     <th class="bg-dark text-white">Sr#</th>
-
                                     <th class="bg-dark text-white">Container No</th>
                                     <th class="bg-dark text-white">B/L.No</th>
-                                    <!-- <th class="bg-dark text-white">Im.N</th>
-                                    <th class="bg-dark text-white">Ex.N</th>
-                                    <th class="bg-dark text-white">N.P.N</th> -->
                                     <th class="bg-dark text-white">G.Ne</th>
-                                    <!-- <th class="bg-dark text-white">SIZE</th>
-                            <th class="bg-dark text-white">BRAND</th>
-                            <th class="bg-dark text-white">ORIGIN</th> -->
                                     <th class="bg-dark text-white">Qty Ne</th>
                                     <th class="bg-dark text-white">Qty No</th>
                                     <th class="bg-dark text-white">G.W.KGS</th>
                                     <th class="bg-dark text-white">N.W.KGS</th>
-                                    <!-- <th class="bg-dark text-white">Report</th> -->
-                                    <!-- <th class="bg-dark text-white">SH.Ne</th> -->
                                     <th class="bg-dark text-white">L.DATE</th>
-                                    <!-- <th class="bg-dark text-white">L.COUNTRY</th> -->
                                     <th class="bg-dark text-white">L.<?= $_fields['sea_road'] === 'sea' ? 'PORT' : 'BORDER'; ?></th>
                                     <th class="bg-dark text-white">R.DATE</th>
-                                    <!-- <th class="bg-dark text-white">R.COUNTRY</th> -->
                                     <th class="bg-dark text-white">R.<?= $_fields['sea_road'] === 'sea' ? 'PORT' : 'BORDER'; ?></th>
                                     <th class="bg-dark text-white">FILE</th>
-
                                 </tr>
                             </thead>
                             <tbody class="loadingsTable">
                                 <?php
-                                $quantity_no = 0;
-                                $gross_weight = 0;
-                                $net_weight = 0;
-                                foreach ($all_records as $record): ?>
+                                $quantity_no = $gross_weight = $net_weight = 0;
+                                foreach ($rows as $row): ?>
                                     <tr class="LoadingRow">
-                                        <td class="border sr_no border-dark"><a href="general-loading?p_id=<?= $id; ?>&view=1&lp_id=<?= $record['id']; ?>&action=update&sr_no=<?= $record['sr_no']; ?>"><?= $record['sr_no']; ?></a></td>
-                                        <td class="border border-dark"><?= json_decode($record['goods_details'], true)['container_no']; ?></td>
-                                        <td class="border border-dark"><?= $record['bl_no']; ?></td>
-                                        <!-- <td class="border border-dark"><?= json_decode($record['importer_details'], true)['im_acc_no']; ?></td>
-                                        <td class="border border-dark"><?= json_decode($record['exporter_details'], true)['xp_acc_no']; ?></td>
-                                        <td class="border border-dark"><?= json_decode($record['notify_party_details'], true)['np_acc_no']; ?></td> -->
-                                        <td class="border border-dark"><?= goodsName(json_decode($record['goods_details'], true)['goods_id']); ?></td>
-                                        <!-- <td class="border border-dark"><?= json_decode($record['goods_details'], true)['size']; ?></td>
-                                <td class="border border-dark"><?= json_decode($record['goods_details'], true)['brand']; ?></td>
-                                <td class="border border-dark"><?= json_decode($record['goods_details'], true)['origin']; ?></td> -->
-                                        <td class="border border-dark"><?= json_decode($record['goods_details'], true)['quantity_name']; ?></td>
-                                        <td class="border quantity_no border-dark"><?= json_decode($record['goods_details'], true)['quantity_no']; ?></td>
-                                        <td class="border border-dark"><?= json_decode($record['goods_details'], true)['gross_weight']; ?></td>
-                                        <td class="border border-dark"><?= json_decode($record['goods_details'], true)['net_weight']; ?></td>
-                                        <!-- <td class="border border-dark"><?= $record['report']; ?></td> -->
-                                        <!-- <td class="border border-dark"><?= json_decode($record['shipping_details'], true)['shipping_name']; ?></td> -->
-                                        <td class="border border-dark"><?= json_decode($record['loading_details'], true)['loading_date']; ?></td>
-                                        <!-- <td class="border border-dark"><?= json_decode($record['loading_details'], true)['loading_country']; ?></td> -->
-                                        <td class="border border-dark"><?= json_decode($record['loading_details'], true)['loading_port_name']; ?></td>
-                                        <td class="border border-dark"><?= json_decode($record['receiving_details'], true)['receiving_date']; ?></td>
-                                        <!-- <td class="border border-dark"><?= json_decode($record['receiving_details'], true)['receiving_country']; ?></td> -->
-                                        <td class="border border-dark"><?= json_decode($record['receiving_details'], true)['receiving_port_name']; ?></td>
+                                        <td class="border sr_no border-dark"><a href="general-loading?p_id=<?= $id; ?>&view=1&lp_id=<?= $row['id']; ?>&action=update&sr_no=<?= $row['sr_no']; ?>"><?= $row['sr_no']; ?></a></td>
+                                        <td class="border border-dark"><?= json_decode($row['goods_details'], true)['container_no']; ?></td>
+                                        <td class="border border-dark"><?= $row['bl_no']; ?></td>
+                                        <!-- <td class="border border-dark"><?= json_decode($row['importer_details'], true)['im_acc_no']; ?></td>
+                                        <td class="border border-dark"><?= json_decode($row['exporter_details'], true)['xp_acc_no']; ?></td>
+                                        <td class="border border-dark"><?= json_decode($row['notify_party_details'], true)['np_acc_no']; ?></td> -->
+                                        <td class="border border-dark"><?= goodsName(json_decode($row['goods_details'], true)['goods_id']); ?></td>
+                                        <!-- <td class="border border-dark"><?= json_decode($row['goods_details'], true)['size']; ?></td>
+                                <td class="border border-dark"><?= json_decode($row['goods_details'], true)['brand']; ?></td>
+                                <td class="border border-dark"><?= json_decode($row['goods_details'], true)['origin']; ?></td> -->
+                                        <td class="border border-dark"><?= json_decode($row['goods_details'], true)['quantity_name']; ?></td>
+                                        <td class="border quantity_no border-dark"><?= json_decode($row['goods_details'], true)['quantity_no']; ?></td>
+                                        <td class="border border-dark"><?= json_decode($row['goods_details'], true)['gross_weight']; ?></td>
+                                        <td class="border border-dark"><?= json_decode($row['goods_details'], true)['net_weight']; ?></td>
+                                        <!-- <td class="border border-dark"><?= $row['report']; ?></td> -->
+                                        <!-- <td class="border border-dark"><?= json_decode($row['shipping_details'], true)['shipping_name']; ?></td> -->
+                                        <td class="border border-dark"><?= json_decode($row['loading_details'], true)['loading_date']; ?></td>
+                                        <!-- <td class="border border-dark"><?= json_decode($row['loading_details'], true)['loading_country']; ?></td> -->
+                                        <td class="border border-dark"><?= json_decode($row['loading_details'], true)['loading_port_name']; ?></td>
+                                        <td class="border border-dark"><?= json_decode($row['receiving_details'], true)['receiving_date']; ?></td>
+                                        <!-- <td class="border border-dark"><?= json_decode($row['receiving_details'], true)['receiving_country']; ?></td> -->
+                                        <td class="border border-dark"><?= json_decode($row['receiving_details'], true)['receiving_port_name']; ?></td>
                                         <td class="border border-dark text-success" style="position: relative;">
                                             <a href="javascript:void(0);" onclick="toggleDownloadMenu(event, this)" style="text-decoration: none; color: inherit;">
                                                 <i class="fa fa-paperclip"></i>
                                             </a>
                                             <div class="bg-light border border-dark p-2 attachment-menu" style="position: absolute; top: -100%; left: -500%; display: none; z-index: 1000; width: 200px;">
                                                 <?php
-                                                $attachments = json_decode($record['attachments'], true) ?? [];
+                                                $attachments = json_decode($row['attachments'], true) ?? [];
                                                 foreach ($attachments as $item) {
                                                     $fileName = htmlspecialchars($item[1], ENT_QUOTES);
                                                     $fileExtension = pathinfo($fileName, PATHINFO_EXTENSION);
@@ -272,9 +283,9 @@ if ($id > 0) {
 
                                     </tr>
                                     <?php
-                                    $quantity_no += (int)json_decode($record['goods_details'], true)['quantity_no'];
-                                    $gross_weight += (float)json_decode($record['goods_details'], true)['gross_weight'];
-                                    $net_weight += (float)json_decode($record['goods_details'], true)['net_weight'];
+                                    $quantity_no += (int)json_decode($row['goods_details'], true)['quantity_no'];
+                                    $gross_weight += (float)json_decode($row['goods_details'], true)['gross_weight'];
+                                    $net_weight += (float)json_decode($row['goods_details'], true)['net_weight'];
                                     ?>
                                 <?php endforeach; ?>
                                 <tr>
@@ -287,9 +298,9 @@ if ($id > 0) {
                             </tbody>
                         </table>
                     </div>
-                    <div class="card mt-3">
+                    <div class="card mt-3 transfer-form d-none">
                         <div class="card-body p-3">
-                            <form method="post" class="table-form <?= $action === 'update' ? 'border border-danger p-2' : ''; ?>" onsubmit="return compareValues('#quantity_no', '#show_total_quantity')" enctype="multipart/form-data">
+                            <form method="post" class="table-form <?= (isset($_POST['action']) ? $_POST['action'] : '') === 'update' ? 'border border-danger p-2' : ''; ?>" onsubmit="return compareValues()" enctype="multipart/form-data">
                                 <?php
                                 if (isset($_POST['lp_id']) && isset($_POST['action']) && $_POST['action'] === 'update') {
                                     $rowId = $_POST['lp_id'];
@@ -308,6 +319,18 @@ if ($id > 0) {
                                     echo '<input type="hidden" name="action" value="update">';
                                     echo '<input type="hidden" name="id" value="' . $updateRow['id'] . '">';
                                     $action = isset($_POST['action']) ? $_POST['action'] : '';
+                                } elseif ($firstRow) {
+                                    $action = 'new';
+                                    $last_record['bl_no'] = $firstRow['bl_no'];
+                                    $last_record['report'] = $firstRow['report'];
+                                    $Importer = isset($firstRow['importer_details']) ? json_decode($firstRow['importer_details'], true) : [];
+                                    $Notify = isset($firstRow['notify_party_details']) ? json_decode($firstRow['notify_party_details'], true) : [];
+                                    $Exporter = isset($firstRow['exporter_details']) ? json_decode($firstRow['exporter_details'], true) : [];
+                                    // $Goods = isset($firstRow['goods_details']) ? json_decode($firstRow['goods_details'], true) : [];
+                                    $Goods = ['goods_id' => '', 'quantity_no' => '', 'quantity_name' => '', 'size' => '', 'brand' => '', 'origin' => '', 'net_weight' => '', 'gross_weight' => '', 'container_no' => '', 'container_name' => ''];
+                                    $Shipping = isset($firstRow['shipping_details']) ? json_decode($firstRow['shipping_details'], true) : [];
+                                    $Loading = isset($firstRow['loading_details']) ? json_decode($firstRow['loading_details'], true) : [];
+                                    $Receiving = isset($firstRow['receiving_details']) ? json_decode($firstRow['receiving_details'], true) : [];
                                 } else {
                                     $action = 'new';
                                     $last_record = [];
@@ -334,6 +357,14 @@ if ($id > 0) {
                                 </div>
                                 <!-- General Information -->
                                 <hr>
+                                <?php if ($firstRow) { ?>
+                                    <input type="hidden" name="bl_entry_no" value="<?= $next_bl_entry; ?>">
+                                    <input type="hidden" name="child_ids" value="<?= $child_ids; ?>">
+                                <?php } ?>
+                                <input type="hidden" name="total_quantity_no" value="<?= $total_quantity_no; ?>">
+                                <input type="hidden" name="total_gross_weight" value="<?= $total_gross_weight; ?>">
+                                <input type="hidden" name="total_net_weight" value="<?= $total_net_weight; ?>">
+
                                 <input type="hidden" name="p_id" id="p_id" value="<?= $id; ?>">
                                 <input type="hidden" name="transfer_by" id="transfer_by" value="<?= $_fields['sea_road']; ?>">
                                 <input type="hidden" name="p_type" id="p_type" value="<?= $_fields['type']; ?>">
@@ -357,7 +388,6 @@ if ($id > 0) {
                                         <input type="number" name="sr_no" id="sr_no" required readonly class="form-control form-control-sm" value="<?php echo $next_sr_no; ?>">
                                     </div>
 
-                                    <!-- B/L No (small field) -->
                                     <!-- (B/L) Bill of Lading Number  -->
                                     <!-- B/L No (small field) -->
                                     <div class="col-md-2 position-relative">
@@ -507,56 +537,44 @@ if ($id > 0) {
                                 <!-- Goods Details -->
                                 <h5 class="text-primary mt-4">Goods Details</h5>
                                 <hr>
-                                <div class="row g-3">
-                                    <?php
-                                    $loadingRowsCount = count($all_records);
-                                    $nextGoodsRowIndex = $loadingRowsCount;
-                                    if (isset($_fields['items'][$nextGoodsRowIndex])) {
-                                        $details = $_fields['items'][$nextGoodsRowIndex];
-                                        $goods_id = $details['goods_id'];
-                                        $goods_name = goodsName($goods_id);
-                                        $size = $details['size'];
-                                        $brand = $details['brand'];
-                                        $origin = $details['origin'];
-                                        $quantity_name = $details['qty_name'];
-                                        $quantity_no = $details['qty_no'];
-                                        $gross_weight = $details['total_kgs'];
-                                        $net_weight = $details['net_kgs'];
-                                        $perAmount = $details['qty_kgs'];
-                                        $emptyKgs = $details['empty_kgs'];
-                                    } else {
-                                        $goods_id = $size = $brand = $origin = $quantity_name = $quantity_no = $net_weight = $gross_weight = $perAmount = $empty_kgs = '';
-                                    }
-                                    ?>
-                                    <script>
-                                        let perAmount = parseFloat('<?= $perAmount ?? '0'; ?>');
-                                        let emptyKgs = parseFloat('<?= $emptyKgs ?? '0'; ?>');
-                                    </script>
-                                    <?php
-                                    // $goods_options = [];
-                                    // foreach ($_fields['items'] as $details) {
-                                    //     $goods_id = $details['goods_id'];
-                                    //     $goods_name = goodsName($goods_id);
-                                    //     if (!isset($goods_options[$goods_id])) {
-                                    //         $goods_options[$goods_id] = $goods_name;
-                                    //         $selected = ($goods_id == $Goods['goods_id']) ? 'selected' : '';
-                                    //         echo '<option ' . $selected . ' value="' . $goods_id . '">' . $goods_name . '</option>';
-                                    //     }
-                                    // }
-                                    ?>
+                                <?php
+                                // Step 1: Initialize unique options for goods, sizes, brands, and origins
+                                $goods_options = [];
+                                $sizes = [];
+                                $brands = [];
+                                $origins = [];
 
-                                    <!-- Goods Name -->
+                                foreach ($_fields['items'] as $details) {
+                                    $goods_id = $details['goods_id'];
+                                    $goods_name = goodsName($goods_id);
+
+                                    // Add goods names if not already added
+                                    if (!isset($goods_options[$goods_id])) {
+                                        $goods_options[$goods_id] = $goods_name;
+                                    }
+
+                                    // Add unique sizes, brands, and origins
+                                    $sizes[] = $details['size'];
+                                    $brands[] = $details['brand'];
+                                    $origins[] = $details['origin'];
+                                }
+
+                                // Remove duplicates
+                                $sizes = array_unique($sizes);
+                                $brands = array_unique($brands);
+                                $origins = array_unique($origins);
+                                ?>
+
+                                <div class="row g-3">
                                     <!-- Goods Name -->
                                     <div class="col-md-2">
                                         <label for="goods_id" class="form-label">Goods Name</label>
                                         <select id="goods_id" name="goods_id" class="form-select" required>
                                             <option hidden value="">Select</option>
                                             <?php
-                                            foreach ($_fields['items'] as $index => $details) {
-                                                $goods_option_id = $details['goods_id'];
-                                                $goods_option_name = goodsName($goods_option_id);
-                                                $selected = ($index == $nextGoodsRowIndex) ? 'selected' : '';
-                                                echo '<option ' . $selected . ' value="' . $goods_option_id . '">' . $goods_option_name . '</option>';
+                                            foreach ($goods_options as $id => $name) {
+                                                $selected = ($id == $Goods['goods_id']) ? 'selected' : '';
+                                                echo '<option ' . $selected . ' value="' . $id . '">' . htmlspecialchars($name) . '</option>';
                                             }
                                             ?>
                                         </select>
@@ -568,7 +586,10 @@ if ($id > 0) {
                                         <select class="form-select" name="size" id="size" required>
                                             <option hidden value="">Select</option>
                                             <?php
-                                            echo '<option selected value="' . htmlspecialchars($size) . '">' . htmlspecialchars($size) . '</option>';
+                                            foreach ($sizes as $option) {
+                                                $selected = ($option == $Goods['size']) ? 'selected' : '';
+                                                echo '<option ' . $selected . ' value="' . htmlspecialchars($option) . '">' . htmlspecialchars($option) . '</option>';
+                                            }
                                             ?>
                                         </select>
                                     </div>
@@ -579,7 +600,10 @@ if ($id > 0) {
                                         <select class="form-select" name="brand" id="brand" required>
                                             <option hidden value="">Select</option>
                                             <?php
-                                            echo '<option selected value="' . htmlspecialchars($brand) . '">' . htmlspecialchars($brand) . '</option>';
+                                            foreach ($brands as $option) {
+                                                $selected = ($option == $Goods['brand']) ? 'selected' : '';
+                                                echo '<option ' . $selected . ' value="' . htmlspecialchars($option) . '">' . htmlspecialchars($option) . '</option>';
+                                            }
                                             ?>
                                         </select>
                                     </div>
@@ -590,32 +614,36 @@ if ($id > 0) {
                                         <select class="form-select" name="origin" id="origin" required>
                                             <option hidden value="">Select</option>
                                             <?php
-                                            echo '<option selected value="' . htmlspecialchars($origin) . '">' . htmlspecialchars($origin) . '</option>';
+                                            foreach ($origins as $option) {
+                                                $selected = ($option == $Goods['origin']) ? 'selected' : '';
+                                                echo '<option ' . $selected . ' value="' . htmlspecialchars($option) . '">' . htmlspecialchars($option) . '</option>';
+                                            }
                                             ?>
                                         </select>
                                     </div>
 
+
                                     <!-- Quantity Name -->
                                     <div class="col-md-2">
                                         <label for="quantity_name" class="form-label">Qty Name</label>
-                                        <input type="text" name="quantity_name" value="<?= htmlspecialchars($quantity_name); ?>" id="myquantity_name" required class="form-control form-control-sm">
+                                        <input type="text" name="quantity_name" value="<?= $Goods['quantity_name']; ?>" id="myquantity_name" required class="form-control form-control-sm">
                                     </div>
 
                                     <!-- Quantity No -->
                                     <div class="col-md-1">
                                         <label for="quantity_no" class="form-label">Qty No</label>
-                                        <input type="number" name="quantity_no" value="<?= htmlspecialchars($quantity_no); ?>" id="quantity_no" required class="form-control form-control-sm" step="0.00001" onkeyup="autoCalc('#quantity_no', '#gross_weight', '#net_weight')">
+                                        <input type="number" name="quantity_no" value="<?= $Goods['quantity_no']; ?>" id="quantity_no" required class="form-control form-control-sm" step="0.00001" onkeyup="autoCalc('#quantity_no', '#gross_weight', '#net_weight')">
                                     </div>
 
                                     <!-- Gross Weight -->
                                     <div class="col-md-1">
                                         <label for="gross_weight" class="form-label">G.Weight</label>
-                                        <input type="number" name="gross_weight" value="<?= htmlspecialchars($gross_weight); ?>" id="gross_weight" required class="form-control form-control-sm">
+                                        <input type="number" name="gross_weight" value="<?= $Goods['gross_weight']; ?>" id="gross_weight" required class="form-control form-control-sm">
                                     </div>
                                     <!-- Net Weight -->
                                     <div class="col-md-1">
                                         <label for="net_weight" class="form-label">N.Weight</label>
-                                        <input type="number" name="net_weight" value="<?= htmlspecialchars($net_weight); ?>" id="net_weight" required class="form-control form-control-sm">
+                                        <input type="number" name="net_weight" value="<?= $Goods['net_weight']; ?>" id="net_weight" required class="form-control form-control-sm">
                                     </div>
 
                                     <!-- Container No -->
@@ -654,8 +682,8 @@ if ($id > 0) {
                     </div>
                 </div>
             </div>
-            <div class="col-md-3 card mt-2">
-                <div class="align-items-center justify-content-between flex-wrap">
+            <div class="col-md-2 card mt-2">
+                <div class="align-items-center justify-content-between flex-wrap pt-2">
                     <div>
                         <strong><?php echo strtoupper($_fields['p_s_name']) . ' #'; ?></strong>
                         <?php echo $_fields['sr_no']; ?>
@@ -711,6 +739,8 @@ if ($id > 0) {
                         <div class="text-danger">Notify Party Details Not Added!</div>
                     <?php endif; ?>
                 </div>
+
+                <button class="btn btn-warning btn-sm mt-2" onclick="document.querySelector('.transfer-form').classList.toggle('d-none');">Toggle Form</button>
             </div>
 
         </div>
@@ -718,6 +748,25 @@ if ($id > 0) {
 } ?>
 <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
 <script>
+    function compareValues() {
+        let remainingQty = parseInt('<?= $remaining_quantity_no + (isset($updateRow) ? $Goods['quantity_no'] : 0); ?>');
+        let remainingGross = parseInt('<?= $remaining_gross_weight + (isset($updateRow) ? $Goods['gross_weight'] : 0); ?>');
+        let remainingNet = parseInt('<?= $remaining_net_weight + (isset($updateRow) ? $Goods['net_weight'] : 0); ?>');
+        let msg = "";
+        if (parseInt($('#quantity_no').val()) > remainingQty) {
+            msg = ("You can only add " + remainingQty + " Quantity For This Good");
+        } else if (parseInt($('#gross_weight').val()) > remainingGross) {
+            msg = ("You can only add " + remainingGross + " Gross Weight For This Good");
+        } else if (parseInt($('#net_weight').val()) > remainingNet) {
+            msg = ("You can only add " + remainingNet + " Net Weight For This Good");
+        }
+        if (msg === '') {
+            return true
+        } else {
+            alert(msg);
+            return false
+        };
+    }
     $(document).ready(function() {
         function hidePctInputs() {
             $("#pct, #pct_amt").hide();
@@ -1027,58 +1076,6 @@ if ($id > 0) {
             $('#' + dropdown_id).val('');
         }
     }
-
-    function compareValues(elementId1, elementId2) {
-        let element1 = $(elementId1).val();
-        let element2 = parseInt($(elementId2)[0].innerHTML);
-        let editModeSr_no = '<?= $_POST['sr_no']; ?>';
-        // $('#LoadingsTable tbody tr').each(function() {
-        //     if ($(this).find('.sr_no').text().trim() === editModeSr_no) {
-        //         element2 += parseInt($(this).find('.quantity_no').text().trim());
-        //         return false;
-        //     }
-        // });
-        // console.log(element2);
-        if (parseInt(element1) > element2) {
-            alert("You can only add " + element2 + " Quantity For This Purchase");
-            return false;
-        }
-        return true;
-    }
-
-
-    // function updateQuantities() {
-    //     let totalLoadedQuantity = parseInt($('#total_loaded_quantity_no')[0].innerHTML) || 0;
-    //     let totalLoadedGross = parseFloat($('#total_loaded_gross_weight')[0].innerHTML) || 0;
-    //     let totalLoadedNet = parseFloat($('#total_loaded_net_weight')[0].innerHTML) || 0;
-    //     let totalQuantity = parseInt($('#total_quantity_no')[0].innerHTML) || 0;
-    //     let totalGross = parseFloat($('#total_gross_weight')[0].innerHTML) || 0;
-    //     let totalNet = parseFloat($('#total_net_weight')[0].innerHTML) || 0;
-    //     let finalQuantity = totalQuantity - totalLoadedQuantity;
-    //     let finalGross = totalGross - totalLoadedGross;
-    //     let finalNet = totalNet - totalLoadedNet;
-    //     $("#show_total_loaded_quantity_no").html('-' + totalLoadedQuantity);
-    //     $("#show_total_loaded_gross_weight").html('-' + totalLoadedGross);
-    //     $("#show_total_loaded_net_weight").html('-' + totalLoadedNet);
-    //     $("#show_final_quantity_no").html(finalQuantity);
-    //     $("#show_final_gross_weight").html(finalGross);
-    //     $("#show_final_net_weight").html(finalNet);
-    //     // if (finalQuantity === 0) {
-    //     //     console.log("Final quantity is 0. No more loading needed.");
-    //     // } else {
-    //     //     console.log("Final quantity is not 0. More loading needed.");
-    //     // }
-    // }
-    $('#show_goods_quantity').html($("#total_quantity_no").html());
-    $('#show_gross_weight').html($("#total_gross_weight").html());
-    $('#show_net_weight').html($("#total_net_weight").html());
-    $('#show_loaded_quantity').html('-' + $("#total_loaded_quantity_no").html());
-    $('#show_loaded_gross_weight').html('-' + $("#total_loaded_gross_weight").html());
-    $('#show_loaded_net_weight').html('-' + $("#total_loaded_net_weight").html());
-    $("#show_total_quantity").html(parseInt($('#show_goods_quantity').html()) - parseInt($("#total_loaded_quantity_no").html()));
-    $("#show_total_gross_weight").html(parseInt($('#show_gross_weight').html()) - parseInt($("#total_loaded_gross_weight").html()));
-    $("#show_total_net_weight").html(parseInt($('#show_net_weight').html()) - parseInt($("#total_loaded_net_weight").html()));
-
     $(document).ready(function() {
         $('#im_acc_kd_id').on('change', function() {
             khaataDetailsSingle($(this).val(), 'im_acc_details');
@@ -1183,17 +1180,17 @@ if ($id > 0) {
         }
     }
 
-    // Function to get data from the table based on column class name
-    function getTableData(columnClass) {
-        var values = [];
-        $('#goodsTable tr').each(function() {
-            var value = $(this).find('td.' + columnClass).text().trim();
-            if (value && !values.includes(value)) {
-                values.push(value);
-            }
-        });
-        return values;
-    }
+    // // Function to get data from the table based on column class name
+    // function getTableData(columnClass) {
+    //     var values = [];
+    //     $('#goodsTable tr').each(function() {
+    //         var value = $(this).find('td.' + columnClass).text().trim();
+    //         if (value && !values.includes(value)) {
+    //             values.push(value);
+    //         }
+    //     });
+    //     return values;
+    // }
 
     function toggleDownloadMenu(event, iconElement) {
         event.preventDefault();

@@ -1,6 +1,6 @@
 <?php
 require_once '../connection.php';
-
+### The issue in this form is just to deal with the datatpye of bill_of_entry_no and billNumber + sorting the entries as containers under the bill_of_entry_no submitted by an agent. The Bill will contain multiple entries for all container loading unlaodind expenses. 
 $loading_id = isset($_POST['loading_id']) ? (int)$_POST['loading_id'] : 0;
 $bill_of_entry_no = isset($_POST['bill_of_entry_no']) ? mysqli_real_escape_string($connect, $_POST['bill_of_entry_no']) : '';
 $level = isset($_POST['level']) ? $_POST['level'] : '';

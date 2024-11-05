@@ -20,13 +20,15 @@ $mypageURL = $pageURL;
             <thead>
                 <tr class="text-nowrap">
                     <th>P#</th>
-                    <th>Sr#</th>
+                    <!-- <th>Sr#</th> -->
                     <th>WareHouse</th>
+                    <th>AG ID</th>
+                    <th>AG NAME</th>
                     <th>L_DATE</th>
-                    <th>L_COUNTRY</th>
+                    <!-- <th>L_COUNTRY</th> -->
                     <th>L_PORT/BORDER</th>
                     <th>R_DATE</th>
-                    <th>R_COUNTRY</th>
+                    <!-- <th>R_COUNTRY</th> -->
                     <th>R_PORT/BORDER</th>
                     <th>B/L No.</th>
                     <th>Container No</th>
@@ -41,8 +43,6 @@ $mypageURL = $pageURL;
                     <th>QTY.No</th>
                     <th>G.W.KGS</th>
                     <th>N.W.KGS</th>
-                    <th>AG ID</th>
-                    <th>AG NAME</th>
                 </tr>
             </thead>
             <tbody>
@@ -59,6 +59,7 @@ $mypageURL = $pageURL;
                     } elseif (isset(json_decode($SingleLoading['agent_details'], true)['transferred'])) {
                         if (json_decode($SingleLoading['agent_details'], true)['transferred'] === true) {
                             $rowColor = 'text-dark';
+                            $locked = 1;
                         } else {
                             $rowColor = 'text-warning';
                         }
@@ -67,16 +68,18 @@ $mypageURL = $pageURL;
                     <tr class="text-nowrap">
                         <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $SingleLoading['id']; ?>)"
                             data-bs-toggle="modal" data-bs-target="#KhaataDetails">
-                            <?php echo '<b>P#', $SingleLoading['p_id']; ?>
+                            <?php echo '<b>P#', $SingleLoading['p_id']."</b> (".$SingleLoading['sr_no'].")"; ?>
                             <?php echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
                         </td>
-                        <td class="<?php echo $rowColor; ?>"><?php echo $SingleLoading['sr_no']; ?></td>
+                        <!-- <td class="<?php echo $rowColor; ?>"><?php echo $SingleLoading['sr_no']; ?></td> -->
                         <td class="<?php echo $rowColor; ?>"><?= isset(json_decode($SingleLoading['agent_details'], true)['cargo_transfer_warehouse']) ? json_decode($SingleLoading['agent_details'], true)['cargo_transfer_warehouse'] : ''; ?></td>
+                        <td class="<?php echo $rowColor; ?>"><?= isset(json_decode($SingleLoading['agent_details'], true)['ag_id']) ? json_decode($SingleLoading['agent_details'], true)['ag_id'] : ''; ?></td>
+                        <td class="<?php echo $rowColor; ?>"><?= isset(json_decode($SingleLoading['agent_details'], true)['ag_id']) ? json_decode($SingleLoading['agent_details'], true)['ag_name'] : ''; ?></td>
                         <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['loading_details'], true)['loading_date']; ?></td>
-                        <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['loading_details'], true)['loading_country']; ?></td>
+                        <!-- <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['loading_details'], true)['loading_country']; ?></td> -->
                         <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['loading_details'], true)['loading_port_name']; ?></td>
                         <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['receiving_details'], true)['receiving_date']; ?></td>
-                        <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['receiving_details'], true)['receiving_country']; ?></td>
+                        <!-- <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['receiving_details'], true)['receiving_country']; ?></td> -->
                         <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['receiving_details'], true)['receiving_port_name']; ?></td>
                         <td class="<?php echo $rowColor; ?>"><?= $SingleLoading['bl_no']; ?></td>
                         <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['goods_details'], true)['container_no']; ?></td>
@@ -91,8 +94,6 @@ $mypageURL = $pageURL;
                         <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['goods_details'], true)['quantity_no']; ?></td>
                         <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['goods_details'], true)['gross_weight']; ?></td>
                         <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['goods_details'], true)['net_weight']; ?></td>
-                        <td class="<?php echo $rowColor; ?>"><?= isset(json_decode($SingleLoading['agent_details'], true)['ag_id']) ? json_decode($SingleLoading['agent_details'], true)['ag_id'] : ''; ?></td>
-                        <td class="<?php echo $rowColor; ?>"><?= isset(json_decode($SingleLoading['agent_details'], true)['ag_id']) ? json_decode($SingleLoading['agent_details'], true)['ag_name'] : ''; ?></td>
                     </tr>
                 <?php
                     $row_count++;
