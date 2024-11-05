@@ -211,7 +211,7 @@ if ($_GET) {
     $type = 'danger';
     $r_id_hidden = mysqli_real_escape_string($connect, $_POST['r_id_hidden']);
     $r_type_hidden = mysqli_real_escape_string($connect, $_POST['r_type_hidden']);
-    $roz_types = array('Business', 'Bank', 'Bill', 'Cash');
+    $roz_types = array('Business', 'Bank', 'Bill', 'Cash', 'Agent Bill');
     if ($r_id_hidden > 0 && in_array($r_type_hidden, $roz_types)) {
         $r_moved = mysqli_query($connect, "INSERT INTO roznamchaas_deleted SELECT * FROM roznamchaas WHERE r_id = '$r_id_hidden'");
         if ($r_moved) {

@@ -20,21 +20,15 @@ $mypageURL = $pageURL;
             <thead>
                 <tr class="text-nowrap">
                     <th>P#</th>
-                    <!-- <th>Sr#</th> -->
                     <th>WareHouse</th>
                     <th>AG ID</th>
                     <th>AG NAME</th>
                     <th>L_DATE</th>
-                    <!-- <th>L_COUNTRY</th> -->
                     <th>L_PORT/BORDER</th>
                     <th>R_DATE</th>
-                    <!-- <th>R_COUNTRY</th> -->
                     <th>R_PORT/BORDER</th>
                     <th>B/L No.</th>
-                    <th>Container No</th>
-                    <th>Im.N</th>
-                    <th>Ex.N</th>
-                    <th>N.P.N</th>
+                    <th>Containers</th>
                     <th>Goods Name</th>
                     <th>SIZE</th>
                     <th>BRAND</th>
@@ -47,29 +41,54 @@ $mypageURL = $pageURL;
             </thead>
             <tbody>
                 <?php
-                $Loadings = mysqli_query($connect, $sql);
+                $result = mysqli_query($connect, $sql);
+                $Loadings = [];
+                $containerCounts = [];
+                while ($one = mysqli_fetch_assoc($result)) {
+                    $gloadingInfo = json_decode($one['gloading_info'], true);
+                    if (isset($gloadingInfo['child_ids']) && $gloadingInfo['child_ids'] !== null) {
+                        $Loadings[] = $one;
+                    }
+                    $blNo = $one['bl_no'];
+                    if (!isset($containerCounts[$blNo])) {
+                        $containerCounts[$blNo] = 1;
+                    } else {
+                        $containerCounts[$blNo]++;
+                    }
+                }
                 $row_count = $p_qty_total = $p_kgs_total = 0;
-                $i = 1;
                 $rowColor = '';
                 $locked = 0;
-                while ($SingleLoading = mysqli_fetch_assoc($Loadings)) {
+                $pIdCounts = [];
+                foreach ($Loadings as $SingleLoading) {
                     $id = $SingleLoading['id'];
-                    if (!($SingleLoading['agent_details'])) {
+                    $pId = $SingleLoading['p_id'];
+                    $blNo = $SingleLoading['bl_no'];
+                    if (empty($SingleLoading['agent_details'])) {
                         $rowColor = 'text-danger';
+                        $locked = 0;
                     } elseif (isset(json_decode($SingleLoading['agent_details'], true)['transferred'])) {
-                        if (json_decode($SingleLoading['agent_details'], true)['transferred'] === true) {
+                        $transferred = json_decode($SingleLoading['agent_details'], true)['transferred'];
+                        if ($transferred === true) {
                             $rowColor = 'text-dark';
                             $locked = 1;
                         } else {
                             $rowColor = 'text-warning';
+                            $locked = 0;
                         }
                     }
+                    if (!isset($pIdCounts[$pId])) {
+                        $pIdCounts[$pId] = 1;
+                    } else {
+                        $pIdCounts[$pId]++;
+                    }
+                    $pIdDisplayCount = $pIdCounts[$pId];
                 ?>
+
                     <tr class="text-nowrap">
-                        <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $SingleLoading['id']; ?>)"
-                            data-bs-toggle="modal" data-bs-target="#KhaataDetails">
-                            <?php echo '<b>P#', $SingleLoading['p_id']."</b> (".$SingleLoading['sr_no'].")"; ?>
-                            <?php echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
+                        <td class="pointer <?= $rowColor; ?>" onclick="window.location.href= '?view=1&id=<?= $SingleLoading['id']; ?>';">
+                            <?php echo '<b>P#', $pId . "</b> (" . $pIdDisplayCount . ")"; ?>
+                            <?php echo $locked ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
                         </td>
                         <!-- <td class="<?php echo $rowColor; ?>"><?php echo $SingleLoading['sr_no']; ?></td> -->
                         <td class="<?php echo $rowColor; ?>"><?= isset(json_decode($SingleLoading['agent_details'], true)['cargo_transfer_warehouse']) ? json_decode($SingleLoading['agent_details'], true)['cargo_transfer_warehouse'] : ''; ?></td>
@@ -82,10 +101,10 @@ $mypageURL = $pageURL;
                         <!-- <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['receiving_details'], true)['receiving_country']; ?></td> -->
                         <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['receiving_details'], true)['receiving_port_name']; ?></td>
                         <td class="<?php echo $rowColor; ?>"><?= $SingleLoading['bl_no']; ?></td>
-                        <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['goods_details'], true)['container_no']; ?></td>
-                        <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['importer_details'], true)['im_acc_no']; ?></td>
-                        <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['exporter_details'], true)['xp_acc_no']; ?></td>
-                        <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['notify_party_details'], true)['np_acc_no']; ?></td>
+                        <td class="<?php echo $rowColor; ?>"><?= $containerCounts[$SingleLoading['bl_no']]; ?></td>
+                        <!-- <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['importer_details'], true)['im_acc_no']; ?></td> -->
+                        <!-- <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['exporter_details'], true)['xp_acc_no']; ?></td> -->
+                        <!-- <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['notify_party_details'], true)['np_acc_no']; ?></td> -->
                         <td class="<?php echo $rowColor; ?>"><?= goodsName(json_decode($SingleLoading['goods_details'], true)['goods_id']); ?></td>
                         <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['goods_details'], true)['size']; ?></td>
                         <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['goods_details'], true)['brand']; ?></td>
@@ -151,7 +170,7 @@ $mypageURL = $pageURL;
     </div>
 </div>
 <script>
-    function viewPurchase(id = null, loading_id = null) {
+    function viewPurchase(id = null) {
         if (id) {
             $.ajax({
                 url: 'ajax/viewLoadingTransfer.php',
@@ -198,47 +217,138 @@ $mypageURL = $pageURL;
 </script>
 <?php
 if (isset($_POST['UpdatePermission'])) {
-    $id = mysqli_real_escape_string($connect, $_POST['id']);
-    $existingData = json_decode($_POST['existing_agent_data'], true);
-    $existingData = array_merge($existingData, [
+    $update_permission_ids = mysqli_real_escape_string($connect, $_POST['update_permission_ids']);
+    $PermissionIDs = explode(',', $update_permission_ids);
+    $idConditions = [];
+    foreach ($PermissionIDs as $pair) {
+        list($p_id, $sr_no) = explode('-', trim($pair));
+        $idConditions[] = "(p_id = '$p_id' AND sr_no = '$sr_no')";
+    }
+    $whereClause = implode(' OR ', $idConditions);
+    $query = "SELECT id, agent_details FROM general_loading WHERE $whereClause";
+    $result = mysqli_query($connect, $query);
+    if ($result) {
+        $updates = [];
+        while ($row = mysqli_fetch_assoc($result)) {
+            $id = $row['id'];
+            $existingData = json_decode($row['agent_details'], true) ?? [];
+            $existingData['permission_to_edit'] = $_POST['permission'];
+            $updatedAgentDetails = mysqli_real_escape_string($connect, json_encode($existingData));
+            $updates[] = "WHEN id = '$id' THEN '$updatedAgentDetails'";
+        }
+        if (!empty($updates)) {
+            $updateQuery = "
+                UPDATE general_loading
+                SET agent_details = CASE " . implode(' ', $updates) . " ELSE agent_details END
+                WHERE $whereClause
+            ";
+            $done = mysqli_query($connect, $updateQuery);
+            if ($done) {
+                $type = 'success';
+                $msg = 'Agent Permission Updated!';
+            } else {
+                $type = 'danger';
+                $msg = 'Update Failed!';
+            }
+            message($type, '', $msg);
+        }
+    } else {
+        message('danger', '', 'No matching records found.');
+    }
+}
+
+if (isset($_POST['TransferToAgent'])) {
+    $msg = 'DB Error';
+    $msgType = 'danger';
+    $url = 'loading-transfer?view=1&id=' . $_POST['openRecord'];
+    $ag_transfer_ids = mysqli_real_escape_string($connect, $_POST['ag_transfer_ids']);
+    $ag_id = mysqli_real_escape_string($connect, $_POST['ag_id']);
+    $transferPairs = explode(',', $ag_transfer_ids);
+
+    $idConditions = [];
+    foreach ($transferPairs as $pair) {
+        list($p_id, $sr_no) = explode('-', trim($pair));
+        $idConditions[] = "(p_id = '$p_id' AND sr_no = '$sr_no')";
+    }
+    $whereClause = implode(' OR ', $idConditions);
+
+    $agentDetails = json_encode([
         'ag_acc_no' => mysqli_real_escape_string($connect, $_POST['ag_acc_no']),
         'ag_name' => mysqli_real_escape_string($connect, $_POST['ag_name']),
         'ag_id' => mysqli_real_escape_string($connect, $_POST['ag_id']),
-        'row_id' => mysqli_real_escape_string($connect, $_POST['row_id']),
+        'row_id' => mysqli_real_escape_string($connect, $_POST['ag_row_id']),
         'cargo_transfer_warehouse' => $_POST['cargo_transfer'],
-        'transferred' => isset($_POST['TransferToAgent']) ? true : false
+        'transferred' => true
     ]);
-    $existingData['permission_to_edit'] = isset($_POST['change_permission']) && $_POST['change_permission'] === 'on' ? 'yes' : 'no';
-    $done = update('general_loading', array('agent_details' => json_encode($existingData)), array('id' => $id));
-    if ($done) {
-        $type = 'success';
-        $msg = 'Agent Permission Updated!';
+
+    // Check if there is a parent record
+    $parentCheckQuery = "
+        SELECT id, gloading_info, JSON_EXTRACT(gloading_info, '$.child_ids') AS child_ids
+        FROM general_loading
+        WHERE $whereClause AND JSON_EXTRACT(gloading_info, '$.child_ids') IS NOT NULL";
+    $parentCheckResult = mysqli_query($connect, $parentCheckQuery);
+    $isParent = ($parentCheckResult && mysqli_num_rows($parentCheckResult) > 0);
+    $parentId = null;
+    $billNumber = 0;
+    $existingGloadingData = [];
+
+    if ($isParent) {
+        $row = mysqli_fetch_assoc($parentCheckResult);
+        $parentId = $row['id'];
+        $existingGloadingData = json_decode($row['gloading_info'], true) ?? [];
+
+        // Retrieve and increment billNumber
+        $existingBillQuery = "
+            SELECT JSON_UNQUOTE(JSON_EXTRACT(gloading_info, '$.billNumber')) AS billNumber
+            FROM general_loading
+            WHERE JSON_EXTRACT(agent_details, '$.ag_id') = '$ag_id'
+              AND JSON_EXTRACT(gloading_info, '$.child_ids') IS NOT NULL
+              AND JSON_EXTRACT(gloading_info, '$.child_ids') != ''";
+
+        $billNumbers = [];
+        $existingBillResult = mysqli_query($connect, $existingBillQuery);
+        while ($row = mysqli_fetch_assoc($existingBillResult)) {
+            if (is_numeric($row['billNumber'])) {
+                $billNumbers[] = (int)$row['billNumber'];
+            }
+        }
+        $billNumber = !empty($billNumbers) ? max($billNumbers) + 1 : 1;
+        $existingGloadingData['billNumber'] = $billNumber;
     }
-    message($type, $url, $msg);
-}
-if (isset($_POST['LoadingTransfer']) || isset($_POST['TransferToAgent'])) {
-    $msg = 'DB Error';
-    $msgType = 'danger';
-    $url = 'loading-transfer';
-    $id = mysqli_real_escape_string($connect, $_POST['id']);
-    $data = [
-        "agent_details" => json_encode([
-            'ag_acc_no' => mysqli_real_escape_string($connect, $_POST['ag_acc_no']),
-            'ag_name' => mysqli_real_escape_string($connect, $_POST['ag_name']),
-            'ag_id' => mysqli_real_escape_string($connect, $_POST['ag_id']),
-            'row_id' => mysqli_real_escape_string($connect, $_POST['row_id']),
-            'cargo_transfer_warehouse' => $_POST['cargo_transfer'],
-            'transferred' => isset($_POST['TransferToAgent']) ? true : false
-        ])
-    ];
-    $done = update('general_loading', $data, array('id' => $id));
-    if (isset($_POST['TransferToAgent'])) {
-        $done = update('user_permissions', array('permission' => json_encode(['agent-form'])), array('id' => $_POST['row_id']));
+
+    $gloadingInfo = json_encode($existingGloadingData);
+
+    // Update only the parent with gloading_info
+    if ($parentId) {
+        $parentUpdateQuery = "
+            UPDATE general_loading
+            SET agent_details = '$agentDetails', gloading_info = '$gloadingInfo'
+            WHERE id = '$parentId'";
+        $doneParent = mysqli_query($connect, $parentUpdateQuery);
     }
-    if ($done) {
+
+    // Update only child records without gloading_info
+    $childUpdateQuery = "
+        UPDATE general_loading
+        SET agent_details = '$agentDetails'
+        WHERE $whereClause AND id != '$parentId'";
+    $doneChildren = mysqli_query($connect, $childUpdateQuery);
+
+    // Update user permissions if required
+    $permissionUpdate = update('user_permissions', ['permission' => json_encode(['agent-form'])], ['id' => $_POST['ag_row_id']]);
+
+    if (($doneParent || $doneChildren) && $permissionUpdate) {
         $type = 'success';
         $msg = 'Agent Details Added!';
     }
     message($type, $url, $msg);
+}
+
+
+
+if (isset($_GET['id']) && is_numeric($_GET['id']) && isset($_GET['view']) && $_GET['view'] == 1) {
+    $id = mysqli_real_escape_string($connect, $_GET['id']);
+    echo "<script>jQuery(document).ready(function ($) {  $('#KhaataDetails').modal('show');});</script>";
+    echo "<script>jQuery(document).ready(function ($) {  viewPurchase($id); });</script>";
 }
 ?>

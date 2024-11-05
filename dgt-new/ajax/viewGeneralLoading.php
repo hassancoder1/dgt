@@ -1,7 +1,11 @@
+<script>
+    let emptyKgs = 0;
+    let Rate = 0;
+</script>
 <?php require_once '../connection.php';
 $id = $_POST['id'];
 $level = $_POST['level'];
-$purchase_pays_id = $_POST['purchase_pays_id'];
+
 if ($id > 0) {
     $records = fetch('transactions', array('id' => $id));
     $record = mysqli_fetch_assoc($records);
@@ -165,23 +169,19 @@ if ($id > 0) {
                                     $i = 0;
                                     $rate = 0;
                                     foreach ($items as $details) {
-                                        $goods = goodsName($details['goods_id']);
-                                        $t_country = $details['origin'];
-                                        $allot = $details['allotment_name'];
-                                        $curr1 = $details['currency1'];
-                                        $curr2 = $details['currency2'];
-                                        echo '<tr class="goodRow">';
+                                        echo '<tr class="goodRow" data-empty-kgs="' . $details['empty_kgs'] . '" data-rate="' . $details['rate1'] . '" data-quantity="' . $details['qty_no'] . '" data-quantity-name="' . $details['qty_name'] . '" data-net-kgs="' . round($details['net_kgs'], 2) . '" data-gross-kgs="' . round($details['total_kgs'], 2) . '">';
                                         echo '<td>' . $details['sr'] . '</td>';
+                                        echo '<td class="TgoodsId d-none">' . $details['goods_id'] . '</td>';
                                         echo '<td>' . goodsName($details['goods_id']) . '</td>';
                                         echo '<td class="size">' . $details['size'] . '</td>';
                                         echo '<td class="brand">' . $details['brand'] . '</td>';
                                         echo '<td class="origin">' . $details['origin'] . '</td>';
                                         echo '<td>' . $details['qty_no'] . '<sub>' . $details['qty_name'] . '</sub></td>';
                                         echo '<td>' . round($details['total_kgs'], 2) . '</td>';
-                                        echo '<td>' . round($details['net_kgs'], 2);
-                                        echo '<sub>' . $details['divide'] . '</sub>';
-                                        echo '</td>';
+                                        echo '<td>' . round($details['net_kgs'], 2) . '<sub>' . $details['divide'] . '</sub></td>';
                                         echo '</tr>';
+
+                                        // Perform calculations
                                         $rate += $details['rate1'];
                                         $qty_no += $details['qty_no'];
                                         $qty_kgs += $details['qty_kgs'];
@@ -190,7 +190,6 @@ if ($id > 0) {
                                         $total += $details['total'];
                                         $amount += $details['amount'];
                                         $final_amount += $details['final_amount'];
-                                        $i++;
                                     }
                                     if ($qty_no > 0) {
                                         $goodsTotals = [
@@ -346,12 +345,14 @@ if ($id > 0) {
                                 }
                                 ?>
                                 <div style="width:100%; display: flex; justify-content: space-between; margin-bottom: 2px;">
-                                    <?php if ($action === 'update'): ?>
+                                    <?php if ($action === 'update') { ?>
                                         <h5 class="text-primary">Update Information</h5>
-                                        <a href="general-loading?deleteLoadingEntry=true&lp_id=<?= $updateRow['id']; ?>&p_id=<?= $id ?>" class="btn btn-danger btn-sm">Delete This Entry</a>
-                                    <?php else: ?>
+                                        <?php if (!isset(json_decode($updateRow['gloading_info'], true)['child_ids'])) { ?>
+                                            <a href="general-loading?deleteLoadingEntry=true&lp_id=<?= $updateRow['id']; ?>&p_id=<?= $id ?>" class="btn btn-danger btn-sm">Delete This Entry</a>
+                                        <?php }
+                                    } else { ?>
                                         <h5 class="text-primary">General Information</h5>
-                                    <?php endif; ?>
+                                    <?php }; ?>
                                     <input type="file" id="entry_file" name="entry_file[]" class="d-none" multiple>
                                     <span class="btn cursor btn-success" onclick="document.getElementById('entry_file').click();"><i class="fa fa-paperclip"></i> Add File(s)</span>
                                 </div>
@@ -632,7 +633,7 @@ if ($id > 0) {
                                     <!-- Quantity No -->
                                     <div class="col-md-1">
                                         <label for="quantity_no" class="form-label">Qty No</label>
-                                        <input type="number" name="quantity_no" value="<?= $Goods['quantity_no']; ?>" id="quantity_no" required class="form-control form-control-sm" step="0.00001" onkeyup="autoCalc('#quantity_no', '#gross_weight', '#net_weight')">
+                                        <input type="number" name="quantity_no" value="<?= $Goods['quantity_no']; ?>" id="quantity_no" required class="form-control form-control-sm" step="0.00001" onkeyup="autoCalc('#quantity_no', '#gross_weight', '#net_weight', Rate, emptyKgs)">
                                     </div>
 
                                     <!-- Gross Weight -->
@@ -1089,96 +1090,90 @@ if ($id > 0) {
             khaataDetailsSingle($(this).val(), 'xp_acc_details');
             //var kd_id = $(this).val();
         });
-        updateQuantities();
+        // updateQuantities();
 
-        $("#goods_id").change(function() {
-            var goods_id = $(this).val();
-            goodDetails(goods_id);
+        // $("#goods_id").change(function() {
+        //     var goods_id = $(this).val();
+        //     goodDetails(goods_id);
+        // });
+        $('#goods_id, #size, #brand, #origin').on('change', function() {
+            populateFields();
         });
-
         // $("#quantity_no").change(autoCalc('#quantity_no', '#gross_weight', '#net_weight'));
 
     });
+    // function goodDetails(goods_id) {
+    //     if (goods_id > 0) {
+    //         // Get existing sizes, brands, and origins from the table
+    //         var existingSizes = getTableData('size');
+    //         var existingBrands = getTableData('brand');
+    //         var existingOrigins = getTableData('origin');
 
-    function autoCalc(quantityNo, grossWeight, netWeight) {
-        let qty = parseInt($(quantityNo).val() !== '' ? $(quantityNo).val() : '0');
-        let myGrossweight = qty * perAmount;
-        $(grossWeight).val(parseInt(myGrossweight));
-        $(netWeight).val(parseInt(myGrossweight - (emptyKgs * qty)));
-    };
+    //         $.ajax({
+    //             type: 'POST',
+    //             url: 'ajax/fetch_good_details.php',
+    //             data: {
+    //                 goods_id: goods_id
+    //             },
+    //             dataType: 'json',
+    //             success: function(response) {
+    //                 // Ensure the response contains arrays for sizes, brands, and origins
+    //                 var allSizes = Array.isArray(response.sizes) ? response.sizes : [];
+    //                 var allBrands = Array.isArray(response.brands) ? response.brands : [];
+    //                 var allOrigins = Array.isArray(response.origins) ? response.origins : [];
 
-    function goodDetails(goods_id) {
-        if (goods_id > 0) {
-            // Get existing sizes, brands, and origins from the table
-            var existingSizes = getTableData('size');
-            var existingBrands = getTableData('brand');
-            var existingOrigins = getTableData('origin');
+    //                 // Filter sizes to only show those available in the table
+    //                 var filteredSizes = allSizes.filter(function(size) {
+    //                     return existingSizes.includes(size);
+    //                 });
 
-            $.ajax({
-                type: 'POST',
-                url: 'ajax/fetch_good_details.php',
-                data: {
-                    goods_id: goods_id
-                },
-                dataType: 'json',
-                success: function(response) {
-                    // Ensure the response contains arrays for sizes, brands, and origins
-                    var allSizes = Array.isArray(response.sizes) ? response.sizes : [];
-                    var allBrands = Array.isArray(response.brands) ? response.brands : [];
-                    var allOrigins = Array.isArray(response.origins) ? response.origins : [];
+    //                 // Filter brands to only show those available in the table
+    //                 var filteredBrands = allBrands.filter(function(brand) {
+    //                     return existingBrands.includes(brand);
+    //                 });
 
-                    // Filter sizes to only show those available in the table
-                    var filteredSizes = allSizes.filter(function(size) {
-                        return existingSizes.includes(size);
-                    });
+    //                 // Filter origins to only show those available in the table
+    //                 var filteredOrigins = allOrigins.filter(function(origin) {
+    //                     return existingOrigins.includes(origin);
+    //                 });
 
-                    // Filter brands to only show those available in the table
-                    var filteredBrands = allBrands.filter(function(brand) {
-                        return existingBrands.includes(brand);
-                    });
+    //                 // Populate the Size dropdown
+    //                 $('#size').html('<option hidden value="">Select</option>');
+    //                 if (filteredSizes.length > 0) {
+    //                     $.each(filteredSizes, function(index, size) {
+    //                         $('#size').append('<option value="' + size + '">' + size + '</option>');
+    //                     });
+    //                 } else {
+    //                     $('#size').append('<option value="">No available sizes</option>');
+    //                 }
 
-                    // Filter origins to only show those available in the table
-                    var filteredOrigins = allOrigins.filter(function(origin) {
-                        return existingOrigins.includes(origin);
-                    });
+    //                 // Populate the Brand dropdown
+    //                 $('#brand').html('<option hidden value="">Select</option>');
+    //                 if (filteredBrands.length > 0) {
+    //                     $.each(filteredBrands, function(index, brand) {
+    //                         $('#brand').append('<option value="' + brand + '">' + brand + '</option>');
+    //                     });
+    //                 } else {
+    //                     $('#brand').append('<option value="">No available brands</option>');
+    //                 }
 
-                    // Populate the Size dropdown
-                    $('#size').html('<option hidden value="">Select</option>');
-                    if (filteredSizes.length > 0) {
-                        $.each(filteredSizes, function(index, size) {
-                            $('#size').append('<option value="' + size + '">' + size + '</option>');
-                        });
-                    } else {
-                        $('#size').append('<option value="">No available sizes</option>');
-                    }
-
-                    // Populate the Brand dropdown
-                    $('#brand').html('<option hidden value="">Select</option>');
-                    if (filteredBrands.length > 0) {
-                        $.each(filteredBrands, function(index, brand) {
-                            $('#brand').append('<option value="' + brand + '">' + brand + '</option>');
-                        });
-                    } else {
-                        $('#brand').append('<option value="">No available brands</option>');
-                    }
-
-                    // Populate the Origin dropdown
-                    $('#origin').html('<option hidden value="">Select</option>');
-                    if (filteredOrigins.length > 0) {
-                        $.each(filteredOrigins, function(index, origin) {
-                            $('#origin').append('<option value="' + origin + '">' + origin + '</option>');
-                        });
-                    } else {
-                        $('#origin').append('<option value="">No available origins</option>');
-                    }
-                }
-            });
-        } else {
-            $('#size').html('<option hidden value="">Select</option>');
-            $('#brand').html('<option hidden value="">Select</option>');
-            $('#origin').html('<option hidden value="">Select</option>');
-        }
-    }
+    //                 // Populate the Origin dropdown
+    //                 $('#origin').html('<option hidden value="">Select</option>');
+    //                 if (filteredOrigins.length > 0) {
+    //                     $.each(filteredOrigins, function(index, origin) {
+    //                         $('#origin').append('<option value="' + origin + '">' + origin + '</option>');
+    //                     });
+    //                 } else {
+    //                     $('#origin').append('<option value="">No available origins</option>');
+    //                 }
+    //             }
+    //         });
+    //     } else {
+    //         $('#size').html('<option hidden value="">Select</option>');
+    //         $('#brand').html('<option hidden value="">Select</option>');
+    //         $('#origin').html('<option hidden value="">Select</option>');
+    //     }
+    // }
 
     // // Function to get data from the table based on column class name
     // function getTableData(columnClass) {
@@ -1203,5 +1198,42 @@ if ($id > 0) {
         } else {
             currentMenu.style.display = 'none';
         }
+    }
+
+    function autoCalc(quantityNo, grossWeight, netWeight, Rate, emptyKgs) {
+        let qty = parseFloat($(quantityNo).val()) || 0;
+        let myGrossweight = qty * parseFloat(Rate);
+        $(grossWeight).val(myGrossweight.toFixed(2));
+        let myNetWeight = myGrossweight - (parseFloat(emptyKgs) * qty);
+        $(netWeight).val(myNetWeight.toFixed(2));
+    }
+
+    function populateFields() {
+        const goodsId = $('#goods_id').val();
+        const size = $('#size').val();
+        const brand = $('#brand').val();
+        const origin = $('#origin').val();
+        $('#myquantity_name').val('');
+        $('#quantity_no').val('');
+        $('#gross_weight').val('');
+        $('#net_weight').val('');
+        $('#goodsTable .goodRow').each(function() {
+            const row = $(this);
+            const TgoodsId = row.find('.TgoodsId').text();
+            const rowSize = row.find('.size').text();
+            const rowBrand = row.find('.brand').text();
+            const rowOrigin = row.find('.origin').text();
+            console.log(TgoodsId, rowSize, rowBrand, rowOrigin);
+            console.log(goodsId, size, brand, origin);
+            if (goodsId === TgoodsId && size === rowSize && brand === rowBrand && origin === rowOrigin) {
+                $('#myquantity_name').val(row.data('quantity-name'));
+                $('#quantity_no').val(row.data('quantity')).trigger('keyup');
+                $('#gross_weight').val(row.data('gross-kgs'));
+                $('#net_weight').val(row.data('net-kgs'));
+                emptyKgs = row.data('empty-kgs');
+                Rate = row.data('rate');
+                return false;
+            }
+        });
     }
 </script>

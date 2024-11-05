@@ -48,7 +48,7 @@ if (count($print_filters) > 0) {
         $pageURL .= '&' . $filter;
     }
 } else {
-    $pageURL .= '?is_tranferred=1';
+    // $pageURL .= '?is_tranferred=1';
     $is_transferred = '1';
 }
 $mypageURL = $pageURL;
@@ -141,7 +141,7 @@ $mypageURL = $pageURL;
                     }
                 ?>
                     <tr class="text-nowrap">
-                        <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $id; ?>)"
+                        <td class="pointer <?php echo $rowColor; ?>" onclick="window.location.href = '?p_id=<?= $id; ?>&view=1';"
                             data-bs-toggle="modal" data-bs-target="#KhaataDetails">
                             <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $id; ?>
                             <?php echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
@@ -218,9 +218,8 @@ $mypageURL = $pageURL;
     </div>
 </div>
 <script>
-    function viewPurchase(id = null, purchase_pays_id = null) {
+    function viewPurchase(id = null) {
         if (id) {
-            var pp_id = purchase_pays_id || 0; // Default to 0 if purchase_pays_id is null
             let action = '<?= isset($_GET['action']) ? $_GET['action'] : '' ?>'; // Check if action exists
             let lp_id = '<?= isset($_GET['lp_id']) ? $_GET['lp_id'] : '' ?>'; // Check if lp_id exists
             let sr_no = '<?= isset($_GET['sr_no']) ? $_GET['sr_no'] : '' ?>'; // Check if lp_id exists
@@ -231,8 +230,7 @@ $mypageURL = $pageURL;
                 data: {
                     id: id,
                     level: 1,
-                    page: "purchase-general-loading",
-                    purchase_pays_id: pp_id,
+                    page: "general-loading",
                     lp_id: lp_id,
                     action: action,
                     sr_no: sr_no
@@ -278,8 +276,8 @@ if (isset($_POST['GLoadingSubmit'])) {
     } else {
         $uploadedFiles = [];
     }
-    $maxIdResult = mysqli_fetch_assoc(mysqli_query($connect, "SELECT MAX(id) AS max_id FROM general_loading"));
-    $maxId = $maxIdResult['max_id'] ? $maxIdResult['max_id'] : 0;
+    $autoIncrementResult = mysqli_fetch_assoc(mysqli_query($connect, "SHOW TABLE STATUS LIKE 'general_loading'"));
+    $nextId = $autoIncrementResult['Auto_increment'];
     $parent_bl_data = mysqli_fetch_assoc(mysqli_query($connect, "
     SELECT id, gloading_info, 
            LENGTH(JSON_EXTRACT(gloading_info, '$.child_ids')) 
@@ -288,27 +286,33 @@ if (isset($_POST['GLoadingSubmit'])) {
     WHERE bl_no = '$bl_no' 
     AND JSON_EXTRACT(gloading_info, '$.child_ids') IS NOT NULL
 "));
+    if ($parent_bl_data) {
+        $data = json_decode($parent_bl_data['gloading_info'], true);
+        $existing_child_ids = isset($data['child_ids']) ? $data['child_ids'] : '';
+        $existing_child_ids_count = isset($data['child_ids_count']) ? $data['child_ids_count'] : 0;
+        if ($_GET['action'] === 'update') {
+            $child_ids = $existing_child_ids;
+            $child_ids_count = $existing_child_ids_count;
+        } else {
+            $child_ids = $existing_child_ids . (!empty($existing_child_ids) ? ", " : "") . $nextId;
+            $child_ids_count = $existing_child_ids === '' ? 1 : substr_count($child_ids, ',') + 1;
+        }
+        $my = [
+            'parent_id' => $parent_bl_data['id'],
+            'bl_entry_no' => $child_ids_count + 1
+        ];
+        $data = array_merge($data, ['child_ids' => $child_ids, 'child_ids_count' => $child_ids_count]);
+        $updateData = ['gloading_info' => json_encode($data)];
+        print_r($updateData);
+        update('general_loading', $updateData, ['id' => $parent_bl_data['id']]);
+    } else {
+        $my = [
+            'child_ids' => '',
+            'child_ids_count' => 0,
+            'bl_entry_no' => 1
+        ];
+    }
 
-if ($parent_bl_data) {
-    $data = json_decode($parent_bl_data['gloading_info'], true);
-    $existing_child_ids = isset($data['child_ids']) ? $data['child_ids'] : '';
-    $child_ids = $existing_child_ids . (!empty($existing_child_ids) ? ", " : "") . ($maxId + 1);
-    $child_ids_count = $existing_child_ids === '' ? 1 : substr_count($child_ids, ',') + 1;
-    $my = [
-        'parent_id' => $parent_bl_data['id'],
-        'bl_entry_no' => $child_ids_count + 1
-    ];
-    $data = array_merge($data, ['child_ids' => $child_ids, 'child_ids_count' => $child_ids_count]);
-    $updateData = ['gloading_info' => json_encode($data)];
-    print_r($updateData);
-    update('general_loading', $updateData, ['id' => $parent_bl_data['id']]);
-} else {
-    $my = [
-        'child_ids' => '',
-        'child_ids_count' => 0,
-        'bl_entry_no' => 1
-    ];
-}
 
     if ($sr_no == 1) {
         $my = array_merge($my, [
@@ -317,7 +321,6 @@ if ($parent_bl_data) {
             'total_net_weight' => $_POST['total_net_weight']
         ]);
     }
-
     $loading_details = [
         'loading_date' => mysqli_real_escape_string($connect, $_POST['loading_date']),
         'loading_country' => mysqli_real_escape_string($connect, $_POST['loading_country']),
@@ -411,16 +414,68 @@ if ($parent_bl_data) {
 if (isset($_GET['deleteLoadingEntry']) && isset($_GET['lp_id']) && !empty($_GET['lp_id'])) {
     $type = 'danger';
     $msg = 'DB Failed';
-    $id = mysqli_real_escape_string($connect, $_GET['lp_id']);
+    $childEntryId = mysqli_real_escape_string($connect, $_GET['lp_id']);
     $p_id = mysqli_real_escape_string($connect, $_GET['p_id']);
     $url_ = "general-loading?view=1&p_id=" . $p_id;
-    $done = mysqli_query($connect, "DELETE FROM `general_loading` WHERE id='$id'");
-    if ($done) {
-        $msg = " Loading Entry Deleted for Purchase #" . $p_id;
-        $type = "success";
+
+    // Step 1: Get the parent ID from the record being deleted
+    $parentIdQuery = "SELECT JSON_EXTRACT(gloading_info, '$.parent_id') AS parent_id FROM general_loading WHERE id = '$childEntryId'";
+    $parentIdResult = mysqli_fetch_assoc(mysqli_query($connect, $parentIdQuery));
+    $parentId = trim($parentIdResult['parent_id'], '"'); // Remove extra quotes
+
+    // Check if parent ID is valid
+    if (empty($parentId)) {
+        $msg = "No parent ID found for the entry.";
+        message('danger', $url_, $msg);
+        exit;
     }
+
+    // Step 2: Fetch parent record's gloading_info
+    $parentBlDataQuery = "SELECT id, gloading_info FROM general_loading WHERE id = '$parentId'";
+    $parentBlData = mysqli_fetch_assoc(mysqli_query($connect, $parentBlDataQuery));
+
+    // Check if the parent record exists
+    if (!$parentBlData) {
+        $msg = "Parent record not found.";
+        message('danger', $url_, $msg);
+        exit;
+    }
+
+    // Step 3: Update child_ids and child_ids_count
+    $data = json_decode($parentBlData['gloading_info'], true);
+    if (isset($data['child_ids']) && isset($data['child_ids_count'])) {
+        // Remove the current ID from child_ids
+        $childIdsArray = explode(', ', $data['child_ids']);
+        $childIdsArray = array_filter($childIdsArray, function ($childId) use ($childEntryId) {
+            return $childId != $childEntryId;
+        });
+
+        // Update child_ids and child_ids_count
+        $data['child_ids'] = implode(', ', $childIdsArray);
+        $data['child_ids_count'] = count($childIdsArray);
+
+        // Step 4: Update the gloading_info in the database
+        $updateData = ['gloading_info' => json_encode($data)];
+        update('general_loading', $updateData, ['id' => $parentBlData['id']]);
+    }
+
+    // Step 5: Delete the current record
+    $deleteQuery = "DELETE FROM `general_loading` WHERE id='$childEntryId'";
+    $done = mysqli_query($connect, $deleteQuery);
+
+    if ($done) {
+        $msg = "Loading Entry Deleted for Purchase #" . $p_id;
+        $type = "success";
+    } else {
+        $msg = "Failed to delete loading entry.";
+    }
+
+    // Redirect or display message
     message($type, $url_, $msg);
 }
+
+
+
 if (isset($_POST['t_id_hidden_attach'])) {
     $type = 'danger';
     $msg = 'DB Failed';
@@ -445,27 +500,6 @@ if (isset($_POST['t_id_hidden_attach'])) {
 }
 if (isset($_GET['p_id']) && is_numeric($_GET['p_id']) && isset($_GET['view']) && $_GET['view'] == 1) {
     $p_id = mysqli_real_escape_string($connect, $_GET['p_id']);
-    if (isset($_GET['purchase_pays_id']) && is_numeric($_GET['purchase_pays_id'])) {
-        $purchase_pays_id = mysqli_real_escape_string($connect, $_GET['purchase_pays_id']);
-    } else {
-        $purchase_pays_id = 0;
-    }
     echo "<script>jQuery(document).ready(function ($) {  $('#KhaataDetails').modal('show');});</script>";
-    echo "<script>jQuery(document).ready(function ($) {  viewPurchase($p_id,$purchase_pays_id); });</script>";
+    echo "<script>jQuery(document).ready(function ($) {  viewPurchase($p_id); });</script>";
 }
-
-if (isset($_POST['transferAdvanceToRem'])) {
-?>
-<?php
-    $type = 'danger';
-    $msg = 'DB Failed';
-    $p_id_hidden = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
-    $data = array('transfer_level' => 4);
-    $locked = update('transactions', $data, array('id' => $p_id_hidden));
-    if ($locked) {
-        $type = 'success';
-        $msg = 'Purchase Advance transferred ';
-    }
-    message($type, $pageURL, $msg);
-}
-?>

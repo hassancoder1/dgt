@@ -30,7 +30,7 @@ $mypageURL = $pageURL;
                     <th>L_PORT</th>
                     <th>R_DATE</th>
                     <th>R_PORT</th>
-                    <th>Container No</th>
+                    <!-- <th>Container No</th> -->
                     <th>Goods Name</th>
                     <th>ORIGIN</th>
                     <th>QTY.Ne</th>
@@ -43,11 +43,11 @@ $mypageURL = $pageURL;
                 <?php
                 $Loadings = mysqli_query($connect, $sql);
                 $row_count = $p_qty_total = $p_kgs_total = 0;
-                $i = 1;
                 $rowColor = '';
                 $locked = 0;
                 while ($SingleLoading = mysqli_fetch_assoc($Loadings)) {
                     $id = $SingleLoading['id'];
+                    $billNumber = json_decode($SingleLoading['gloading_info'], true)['billNumber'];
                     $agentDetails = json_decode($SingleLoading['agent_details'], true);
                     if (!empty($agentDetails) && isset($agentDetails['transferred']) && $agentDetails['transferred'] === true) {
                         if (isset($agentDetails['bill_of_entry_no'])) {
@@ -60,15 +60,15 @@ $mypageURL = $pageURL;
 
                         <tr class="text-nowrap">
                             <?php if (SuperAdmin()) { ?>
-                                <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $SingleLoading['id']; ?>)"
+                                <td class="pointer <?php echo $rowColor; ?>" onclick="window.location.href= '?lp_id=<?= $SingleLoading['id']; ?>&view=1';"
                                     data-bs-toggle="modal" data-bs-target="#KhaataDetails">
-                                    <?= '<b>P#' . $SingleLoading['p_id']; ?>
+                                    <?= '<b>P#' . $SingleLoading['p_id'] . "($billNumber)"; ?>
                                     <?php echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
                                 </td>
                             <?php } else { ?>
-                                <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $SingleLoading['id']; ?>)"
+                                <td class="pointer <?php echo $rowColor; ?>" onclick="window.location.href= '?lp_id=<?= $SingleLoading['id']; ?>&view=1';"
                                     data-bs-toggle="modal" data-bs-target="#KhaataDetails">
-                                    <b><?= $i; ?></b>
+                                    <b>#<?= $billNumber; ?></b>
                                     <?php echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
                                 </td>
                             <?php } ?>
@@ -81,7 +81,7 @@ $mypageURL = $pageURL;
                             <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['receiving_details'], true)['receiving_date']; ?></td>
                             <!-- <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['receiving_details'], true)['receiving_country']; ?></td> -->
                             <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['receiving_details'], true)['receiving_port_name']; ?></td>
-                            <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['goods_details'], true)['container_no']; ?></td>
+                            <!-- <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['goods_details'], true)['container_no']; ?></td> -->
                             <!-- <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['importer_details'], true)['im_acc_no']; ?></td>
                                          
                                 <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['exporter_details'], true)['xp_acc_no']; ?></td>
@@ -94,8 +94,7 @@ $mypageURL = $pageURL;
                             <td class="<?php echo $rowColor; ?>"><?= round(json_decode($SingleLoading['goods_details'], true)['net_weight']); ?></td>
                         </tr>
                 <?php
-                    $row_count++;
-                    $i++;
+                        $row_count++;
                     }
                 }
                 ?>
@@ -152,15 +151,19 @@ $mypageURL = $pageURL;
     </div>
 </div>
 <script>
-    function viewPurchase(id = null, loading_id = null) {
+    function viewPurchase(id = null) {
         if (id) {
+            let action = '<?= isset($_GET['action']) ? $_GET['action'] : '' ?>';
+            let editId = '<?= isset($_GET['editId']) ? $_GET['editId'] : '' ?>';
             $.ajax({
                 url: 'ajax/viewAgentForm.php',
                 type: 'post',
                 data: {
                     id: id,
                     level: 1,
-                    page: "agent-transfer",
+                    page: "agent-form",
+                    action: action,
+                    editId: editId
                 },
                 success: function(response) {
                     $('#viewDetails').html(response);
@@ -204,6 +207,7 @@ if (isset($_POST['AgentFormSubmit'])) {
     $msgType = 'danger';
     $url = 'agent-form';
     $id = mysqli_real_escape_string($connect, $_POST['id']);
+    $parent_id = mysqli_real_escape_string($connect, $_POST['parent_id']);
     $agent = json_decode($_POST['existing_data'], true);
     $uploadDir = 'attachments/';
     $uploadedFiles = [];
@@ -229,9 +233,10 @@ if (isset($_POST['AgentFormSubmit'])) {
             'ag_acc_no' => mysqli_real_escape_string($connect, $agent['ag_acc_no']),
             'ag_name' => mysqli_real_escape_string($connect, $agent['ag_name']),
             'ag_id' => mysqli_real_escape_string($connect, $agent['ag_id']),
+            'cargo_transfer_warehouse' => mysqli_real_escape_string($connect, $agent['cargo_transfer_warehouse']),
             'row_id' => mysqli_real_escape_string($connect, $agent['row_id']),
             'transferred' => true,
-            'permission_to_edit' => 'no',
+            'permission_to_edit' => 'No',
             'ag_billNumber' => $billNumber,
             'received_date' => mysqli_real_escape_string($connect, $_POST['received_date']),
             'clearing_date' => mysqli_real_escape_string($connect, $_POST['clearing_date']),
@@ -249,6 +254,11 @@ if (isset($_POST['AgentFormSubmit'])) {
         $type = 'success';
         $msg = 'Agent Form Updated!';
     }
-    message($type, $url, $msg);
+    message($type, $url . "?lp_id=" . $parent_id . '&view=1&action=update&editId=' . $id, $msg);
+}
+if (isset($_GET['lp_id']) && is_numeric($_GET['lp_id']) && isset($_GET['view']) && $_GET['view'] == 1) {
+    $lp_id = mysqli_real_escape_string($connect, $_GET['lp_id']);
+    echo "<script>jQuery(document).ready(function ($) {  $('#KhaataDetails').modal('show');});</script>";
+    echo "<script>jQuery(document).ready(function ($) {  viewPurchase($lp_id); });</script>";
 }
 ?>
