@@ -1,7 +1,3 @@
-<script>
-    let emptyKgs = 0;
-    let Rate = 0;
-</script>
 <?php require_once '../connection.php';
 $id = $_POST['id'];
 $level = $_POST['level'];
@@ -14,34 +10,47 @@ if ($id > 0) {
     if (!empty($_fields)) { ?>
         <?php
         $result = mysqli_query($connect, "SELECT * FROM general_loading where p_id=$id");
-        $all_records = [];
         $firstRow = null;
+        $uniqueBlNumbers = [];
         $rows = [];
         $max_sr_no = $total_loaded_quantity_no = $total_loaded_gross_weight = $total_loaded_net_weight = $next_bl_entry = 0;
         $child_ids = "";
+        $ActiveBlRow = null;
         if ($result && mysqli_num_rows($result) > 0) {
             while ($row = mysqli_fetch_assoc($result)) {
+                if (!in_array($row['bl_no'], $uniqueBlNumbers)) {
+                    $uniqueBlNumbers[] = $row['bl_no'];
+                }
                 $rows[] = $row;
                 if ($firstRow === null) {
                     $firstRow = $row;
                     $current_bl_no = $firstRow['bl_no'];
                     $bl_no_query = mysqli_query($connect, "
-                SELECT COUNT(*) AS bl_count, GROUP_CONCAT(id) AS child_ids 
-                FROM general_loading 
-                WHERE bl_no = '$current_bl_no'
-            ");
+                        SELECT COUNT(*) AS bl_count, GROUP_CONCAT(id) AS child_ids 
+                        FROM general_loading 
+                        WHERE bl_no = '$current_bl_no'
+                    ");
                     $bl_no_result = mysqli_fetch_assoc($bl_no_query);
 
                     $next_bl_entry = $bl_no_result['bl_count'] + 1;
                     $child_ids = implode(',', array_filter(explode(',', $bl_no_result['child_ids']), fn($id) => $id != $firstRow['id']));
                 }
+                $ActiveBlNo = isset($firstRow) ? json_decode($firstRow['gloading_info'], true)['active_bl_no'] : '';
+                // Check if this row's bl_no matches ActiveBlNo and is the oldest entry
+                if (isset($ActiveBlNo) && $row['bl_no'] === $ActiveBlNo) {
+                    if ($ActiveBlRow === null || $row['created_at'] < $ActiveBlRow['created_at']) {
+                        $ActiveBlRow = $row;
+                    }
+                }
                 if ($row['sr_no'] > $max_sr_no) {
                     $max_sr_no = $row['sr_no'];
                 }
                 $goods_details = json_decode($row['goods_details'], true);
-                $total_loaded_quantity_no += $goods_details['quantity_no'];
-                $total_loaded_gross_weight += $goods_details['gross_weight'];
-                $total_loaded_net_weight += $goods_details['net_weight'];
+                if (!(isset($_POST['action']) && $_POST['action'] === 'update' && isset($_POST['lp_id']) && $row['id'] == $_POST['lp_id'])) {
+                    $total_loaded_quantity_no += $goods_details['quantity_no'];
+                    $total_loaded_gross_weight += $goods_details['gross_weight'];
+                    $total_loaded_net_weight += $goods_details['net_weight'];
+                }
             }
         }
         $next_sr_no = $max_sr_no + 1;
@@ -55,6 +64,36 @@ if ($id > 0) {
         $remaining_gross_weight = $total_gross_weight - $total_loaded_gross_weight;
         $remaining_net_weight = $total_net_weight - $total_loaded_net_weight;
         ?>
+        <div class="modal-header d-flex justify-content-between bg-white align-items-center">
+            <h5 class="modal-title" id="staticBackdropLabel">GENERAL LOADING</h5>
+            <div class="d-flex align-items-center gap-2">
+                <?php if ($firstRow): ?>
+                    <form action="print/gloading-bl-print" class="d-flex gap-2 align-items-center">
+                        <input type="hidden" name="p_id" value="<?= $id; ?>">
+                        <input type="hidden" name="secret" value="<?= base64_encode("powered-by-upsol"); ?>">
+                        <label for="blSearch" style="text-wrap:nowrap;">B/L No Print </label>
+                        <select name="blSearch" id="blSearch" class="form-select form-select-sm">
+                            <?php
+                            foreach ($uniqueBlNumbers as $onebl) {
+                                echo '<option value="' . $onebl . '">' . $onebl . '</option>';
+                            }
+                            ?>
+                        </select>
+                        <button type="submit" class="btn btn-dark btn-sm me-2">PRINT</button>
+                    </form>
+                <?php endif; ?>
+                <!-- Print Button -->
+                <!-- <a href="print/purchase-single?t_id=<?php echo $id; ?>&action=order&secret=<?php echo base64_encode('powered-by-upsol') . "&print_type=full"; ?>"
+                        target="_blank" class="btn btn-dark btn-sm me-2">PRINT</a> -->
+                <button class="btn btn-warning btn-sm" onclick="document.querySelector('.transfer-form').classList.toggle('d-none');">Toggle Form</button>
+                <!-- Close Button -->
+                <a href="general-loading" class="btn-close ms-3" aria-label="Close"></a>
+            </div>
+        </div>
+        <script>
+            let emptyKgs = 0;
+            let Rate = 0;
+        </script>
         <style>
             #bl_suggestions {
                 z-index: 1000;
@@ -78,8 +117,7 @@ if ($id > 0) {
                             <div class="row gy-1 border-bottom py-1">
                                 <div class="col-md-12">
                                     <span class="fw-bold">By </span>
-                                    <?php
-                                    echo $_fields['sea_road'];                              ?>
+                                    <?= $_fields['sea_road']; ?>
                                 </div>
                                 <div class="col-md-3">
                                     <div class="fw-bold">Loading Details</div>
@@ -169,7 +207,7 @@ if ($id > 0) {
                                     $i = 0;
                                     $rate = 0;
                                     foreach ($items as $details) {
-                                        echo '<tr class="goodRow" data-empty-kgs="' . $details['empty_kgs'] . '" data-rate="' . $details['rate1'] . '" data-quantity="' . $details['qty_no'] . '" data-quantity-name="' . $details['qty_name'] . '" data-net-kgs="' . round($details['net_kgs'], 2) . '" data-gross-kgs="' . round($details['total_kgs'], 2) . '">';
+                                        echo '<tr class="goodRow" data-empty-kgs="' . $details['empty_kgs'] . '" data-rate="' . $details['qty_kgs'] . '" data-quantity="' . $details['qty_no'] . '" data-quantity-name="' . $details['qty_name'] . '" data-net-kgs="' . round($details['net_kgs'], 2) . '" data-gross-kgs="' . round($details['total_kgs'], 2) . '">';
                                         echo '<td>' . $details['sr'] . '</td>';
                                         echo '<td class="TgoodsId d-none">' . $details['goods_id'] . '</td>';
                                         echo '<td>' . goodsName($details['goods_id']) . '</td>';
@@ -216,7 +254,7 @@ if ($id > 0) {
                         <?php } ?>
                     </div>
                     <!-- HTML to display records in the table -->
-                    <div class="table-responsive">
+                    <div>
                         <table class="table mt-2 table-hover table-sm">
                             <thead>
                                 <tr>
@@ -263,21 +301,24 @@ if ($id > 0) {
                                         <!-- <td class="border border-dark"><?= json_decode($row['receiving_details'], true)['receiving_country']; ?></td> -->
                                         <td class="border border-dark"><?= json_decode($row['receiving_details'], true)['receiving_port_name']; ?></td>
                                         <td class="border border-dark text-success" style="position: relative;">
-                                            <a href="javascript:void(0);" onclick="toggleDownloadMenu(event, this)" style="text-decoration: none; color: inherit;">
+                                            <?php
+                                            $attachments = json_decode($row['attachments'], true) ?? [];
+                                            if ($attachments !== []) {
+                                                echo '<a href="javascript:void(0);" onclick="toggleDownloadMenu(event, this)" style="text-decoration: none; color: inherit;">
                                                 <i class="fa fa-paperclip"></i>
                                             </a>
-                                            <div class="bg-light border border-dark p-2 attachment-menu" style="position: absolute; top: -100%; left: -500%; display: none; z-index: 1000; width: 200px;">
-                                                <?php
-                                                $attachments = json_decode($row['attachments'], true) ?? [];
+                                            <div class="bg-light border border-dark p-2 attachment-menu" style="position: absolute; top: -100%; left: -500%; display: none; z-index: 1000; width: 200px;">';
                                                 foreach ($attachments as $item) {
                                                     $fileName = htmlspecialchars($item[1], ENT_QUOTES);
                                                     $fileExtension = pathinfo($fileName, PATHINFO_EXTENSION);
                                                     $trimmedName = (strlen($fileName) > 15) ? substr($fileName, 0, 15) . '...' . $fileExtension : $fileName;
                                                     echo '<a href="attachments/' . $fileName . '" download="' . $fileName . '" class="d-block mb-2">' . $trimmedName . '</a>';
                                                 }
-                                                if (empty($attachments)) echo '<p>No attachments available</p>';
-                                                ?>
-                                            </div>
+                                                echo '</div>';
+                                            } else {
+                                                echo '<i class="fw-bold fa fa-times text-danger"></i>';
+                                            }
+                                            ?>
                                         </td>
 
                                     </tr>
@@ -318,18 +359,19 @@ if ($id > 0) {
                                     echo '<input type="hidden" name="action" value="update">';
                                     echo '<input type="hidden" name="id" value="' . $updateRow['id'] . '">';
                                     $action = isset($_POST['action']) ? $_POST['action'] : '';
-                                } elseif ($firstRow) {
+                                } elseif ($ActiveBlRow) {
                                     $action = 'new';
-                                    $last_record['bl_no'] = $firstRow['bl_no'];
-                                    $last_record['report'] = $firstRow['report'];
-                                    $Importer = isset($firstRow['importer_details']) ? json_decode($firstRow['importer_details'], true) : [];
-                                    $Notify = isset($firstRow['notify_party_details']) ? json_decode($firstRow['notify_party_details'], true) : [];
-                                    $Exporter = isset($firstRow['exporter_details']) ? json_decode($firstRow['exporter_details'], true) : [];
-                                    // $Goods = isset($firstRow['goods_details']) ? json_decode($firstRow['goods_details'], true) : [];
+                                    $last_record['bl_no'] = $ActiveBlRow['bl_no'];
+                                    $last_record['report'] = $ActiveBlRow['report'];
+                                    $Importer = isset($ActiveBlRow['importer_details']) ? json_decode($ActiveBlRow['importer_details'], true) : [];
+                                    $Notify = isset($ActiveBlRow['notify_party_details']) ? json_decode($ActiveBlRow['notify_party_details'], true) : [];
+                                    $Exporter = isset($ActiveBlRow['exporter_details']) ? json_decode($ActiveBlRow['exporter_details'], true) : [];
+                                    // $Goods = isset($ActiveBlRow['goods_details']) ? json_decode($ActiveBlRow['goods_details'], true) : [];
                                     $Goods = ['goods_id' => '', 'quantity_no' => '', 'quantity_name' => '', 'size' => '', 'brand' => '', 'origin' => '', 'net_weight' => '', 'gross_weight' => '', 'container_no' => '', 'container_name' => ''];
-                                    $Shipping = isset($firstRow['shipping_details']) ? json_decode($firstRow['shipping_details'], true) : [];
-                                    $Loading = isset($firstRow['loading_details']) ? json_decode($firstRow['loading_details'], true) : [];
-                                    $Receiving = isset($firstRow['receiving_details']) ? json_decode($firstRow['receiving_details'], true) : [];
+                                    $Shipping = isset($ActiveBlRow['shipping_details']) ? json_decode($ActiveBlRow['shipping_details'], true) : [];
+                                    $Loading = isset($ActiveBlRow['loading_details']) ? json_decode($ActiveBlRow['loading_details'], true) : [];
+                                    $Receiving = isset($ActiveBlRow['receiving_details']) ? json_decode($ActiveBlRow['receiving_details'], true) : [];
+                                    echo '<input type="hidden" name="active_bl_no" value="' . $ActiveBlRow['bl_no'] . '">';
                                 } else {
                                     $action = 'new';
                                     $last_record = [];
@@ -352,9 +394,11 @@ if ($id > 0) {
                                         <?php }
                                     } else { ?>
                                         <h5 class="text-primary">General Information</h5>
-                                    <?php }; ?>
-                                    <input type="file" id="entry_file" name="entry_file[]" class="d-none" multiple>
-                                    <span class="btn cursor btn-success" onclick="document.getElementById('entry_file').click();"><i class="fa fa-paperclip"></i> Add File(s)</span>
+                                    <?php };
+                                    if (!$ActiveBlRow): ?>
+                                        <input type="file" id="entry_file" name="entry_file[]" class="d-none" multiple>
+                                        <span class="btn cursor btn-success" onclick="document.getElementById('entry_file').click();"><i class="fa fa-paperclip"></i> Add File(s)</span>
+                                    <?php endif; ?>
                                 </div>
                                 <!-- General Information -->
                                 <hr>
@@ -633,18 +677,18 @@ if ($id > 0) {
                                     <!-- Quantity No -->
                                     <div class="col-md-1">
                                         <label for="quantity_no" class="form-label">Qty No</label>
-                                        <input type="number" name="quantity_no" value="<?= $Goods['quantity_no']; ?>" id="quantity_no" required class="form-control form-control-sm" step="0.00001" onkeyup="autoCalc('#quantity_no', '#gross_weight', '#net_weight', Rate, emptyKgs)">
+                                        <input type="number" name="quantity_no" value="<?= $Goods['quantity_no']; ?>" id="quantity_no" required class="form-control form-control-sm" step="0.01" onkeyup="autoCalc('#quantity_no', '#gross_weight', '#net_weight', Rate, emptyKgs)">
                                     </div>
 
                                     <!-- Gross Weight -->
                                     <div class="col-md-1">
                                         <label for="gross_weight" class="form-label">G.Weight</label>
-                                        <input type="number" name="gross_weight" value="<?= $Goods['gross_weight']; ?>" id="gross_weight" required class="form-control form-control-sm">
+                                        <input type="number" name="gross_weight" value="<?= $Goods['gross_weight']; ?>" id="gross_weight" required class="form-control form-control-sm" step="0.01">
                                     </div>
                                     <!-- Net Weight -->
                                     <div class="col-md-1">
                                         <label for="net_weight" class="form-label">N.Weight</label>
-                                        <input type="number" name="net_weight" value="<?= $Goods['net_weight']; ?>" id="net_weight" required class="form-control form-control-sm">
+                                        <input type="number" name="net_weight" value="<?= $Goods['net_weight']; ?>" id="net_weight" required class="form-control form-control-sm" step="0.01">
                                     </div>
 
                                     <!-- Container No -->
@@ -676,6 +720,7 @@ if ($id > 0) {
                                             class="btn btn-<?= $action === 'update' ? 'warning' : 'primary'; ?> btn-sm rounded-0">
                                             <i class="fa fa-paper-plane"></i> <?= $action === 'update' ? 'Update' : 'Submit'; ?>
                                         </button>
+                                        <div class="text-danger fw-bold mt-1 d-none show_complete_msg">Remaining Quantity is Now Zero (<?= $remaining_quantity_no; ?>)</div>
                                     </div>
                                 </div>
                             </form>
@@ -740,8 +785,9 @@ if ($id > 0) {
                         <div class="text-danger">Notify Party Details Not Added!</div>
                     <?php endif; ?>
                 </div>
-
-                <button class="btn btn-warning btn-sm mt-2" onclick="document.querySelector('.transfer-form').classList.toggle('d-none');">Toggle Form</button>
+                <?php if ($firstRow) {
+                    echo '<a href="?updateActiveBl=&parent_id=' . $firstRow['id'] . '&p_id=' . $firstRow['p_id'] . '" class="btn btn-success btn-sm mt-2">Transfer BL</a>';
+                } ?>
             </div>
 
         </div>
@@ -1058,11 +1104,7 @@ if ($id > 0) {
                 success: function(response) {
                     var data = JSON.parse(response)
                     var data_comp = JSON.parse(data[3])
-                    var datu = data_comp['company_name'] + '\n' +
-                        'Country: ' + data_comp['country'] + '\n' +
-                        'City: ' + data_comp['city'] + '\n' +
-                        'State: ' + data_comp['state'] + '\n' +
-                        'Address: ' + data_comp['address'];
+                    var datu = data_comp['company_name'] + ' Country: ' + data_comp['country'] + ' City: ' + data_comp['city'] + ' State: ' + data_comp['state'] + ' Address: ' + data_comp['address'];
                     var indexVals = '';
                     if (data_comp['indexes1'] && data_comp['vals1']) {
                         for (var i = 0; i < data_comp['indexes1'].length; i++) {
@@ -1099,6 +1141,10 @@ if ($id > 0) {
         $('#goods_id, #size, #brand, #origin').on('change', function() {
             populateFields();
         });
+        if (parseInt('<?= $remaining_quantity_no; ?>') === 0) {
+            disableButton('GLoadingSubmit');
+            $('.show_complete_msg').removeClass('d-none');
+        }
         // $("#quantity_no").change(autoCalc('#quantity_no', '#gross_weight', '#net_weight'));
 
     });

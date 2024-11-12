@@ -21,6 +21,7 @@ $_fields = [
     'locked' => 0,
     '_date' => date('Y-m-d'),
     'country' => '',
+    'delivery_terms' => '',
     'action' => 'insert',
     'dr_acc' => '',
     'dr_acc_name' => '',
@@ -60,6 +61,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
         'locked' => $record['locked'],
         '_date' => $record['_date'],
         'country' => $record['country'],
+        'delivery_terms' => $record['delivery_terms'],
         'action' => 'update',
         'dr_acc' => $dr_record['acc'],
         'dr_acc_name' => $dr_record['acc_name'],
@@ -226,6 +228,14 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                                     <p><b>Sr#</b> <?php echo $_fields['sr_no']; ?></p>
                                     <p><b>User</b> <?php echo strtoupper($_fields['username']); ?></p>
                                     <p><b>Type:</b> <?php echo strtoupper($_GET['type']); ?></p>
+                                    <?php if (!SuperAdmin()) {
+                                        $dsd = fetch('branches', ['id' => $_fields['branch_id']]);
+                                        while ($b = mysqli_fetch_assoc($dsd)) {
+                                    ?>
+                                    <input type="hidden" value="<?= $b['id']; ?>" name="branch_id" />
+                                            <p><b>Branch:</b> <?php echo strtoupper($b['b_code']); ?></p>
+                                    <?php }
+                                    }; ?>
                                     <input type="hidden" value="<?= $_GET['type']; ?>" name="type" />
                                 </div>
                                 <div>
@@ -234,22 +244,29 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                                 </div>
                             </div>
 
+                            <div class="mb-2">
+                                    <label for="branch_id" class="form-label"><b>Branch</b></label>
+                                    <?php if (SuperAdmin()): ?>
+                                        <select id="branch_id" name="branch_id" class="form-select">
+                                            <?php
+                                            $branches = fetch('branches');
+                                            while ($b = mysqli_fetch_assoc($branches)) {
+                                                $b_select = $b['id'] == $_fields['branch_id'] ? 'selected' : '';
+                                                echo '<option ' . $b_select . ' value="' . $b['id'] . '">' . $b['b_code'] . '</option>';
+                                            }
+                                            ?>
+                                        </select>
+                                    <?php endif; ?>
+                                </div>
                             <div class="d-flex gap-1">
                                 <div class="mb-2">
-                                    <label for="branch_id" class="form-label"><b>Branch</b></label>
-                                    <select id="branch_id" name="branch_id" class="form-select">
-                                        <?php
-                                        $branches = SuperAdmin() ? fetch('branches') : fetch('branches', ['id' => $_fields['branch_id']]);
-                                        while ($b = mysqli_fetch_assoc($branches)) {
-                                            $b_select = $b['id'] == $_fields['branch_id'] ? 'selected' : '';
-                                            echo '<option ' . $b_select . ' value="' . $b['id'] . '">' . $b['b_code'] . '</option>';
-                                        }
-                                        ?>
-                                    </select>
-                                </div>
-                                <div class="mb-2">
-                                    <label for="country" class="form-label"><b>Delivery Terms</b></label>
+                                    <label for="country" class="form-label"><b>Country</b></label>
                                     <input type="text" value="<?php echo $_fields['country']; ?>" id="country" name="country" class="form-control">
+                                </div>
+
+                                <div class="mb-2">
+                                    <label for="delivery_terms" class="form-label"><b>Delivery Terms</b></label>
+                                    <input type="text" value="<?= !empty($_fields['delivery_terms']) ? $_fields['delivery_terms'] : ''; ?>" id="delivery_terms" name="delivery_terms" class="form-control">
                                 </div>
                             </div>
 
@@ -457,52 +474,57 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                             <thead>
                                 <tr class="text-nowrap">
                                     <th>#</th>
-                                    <th>GOODS</th>
-                                    <th>SIZE</th>
-                                    <th>BRAND</th>
-                                    <th>ORIGIN</th>
+                                    <th>GOODS / SIZE / BRAND / ORIGIN</th>
                                     <th>QTY</th>
                                     <th>KGs</th>
-                                    <th>EMPTY</th>
+                                    <!-- <th>EMPTY</th> -->
                                     <th>NET KGs</th>
-                                    <th>Wt.</th>
+                                    <!-- <th>Wt.</th> -->
                                     <th>TOTAL</th>
                                     <th>PRICE</th>
                                     <th>AMOUNT</th>
-                                    <?php if ($_GET['type'] !== 'local'): ?>
+                                    <?php if ($_GET['type'] !== 'local') { ?>
                                         <th class="text-end">FINAL</th>
-                                    <?php endif; ?>
+                                    <?php } else {; ?>
+                                        <th>Tax%</th>
+                                        <th>Tax.Amt</th>
+                                        <th>Amt+Tax</th>
+                                    <?php } ?>
                                     <th></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php $sr_details = 1;
-                                $qty_no = $qty_kgs = $total_kgs = $total_qty_kgs = $net_kgs = $total = $amount = $final_amount = 0;
+                                $qty_no = $qty_kgs = $total_kgs = $total_qty_kgs = $net_kgs = $total = $amount = $final_amount = $total_tax_amount = $total_total_with_tax = 0;
                                 $pur_d_q = fetch('transaction_items', array('parent_id' => $id));
                                 while ($details = mysqli_fetch_assoc($pur_d_q)) {
                                     $details_id = $details['id'];
                                     echo '<tr>';
                                     echo '<td>' . $details['sr'] . '</td>';
-                                    echo '<td><a href="' . $pageURL . '?id=' . $id . '&item_id=' . $details_id . '&type=' . $record['type'] . '" class="text-dark">' . goodsName($details['goods_id']) . '</a></td>';
-                                    echo '<td>' . $details['size'] . '</td>';
-                                    echo '<td>' . $details['brand'] . '</td>';
-                                    echo '<td>' . $details['origin'] . '</td>';
+                                    echo '<td><a href="' . $pageURL . '?id=' . $id . '&item_id=' . $details_id . '&type=' . $record['type'] . '" class="text-dark">' . goodsName($details['goods_id']) . '</a> / ' . $details['size'] . ' / ' . $details['brand'] . ' / ' . $details['origin'] . '</td>';
+                                    // echo '<td>' . $details['size'] . '</td>';
+                                    // echo '<td>' . $details['brand'] . '</td>';
+                                    // echo '<td>' . $details['origin'] . '</td>';
                                     echo '<td>' . $details['qty_no'] . '<sub>' . $details['qty_name'] . '</sub></td>';
                                     echo '<td>' . round($details['total_kgs'], 2) . '</td>';
-                                    echo '<td>' . round($details['total_qty_kgs'], 2) . '</td>';
+                                    // echo '<td>' . round($details['total_qty_kgs'], 2) . '</td>';
                                     echo '<td>' . round($details['net_kgs'], 2);
                                     echo '<sub>' . $details['divide'] . '</sub>';
                                     echo '</td>';
-                                    echo '<td>' . $details['weight'] . '</td>';
+                                    // echo '<td>' . $details['weight'] . '</td>';
                                     echo '<td>' . $details['total'] . '</td>';
                                     echo '<td>' . $details['price'] . '</td>';
                                     echo '<td>' . round($details['amount'], 2);
                                     echo '<sub>' . $details['currency1'] . '</sub>';
                                     echo '</td>';
-                                    if ($_GET['type'] !== 'local'):
+                                    if ($_GET['type'] !== 'local') {
                                         echo '<td class="text-end">' . round($details['final_amount'], 2);
                                         echo '<sub>' . $details['currency2'] . '</sub>';
-                                    endif;
+                                    } else {
+                                        echo '<td>' . $details['tax_percent'] . "%";
+                                        echo '<td>' . $details['tax_amount'];
+                                        echo '<td>' . $details['total_with_tax'];
+                                    };
                                     echo '</td>';
                                     echo '<td>';
                                     if (empty($p_data['khaata_tr1'])) {
@@ -522,20 +544,26 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                                     $total += $details['total'];
                                     $amount += $details['amount'];
                                     $final_amount += $details['final_amount'];
+                                    $total_tax_amount += (float)$details['tax_amount'];
+                                    $total_total_with_tax += (float)$details['total_with_tax'];
                                 }
                                 $prepareGoodsReport = '';
                                 if ($qty_no > 0) {
                                     echo '<tr>';
-                                    echo '<th colspan="5"></th>';
+                                    echo '<th colspan="2"></th>';
                                     echo '<th class="fw-bold">' . $qty_no . '</th>';
                                     echo '<th class="fw-bold">' . round($total_kgs, 2) . '</th>';
-                                    echo '<th class="fw-bold">' . round($total_qty_kgs, 2) . '</th>';
+                                    // echo '<th class="fw-bold">' . round($total_qty_kgs, 2) . '</th>';
                                     echo '<th class="fw-bold">' . round($net_kgs, 2) . '</th>';
-                                    echo '<th colspan="1"></th>';
+                                    // echo '<th colspan="1"></th>';
                                     echo '<th class="fw-bold">' . round($total, 2) . '</th>';
                                     echo '<th></th>';
                                     echo '<th class="fw-bold">' . round($amount, 2) . '</th>';
-
+                                    if($_GET['type'] === 'local'){
+                                    echo '<th></th>';
+                                    echo '<th class="fw-bold">' . round($total_tax_amount, 2) . '</th>';
+                                    echo '<th class="fw-bold">' . round($total_total_with_tax, 2) . '</th>';
+                                    }
                                     if ($_GET['type'] !== 'local') {
                                         echo '<th class="fw-bold text-end">' . round($final_amount, 2) . '</th>';
                                     }
@@ -1303,6 +1331,7 @@ if (isset($_POST['purchaseSubmit'])) {
         'active' => 1,
         '_date' => $_POST['_date'],
         'country' => mysqli_real_escape_string($connect, $_POST['country']),
+        'delivery_terms' => mysqli_real_escape_string($connect, $_POST['delivery_terms']),
         'branch_id' => mysqli_real_escape_string($connect, $_POST['branch_id']),
         'notify_party_details' => json_encode([
             "np_acc" => $_POST['np_acc'],

@@ -2,36 +2,286 @@
 $page_title = 'Agent Payments Form';
 $pageURL = 'agent-payments-form';
 include("header.php");
-$remove = $size = $brand = $goods_name = $start_print = $end_print = $is_transferred = $s_khaata_id = '';
+$remove = $start_print = $end_print = $type = $acc_no = $p_id = $truck_no = $sea_road = $billStatus = $billEntryNoSearch = $date_type = '';
 $is_search = false;
 global $connect;
-$user = $_SESSION['username'];
+$results_per_page = 50;
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$start_from = ($page - 1) * $results_per_page;
 $sql = "SELECT * FROM `general_loading` WHERE JSON_EXTRACT(gloading_info, '$.parent_id') IS NULL";
+$conditions = [];
+$print_filters = [];
+$user = $_SESSION['username'];
+if ($_GET) {
+    $remove = removeFilter('agent-payments-form');
+    $is_search = true;
+    if (isset($_GET['p_id']) && !empty($_GET['p_id'])) {
+        $p_id = mysqli_real_escape_string($connect, $_GET['p_id']);
+        $print_filters[] = 'p_id=' . $p_id;
+        $conditions[] = "p_id = '$p_id'";
+    }
+    $date_type = isset($_GET['date_type']) ? $_GET['date_type'] : '';
+    $print_filters[] = 'date_type=' . $date_type;
+    if (!empty($_GET['start'])) {
+        $start_print = mysqli_real_escape_string($connect, $_GET['start']);
+        $print_filters[] = 'start=' . $start_print;
+        if ($date_type == 'receiving') {
+            $conditions[] = "JSON_EXTRACT(agent_details, '$.received_date') >= '$start_print'";
+        } elseif ($date_type == 'clearing') {
+            $conditions[] = "JSON_EXTRACT(agent_details, '$.clearing_date') >= '$start_print'";
+        } elseif ($date_type == 'returning') {
+            $conditions[] = "JSON_EXTRACT(agent_details, '$.truck_returning_date') >= '$start_print'";
+        }
+    }
+    if (!empty($_GET['end'])) {
+        $end_print = mysqli_real_escape_string($connect, $_GET['end']);
+        $print_filters[] = 'end=' . $end_print;
+
+        if ($date_type == 'receiving') {
+            $conditions[] = "JSON_EXTRACT(agent_details, '$.received_date') <= '$end_print'";
+        } elseif ($date_type == 'clearing') {
+            $conditions[] = "JSON_EXTRACT(agent_details, '$.clearing_date') <= '$end_print'";
+        } elseif ($date_type == 'returning') {
+            $conditions[] = "JSON_EXTRACT(agent_details, '$.truck_returning_date') <= '$end_print'";
+        }
+    }
+    if (!empty($_GET['p_type'])) {
+        $type = mysqli_real_escape_string($connect, $_GET['p_type']);
+        $print_filters[] = 'p_type=' . $type;
+        $conditions[] = "p_type = '$type'";
+    }
+    if (!empty($_GET['billEntryNoSearch'])) {
+        $billEntryNoSearch = mysqli_real_escape_string($connect, $_GET['billEntryNoSearch']);
+        $print_filters[] = 'billEntryNoSearch=' . $billEntryNoSearch;
+        $conditions[] = "JSON_EXTRACT(agent_details, '$.bill_of_entry_no')='$billEntryNoSearch'";
+    }
+    if (!empty($_GET['acc_no']) && $user === 'admin') {
+        $acc_no = mysqli_real_escape_string($connect, $_GET['acc_no']);
+        $print_filters[] = 'acc_no=' . $acc_no;
+        $conditions[] = "JSON_EXTRACT(agent_details, '$.ag_acc_no') = '$acc_no'";
+    }
+    if (!empty($_GET['truck_no'])) {
+        $truck_no = mysqli_real_escape_string($connect, $_GET['truck_no']);
+        $print_filters[] = 'truck_no=' . $truck_no;
+        $conditions[] = "JSON_EXTRACT(agent_details, '$.loading_truck_number') = '$truck_no'";
+    }
+    if (!empty($_GET['sea_road'])) {
+        $sea_road = mysqli_real_escape_string($connect, $_GET['sea_road']);
+        $print_filters[] = 'sea_road=' . $sea_road;
+        $conditions[] = "JSON_EXTRACT(shipping_details, '$.transfer_by') = '$sea_road'";
+    }
+    if (!empty($_GET['billStatus'])) {
+        $billStatus = mysqli_real_escape_string($connect, $_GET['billStatus']);
+        $print_filters[] = 'billStatus=' . $billStatus;
+    }
+}
+if (count($conditions) > 0) {
+    $sql .= " AND " . implode(' AND ', $conditions);
+}
 if ($user !== 'admin') {
     $sql .= " AND JSON_EXTRACT(agent_details, '$.ag_id') = '$user'";
 }
-$sql .= " AND JSON_EXTRACT(agent_details, '$.ag_id') IS NOT NULL";
-$mypageURL = $pageURL;
+$sql .= " AND JSON_EXTRACT(agent_details, '$.ag_id') IS NOT NULL ORDER BY id DESC LIMIT $start_from, $results_per_page";
+$query_string = implode('&', $print_filters);
+$print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
+$count_sql = "SELECT COUNT(id) AS total FROM `general_loading`" . (count($conditions) > 0 ? " WHERE " . implode(' AND ', $conditions) : "");
+$count_result = mysqli_query($connect, $count_sql);
+$total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_page);
 ?>
+
 <div class="fixed-top">
     <?php require_once('nav-links.php'); ?>
 </div>
 <div class="mx-5 bg-white p-3">
-    <h1 class="mb-2">Agent Payments</h1>
+    <div class="d-flex justify-content-between align-items-center w-100">
+        <h1 class="mb-2" style="font-size: 2rem; font-weight: 700; color: #333; text-transform: uppercase; letter-spacing: 1.5px; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">
+            Agent Payments
+        </h1>
+        <div class="d-flex gap-2">
+            <nav aria-label="Page navigation example">
+                <ul class="pagination justify-content-center pagination-sm">
+                    <?php
+                    $current_url = $_SERVER['REQUEST_URI'];
+                    $url_parts = parse_url($current_url);
+                    parse_str($url_parts['query'] ?? '', $query_params);
+                    unset($query_params['page']);
+                    $base_url = $url_parts['path'] . '?' . http_build_query($query_params);
+                    $count_sql = "SELECT COUNT(id) AS total FROM `general_loading`";
+                    if (count($conditions) > 0) {
+                        $count_sql .= " WHERE " . implode(' AND ', $conditions);
+                    } else {
+                        $count_sql .= " WHERE 1";
+                    }
+                    $count_result = mysqli_query($connect, $count_sql);
+                    if (!$count_result) {
+                        echo "Error: " . mysqli_error($connect);
+                        exit;
+                    }
+                    $row = mysqli_fetch_assoc($count_result);
+                    $total_pages = ceil($row['total'] / $results_per_page);
+                    echo '<ul class="pagination">';
+                    if ($page > 1) {
+                        echo "<li class='page-item'><a class='page-link' href='" . $base_url . "&page=" . ($page - 1) . "'>Previous</a></li>";
+                    } else {
+                        echo "<li class='page-item disabled'><span class='page-link'>Prev</span></li>";
+                    }
+                    for ($i = 1; $i <= $total_pages; $i++) {
+                        $active_class = ($i == $page) ? 'active' : '';
+                        echo "<li class='page-item $active_class'><a class='page-link' href='" . $base_url . "&page=$i'>$i</a></li>";
+                    }
+                    if ($page < $total_pages) {
+                        echo "<li class='page-item'><a class='page-link' href='" . $base_url . "&page=" . ($page + 1) . "'>Next</a></li>";
+                    } else {
+                        echo "<li class='page-item disabled'><span class='page-link'>Next</span></li>";
+                    }
+                    echo '</ul>';
+                    ?>
+                </ul>
+            </nav>
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fa fa-print"></i>
+                </button>
+                <ul class="dropdown-menu mt-2" aria-labelledby="dropdownMenuButton">
+                    <li>
+                        <a class="dropdown-item" href="<?= $print_url; ?>" target="_blank">
+                            <i class="fas text-secondary fa-eye me-2"></i> Print Preview
+                        </a>
+                    </li>
 
+                    <li>
+                        <a class="dropdown-item" href="javascript:void(0);" onclick="openAndPrint('<?= $print_url; ?>')">
+                            <i class="fas text-secondary fa-print me-2"></i> Print
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="getFileThrough('pdf', '<?= $print_url; ?>')">
+                            <i id="pdfIcon" class="fas text-secondary fa-file-pdf me-2"></i> Download PDF
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="getFileThrough('word', '<?= $print_url; ?>')">
+                            <i id="wordIcon" class="fas text-secondary fa-file-word me-2"></i> Download Word File
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="getFileThrough('whatsapp', '<?= $print_url; ?>')">
+                            <i id="whatsappIcon" class="fa text-secondary fa-whatsapp me-2"></i> Send in WhatsApp
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="getFileThrough('email', '<?= $print_url; ?>')">
+                            <i id="emailIcon" class="fas text-secondary fa-envelope me-2"></i> Send In Email
+                        </a>
+                    </li>
+                </ul>
+
+            </div>
+        </div>
+    </div>
+    <form name="datesSubmit" class="mt-2" method="get">
+        <div class="input-group input-group-sm">
+            <div class="form-group">
+                <label for="p_id" class="form-label">P#</label>
+                <input type="number" name="p_id" value="<?php echo $p_id; ?>" id="p_id" class="form-control form-control-sm mx-1" style="max-width:80px;" placeholder="e.g. 33">
+            </div>
+            <div class="form-group">
+                <label for="date_type" class="form-label">Date Type</label>
+                <select class="form-select form-select-sm" name="date_type" style="max-width:130px;" id="date_type" onchange="toggleDates()">
+                    <option value="" <?= !in_array($date_type, ['receiving', 'clearing', 'returning']) ? 'selected' : ''; ?>>All</option>
+                    <option value="receiving" <?= $date_type == 'receiving' ? 'selected' : ''; ?>>Receiving</option>
+                    <option value="clearing" <?= $date_type == 'clearing' ? 'selected' : ''; ?>>Clearing</option>
+                    <option value="returning" <?= $date_type == 'returning' ? 'selected' : ''; ?>>Returning</option>
+                </select>
+            </div>
+            <div class="form-group <?= !in_array($date_type, ['receiving', 'clearing', 'returning']) ? 'd-none' : ''; ?>" id="startInput">
+                <label for="start" class="form-label">Start Date</label>
+                <input type="date" name="start" value="<?php echo $start_print; ?>" id="start" class="form-control form-control-sm mx-1" style="max-width:160px;">
+            </div>
+            <div class="form-group <?= !in_array($date_type, ['receiving', 'clearing', 'returning']) ? 'd-none' : ''; ?>" id="endInput">
+                <label for="end" class="form-label">End Date</label>
+                <input type="date" name="end" value="<?php echo $end_print; ?>" id="end" class="form-control form-control-sm mx-2" style="max-width:160px;">
+            </div>
+            <div class="form-group">
+                <label for="p_type" class="form-label">Type</label>
+                <select class="form-select form-select-sm" name="p_type" style="max-width:130px;" id="p_type">
+                    <option value="" selected>All</option>
+                    <?php
+                    $static_types = fetch('static_types', ['type_for' => 'ps_types']);
+                    while ($static_type = mysqli_fetch_assoc($static_types)) {
+                        $sel_tran = $type == $static_type['type_name'] ? 'selected' : '';
+                        echo '<option ' . $sel_tran . '  value="' . $static_type['type_name'] . '">' . strtoupper(htmlspecialchars($static_type['details'])) . '</option>';
+                    }
+                    ?>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="sea_road" class="form-label">SEA/ROAD</label>
+                <select class="form-select form-select-sm" name="sea_road" style="max-width:130px;" id="sea_road">
+                    <option value="" <?= !in_array($sea_road, ['sea', 'road']) ? 'selected' : ''; ?>>All</option>
+                    <option value="sea" <?= $sea_road == 'sea' ? 'selected' : ''; ?>>by Sea</option>
+                    <option value="road" <?= $sea_road == 'road' ? 'selected' : ''; ?>>by Road</option>
+                </select>
+            </div>
+            <div class="form-group mx-1">
+                <label for="billEntryNoSearch" class="form-label">Bill Entry No Search</label>
+                <input type="text" class="form-control form-control-sm mx-1" style="max-width:130px;" name="billEntryNoSearch" placeholder="Bill Entry No Search" value="<?php echo $billEntryNoSearch; ?>" id="billEntryNoSearch">
+            </div>
+            <div class="form-group">
+                <label for="truck_no" class="form-label">Truck No.</label>
+                <input type="text" name="truck_no" value="<?php echo $truck_no; ?>" id="truck_no" class="form-control form-control-sm mx-1" style="max-width:100px;" placeholder="e.g. TKU 2563 COMTY NMNVBM">
+            </div>
+            <div class="form-group">
+                <label for="billStatus" class="form-label">Bill Status</label>
+                <select class="form-select form-select-sm" name="billStatus" style="max-width:130px;" id="billStatus">
+                    <option value="" <?= !in_array($billStatus, ['Complete', 'In Complete']) ? 'selected' : ''; ?>>All</option>
+                    <option value="Complete" <?= $billStatus == 'Complete' ? 'selected' : ''; ?>>Complete</option>
+                    <option value="In Complete" <?= $billStatus == 'In Complete' ? 'selected' : ''; ?>>In Complete</option>
+                </select>
+            </div>
+            <div class="form-group <?= $user !== 'admin' ? 'd-none' : ''; ?>">
+                <label for="acc_no" class="form-label">Acc No.</label>
+                <input type="text" class="form-control form-control-sm mx-1" style="max-width:90px;" name="acc_no" placeholder="Acc No." value="<?php echo $acc_no; ?>" id="acc_no">
+            </div>
+            <div class="form-group mt-4 pt-1">
+                <?= $remove ? '<a href="' . $pageURL . '" class="btn btn-sm btn-danger"><i class="fa fa-sync-alt"></i></a>' : ''; ?>
+                <button type="submit" class="btn btn-sm btn-success">Search</button>
+            </div>
+        </div>
+    </form>
+
+    <style>
+        .table-responsive,
+        #RecordsTable {
+            height: 300px;
+            overflow-y: scroll;
+        }
+
+        .fixed thead {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background-color: #fff;
+            box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1);
+        }
+    </style>
     <div class="table-responsive mt-4">
         <table class="table table-bordered">
             <thead>
                 <tr class="text-nowrap">
                     <?php if (SuperAdmin()): ?>
-                        <th>P#</th>
+                        <th>P#+Bill#</th>
                         <th>AGENT ACC</th>
                         <th>AGENT ID</th>
                         <th>AGENT NAME</th>
                     <?php else: ?>
                         <th>#</th>
                     <?php endif; ?>
-                    <th>Bill Of Entry</th>
+                    <th>Bill Of Entry No</th>
                     <?php if (!SuperAdmin()): ?>
                         <th>AGENT ACC</th>
                         <th>AGENT ID</th>
@@ -58,13 +308,15 @@ $mypageURL = $pageURL;
                 }
                 foreach ($Loadings as $SingleLoading) {
                     $agentDetails = json_decode($SingleLoading['agent_details'], true);
+                    if (!isset($agentDetails['bill_of_entry_no'])) {
+                        continue;
+                    }
                     $loadingId = $SingleLoading['id'];
                     $currentBillNumber = json_decode($SingleLoading['gloading_info'], true)['billNumber'] ?? '';
                     $grandTotal = isset($paymentTotals[$loadingId]) ? $paymentTotals[$loadingId] : 0;
+                    $rowColor = $grandTotal === 0 ? 'text-danger' : '';
+                    $grandTotal =  $grandTotal === 0 ? 'In Complete' : $grandTotal;
                     $SuperCode = $rowColor . ' pointer" onclick="window.location.href = \'agent-payments-form?view=1&id=' . $loadingId . '\';"';
-                    if (SuperAdmin()) {
-                        $SuperCode .= ' data-bs-toggle="modal" data-bs-target="#KhaataDetails"';
-                    }
                 ?>
 
                     <tr class="text-nowrap">
@@ -76,13 +328,13 @@ $mypageURL = $pageURL;
                         <td class="<?= $rowColor; ?>"><?= $agentDetails['ag_id']; ?></td>
                         <td class="<?= $rowColor; ?>"><?= $agentDetails['ag_name']; ?></td>
                         <?php if (SuperAdmin()): ?>
-                            <td class="<?= $SuperCode; ?>"><b><?= $SingleLoading['bl_no']; ?></b></td>
+                            <td class="<?= $SuperCode; ?>"><b><?= $agentDetails['bill_of_entry_no']; ?></b></td>
                         <?php endif; ?>
                         <td class="<?= $rowColor; ?>"><?= $agentDetails['received_date']; ?></td>
                         <td class="<?= $rowColor; ?>"><?= $agentDetails['clearing_date']; ?></td>
                         <td class="<?= $rowColor; ?>"><?= $agentDetails['loading_truck_number']; ?></td>
                         <td class="<?= $rowColor; ?>"><?= $agentDetails['truck_returning_date']; ?></td>
-                        <td class="<?= $rowColor; ?>"><?= $grandTotal; ?></td>
+                        <td class="<?= $rowColor; ?> bill-status fw-bold"><?= $grandTotal; ?></td>
                     </tr>
                 <?php
                     $row_count++;
@@ -100,14 +352,9 @@ $mypageURL = $pageURL;
             <div class="modal-header d-flex justify-content-between align-items-center">
                 <h5 class="modal-title" id="staticBackdropLabel">AGENT PAYMENTS</h5>
                 <div class="d-flex align-items-center">
-
-
-                    <!-- Close Button -->
-                    <a href="<?php echo $mypageURL; ?>" class="btn-close ms-3" aria-label="Close"></a>
+                    <a href="<?php echo $pageURL; ?>" class="btn-close ms-3" aria-label="Close"></a>
                 </div>
             </div>
-
-
             <div class="modal-body bg-light pt-0" id="viewDetails"></div>
         </div>
     </div>
@@ -136,29 +383,6 @@ $mypageURL = $pageURL;
         }
     }
 </script>
-<script>
-    $(document).ready(function() {
-        // Function to get the query parameter value
-        function getQueryParameter(name) {
-            const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get(name);
-        }
-
-        // Get the value of 's_khaata_id' parameter from the URL
-        var s_khaata_id = getQueryParameter('s_khaata_id').toUpperCase();
-
-        // Iterate over all the <td class="<?php echo $rowColor; ?>"> elements with class 's_khaata_id_row'
-        $('td.s_khaata_id_row').each(function() {
-            // Get the text content of the current <td class="<?php echo $rowColor; ?>">
-            var cellText = $(this).text().trim();
-            // If the text doesn't match the 's_khaata_id' parameter, hide the parent <tr>
-            if (cellText !== s_khaata_id && s_khaata_id !== '') {
-                $(this).closest('tr').hide();
-            }
-        });
-    });
-</script>
-
 <?php
 if (isset($_POST['AgentPaymentsFormSubmit']) || isset($_POST['UpdateAgPaymentEntry'])) {
     $msg = 'DB Error';
@@ -190,15 +414,20 @@ if (isset($_POST['AgentPaymentsFormSubmit']) || isset($_POST['UpdateAgPaymentEnt
             }
         }
     }
+    if (isset($_POST['firstRowID'])) {
+        $fetchTransfer = json_decode(mysqli_fetch_assoc(fetch('agent_payments', ['id' => $_POST['firstRowID']]))['transfer_details'], true);
+    } else {
+        $fetchTransfer = [];
+    }
     $combineData = [
         'bill_no' => $bill_no,
         'date' => $date,
         'bill_details' => $bill_details,
-        'transfer_details' => json_encode([
+        'transfer_details' => json_encode(array_merge($fetchTransfer, [
             'bl_no' => $bl_no,
             'transferred_to_admin' => false,
             'transferred_to_accounts' => false,
-        ]),
+        ])),
         'agent_file' => json_encode($uploadedFiles),
     ];
     $data = [
@@ -214,6 +443,9 @@ if (isset($_POST['AgentPaymentsFormSubmit']) || isset($_POST['UpdateAgPaymentEnt
         'tax_amount' => $tax_amount,
         'grand_total' => $grand_total,
     ];
+    if ($combineData['agent_file'] === '[]') {
+        unset($combineData['agent_file']);
+    }
     if (isset($_POST['firstRowID']) && $editId !== $_POST['firstRowID']) {
         $data['transfer_details'] = json_encode(['parent_id' => $_POST['firstRowID']]);
         $done = update('agent_payments', $combineData, ['id' => $_POST['firstRowID']]);
@@ -226,7 +458,7 @@ if (isset($_POST['AgentPaymentsFormSubmit']) || isset($_POST['UpdateAgPaymentEnt
         $url .= "?view=1&id=$loading_id";
         $msg = 'Agent Payment Added!';
     }
-    // message($type, $url, $msg);
+    message($type, $url, $msg);
 }
 if (isset($_GET['deleteAgPaymentEntry'])) {
     $msg = 'DB Error';
@@ -256,15 +488,11 @@ if (isset($_POST['TransferBillToAdmin'])) {
         'total_bill_amount' => mysqli_real_escape_string($connect, $_POST['total_bill_amount']),
         'total_tax_amount' => mysqli_real_escape_string($connect, $_POST['total_tax_amount']),
     ];
-
-    // Merge existing data with new data
     $existingData = array_merge($existingData, $combineData);
     $data = [
         'transfer_details' => json_encode($existingData)
     ];
     $done = update('agent_payments', $data, ['id' => $parent_id]);
-
-    // Update child rows if the parent update was successful
     if ($done && !empty($child_ids_array)) {
         foreach ($child_ids_array as $child_id) {
             $child_id = mysqli_real_escape_string($connect, $child_id);
@@ -276,21 +504,36 @@ if (isset($_POST['TransferBillToAdmin'])) {
             $done = update('agent_payments', $updateData, ['id' => $child_id]);
         }
     }
-
-    // Feedback message
     if ($done) {
         $type = 'success';
         $msg = 'Transferred to Admin';
     }
     message($type, $url, $msg);
 }
-
-
-
 if (isset($_GET['id']) && is_numeric($_GET['id']) && isset($_GET['view']) && $_GET['view'] == 1) {
     $loadingID = mysqli_real_escape_string($connect, $_GET['id']);
     echo "<script>jQuery(document).ready(function ($) {  $('#KhaataDetails').modal('show');});</script>";
     echo "<script>jQuery(document).ready(function ($) {  viewPurchase($loadingID); });</script>";
 }
-
 ?>
+<script>
+    function toggleDates() {
+        const selectedValue = $('#date_type').val();
+        if (selectedValue === "") {
+            $('#startInput, #endInput').addClass('d-none');
+        } else {
+            $('#startInput, #endInput').removeClass('d-none');
+        }
+    };
+    $(document).ready(function() {
+        var billStatus = getQueryParameter('billStatus') ? getQueryParameter('billStatus') : '';
+        $('tbody tr').each(function() {
+            var rowbillStatus = $(this).find('td.bill-status').text().trim();
+            if (billStatus && billStatus === 'Complete' && rowbillStatus === 'In Complete') {
+                $(this).hide();
+            } else if (billStatus && billStatus === 'In Complete' && rowbillStatus !== 'In Complete') {
+                $(this).hide();
+            }
+        });
+    });
+</script>

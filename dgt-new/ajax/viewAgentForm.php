@@ -14,6 +14,7 @@ if ($id > 0) {
     $Agent = isset($record['agent_details']) ? json_decode($record['agent_details'], true) : [];
     if (!empty($record)) {
         $data = json_decode($parent['gloading_info'], true);
+        $ptransfrd = isset($data['payments_trans_ids']) ? $data['payments_trans_ids'] : [];
         if (isset($data['child_ids'])) {
             $childIdsString = $data['child_ids'];
             $childIdsArray = explode(', ', $childIdsString);
@@ -157,8 +158,8 @@ if ($id > 0) {
                                     <?php endif; ?>
                                     </div>
                             </div>
-                            <div class="table-responsive">
-                                <table class="table mt-2 table-hover table-sm">
+                            <div class="table-responsive" style="overflow: visible;width:100%;">
+                                <table class="table mt-2 table-hover table-sm" style="white-space: nowrap;">
                                     <thead>
                                         <style>
                                             .text-white,
@@ -167,6 +168,7 @@ if ($id > 0) {
                                             }
                                         </style>
                                         <tr>
+                                            <th class="bg-dark text-white text-center"><i class="fa fa-check-square-o"></i></th>
                                             <th class="bg-dark text-white">Sr#</th>
                                             <th class="bg-dark text-white">Container No</th>
                                             <!-- <th class="bg-dark text-white">B/L.No</th> -->
@@ -196,13 +198,21 @@ if ($id > 0) {
                                                 if (!isset($Agent['transferred'])) {
                                                     continue;
                                                 }
-                                                if(isset($Agent['ag_id'])){
-                                                    if($Agent['ag_id'] !== json_decode($parent['agent_details'], true)['ag_id']){
+                                                if (isset($Agent['ag_id'])) {
+                                                    if ($Agent['ag_id'] !== json_decode($parent['agent_details'], true)['ag_id']) {
                                                         continue;
                                                     }
                                                 }
+                                                if (in_array(($record['p_id'] . '-' . $record['sr_no']), $ptransfrd)) {
+                                                    $checked = 'checked';
+                                                } else {
+                                                    $checked = '';
+                                                }
                                         ?>
                                                 <tr>
+                                                    <td class="border border-dark text-center">
+                                                        <input type="checkbox" class="row-checkbox" <?= $checked; ?> value="<?= $record['p_id'] . '-' . $record['sr_no']; ?>">
+                                                    </td>
                                                     <td class="border border-dark"><a href="agent-form?view=1&lp_id=<?= $parent['id']; ?>&action=update&editId=<?= $record['id']; ?>"><b>#<?= $record['p_id'] . '-' . $record['sr_no']; ?></b></a>
                                                         <?php if (isset($_POST['editId']) && $_POST['editId'] == $record['id']) {
                                                             echo '<i class="fa fa-eye m-1" style="font-size: 12px;"></i>';
@@ -217,48 +227,64 @@ if ($id > 0) {
                                                     <td class="border border-dark"><?= json_decode($record['goods_details'], true)['gross_weight']; ?></td>
                                                     <td class="border border-dark"><?= json_decode($record['goods_details'], true)['net_weight']; ?></td>
                                                     <td class="border border-dark text-success" style="position: relative;">
-                                                        <a href="javascript:void(0);" onclick="toggleDownloadMenu(event, this)" style="text-decoration: none; color: inherit;">
-                                                            <i class="fa fa-paperclip"></i>
-                                                        </a>
-                                                        <div class="bg-light border border-dark p-2 attachment-menu" style="position: absolute; top: -100%; left: -190%; display: none; z-index: 1000; width: 200px;">
-                                                            <?php
-                                                            $attachments = json_decode($record['attachments'], true) ?? [];
-                                                            foreach ($attachments as $item) {
-                                                                $fileName = htmlspecialchars($item[1], ENT_QUOTES);
-                                                                $fileExtension = pathinfo($fileName, PATHINFO_EXTENSION);
-                                                                $trimmedName = (strlen($fileName) > 15) ? substr($fileName, 0, 15) . '...' . $fileExtension : $fileName;
-                                                                echo '<a href="attachments/' . $fileName . '" download="' . $fileName . '" class="d-block mb-2">' . $trimmedName . '</a>';
+                                                        <?php
+                                                        $attachments1 = json_decode($record['attachments'], true) ?? [];
+                                                        if ($attachments1 !== []) {
+                                                            echo '<a href="javascript:void(0);" onclick="toggleDownloadMenu(event, this)" style="text-decoration: none; color: inherit;">
+                                                <i class="fa fa-paperclip"></i>
+                                            </a>
+                                            <div class="bg-light border border-dark p-2 attachment-menu" style="position: absolute; top: -100%; left: -350%; display: none; z-index: 1000; width: 200px;">';
+                                                            foreach ($attachments1 as $item1) {
+                                                                $fileName1 = htmlspecialchars($item1[1], ENT_QUOTES);
+                                                                $fileExtension1 = pathinfo($fileName1, PATHINFO_EXTENSION);
+                                                                $trimmedName1 = (strlen($fileName1) > 15) ? substr($fileName1, 0, 15) . '...' . $fileExtension1 : $fileName1;
+                                                                echo '<a href="attachments/' . $fileName1 . '" download="' . $fileName1 . '" class="d-block mb-2">' . $trimmedName1 . '</a>';
                                                             }
-                                                            if (empty($attachments)) echo '<p>No attachments available</p>';
-                                                            ?>
-                                                        </div>
+                                                            echo '</div>';
+                                                        } else {
+                                                            echo '<i class="fw-bold fa fa-times text-danger"></i>';
+                                                        }
+                                                        ?>
                                                     </td>
                                                     <?php if (isset($Agent['permission_to_edit'])): ?>
                                                         <td class="border border-dark"><?= json_decode($record['agent_details'], true)['received_date']; ?></td>
-                                                        <td class="border border-dark"><?= json_decode($record['agent_details'], true)['clearing_date']; ?></td>
+                                                        <td class="border border-dark ag_clearing_date"><?= json_decode($record['agent_details'], true)['clearing_date']; ?></td>
                                                         <td class="border border-dark"><?= json_decode($record['agent_details'], true)['bill_of_entry_no']; ?></td>
                                                         <td class="border border-dark"><?= json_decode($record['agent_details'], true)['loading_truck_number']; ?></td>
                                                         <td class="border border-dark"><?= json_decode($record['agent_details'], true)['truck_returning_date']; ?></td>
                                                         <td class="border border-dark text-success" style="position: relative;">
-                                                            <a href="javascript:void(0);" onclick="toggleDownloadMenu(event, this)" style="text-decoration: none; color: inherit;">
-                                                                <i class="fa fa-paperclip"></i>
-                                                            </a>
-                                                            <div class="bg-light border border-dark p-2 attachment-menu" style="position: absolute; top: -100%; left: -200%; display: none; z-index: 1000; width: 200px;">
-                                                                <?php
-                                                                $attachments = $Agent['attachments'] ?? [];
-                                                                if (!empty($attachments)) {
-                                                                    foreach ($attachments as $key => $fileName) {
-                                                                        $fileName = htmlspecialchars($fileName, ENT_QUOTES);
-                                                                        $fileExtension = pathinfo($fileName, PATHINFO_EXTENSION);
-                                                                        $trimmedName = (strlen($fileName) > 15) ? substr($fileName, 0, 15) . '...' . $fileExtension : $fileName;
-                                                                        echo '<a href="attachments/' . $fileName . '" download="' . $fileName . '" class="d-block mb-2">' . $trimmedName . '</a>';
-                                                                    }
-                                                                } else {
-                                                                    echo '<p>No attachments available</p>';
+                                                            <?php
+                                                            $attachments2 = $Agent['attachments'] ?? [];
+                                                            if (!empty($attachments2)) {
+                                                                echo '<a href="javascript:void(0);" onclick="toggleDownloadMenu(event, this)" style="text-decoration: none; color: inherit;">
+                <i class="fa fa-paperclip"></i>
+              </a>
+              <div class="bg-light border border-dark p-2 attachment-menu" style="position: absolute; top: -100%; left: -500%; display: none; z-index: 1000; width: 200px;">';
+
+                                                                // Loop through each file in the attachments array
+                                                                foreach ($attachments2 as $fileName2) {
+                                                                    // Ensure each file name is safe for display
+                                                                    $fileName2 = htmlspecialchars($fileName2, ENT_QUOTES);
+                                                                    $fileExtension2 = pathinfo($fileName2, PATHINFO_EXTENSION);
+
+                                                                    // Trim the file name if it’s too long (excluding the extension)
+                                                                    $baseName = pathinfo($fileName2, PATHINFO_FILENAME);
+                                                                    $trimmedName2 = (strlen($baseName) > 15) ? substr($baseName, 0, 15) . '...' : $baseName;
+
+                                                                    // Combine trimmed name with file extension
+                                                                    $displayName = $trimmedName2 . '.' . $fileExtension2;
+
+                                                                    // Display clickable link for each file
+                                                                    echo '<a href="attachments/' . $fileName2 . '" download="' . $fileName2 . '" class="d-block mb-2">' . $displayName . '</a>';
                                                                 }
-                                                                ?>
-                                                            </div>
+
+                                                                echo '</div>';
+                                                            } else {
+                                                                echo '<i class="fw-bold fa fa-times text-danger"></i>';
+                                                            }
+                                                            ?>
                                                         </td>
+
                                                     <?php endif; ?>
                                                 </tr>
                                         <?php }
@@ -266,6 +292,7 @@ if ($id > 0) {
                                     </tbody>
                                 </table>
                             </div>
+                            <span class="fw-bold text-danger tex-sm my-2 d-none" id="transfer-alert"></span>
                             <?php
                             $myrecords = fetch('general_loading', array('id' => $_POST['editId']));
                             $myrecord = mysqli_fetch_assoc($myrecords);
@@ -273,10 +300,16 @@ if ($id > 0) {
                             if (SuperAdmin() || (!isset($myAgent['permission_to_edit']) || $myAgent['permission_to_edit'] === 'Yes')): ?>
                                 <div class="card mt-3 <?= $_POST['action'] === 'update' ? '' : 'd-none'; ?>">
                                     <div class="card-body">
-                                        <form method="post" onsubmit="if (document.querySelector('#bill_of_entry_no').value !== '<?= $parent['bl_no']; ?>') { alert('B/L No does not match'); return false; } return true;" class="table-form" enctype="multipart/form-data">
+                                        <!-- onsubmit="if (document.querySelector('#bill_of_entry_no').value !== '<?= $parent['bl_no']; ?>') { alert('B/L No does not match'); return false; } return true;" -->
+                                        <form method="post" class="table-form" enctype="multipart/form-data">
                                             <input type="hidden" name="id" value="<?= $myrecord['id']; ?>">
                                             <input type="hidden" name="parent_id" value="<?= $parent['id']; ?>">
                                             <input type="hidden" name="existing_data" value='<?= $myrecord['agent_details']; ?>'>
+                                            <?php if (isset($myAgent['received_date'])) {
+                                                echo '<input type="hidden" name="case" value="update">';
+                                            } else {
+                                                echo '<input type="hidden" name="case" value="new">';
+                                            } ?>
                                             <h5 class="text-primary">Agent Form</h5>
                                             <div class="row g-3">
                                                 <div class="col-md-2">
@@ -338,6 +371,19 @@ if ($id > 0) {
                         <div><b>Type </b><?php echo badge(strtoupper($record['p_type']), 'dark'); ?></div>
                         <div><b>Branch </b><?php echo $record['p_branch']; ?></div>
                     </div>
+                    <?php // if ($data['transferred_to_payments'] === false): 
+                    ?>
+                    <form action="" method="post">
+                        <input type="text" name="payment_transfer_ids" class="form-control form-control-sm" id="payment_transfer_ids" value="<?= implode(',', $ptransfrd); ?>">
+                        <input type="hidden" name="parent_id" value="<?= $parent['id']; ?>">
+                        <input type="hidden" name="TransferToPayments" value="true">
+                        <button type="submit" class="btn btn-warning btn-sm mt-2">Transfer</button>
+                    </form>
+                    <?php // else: 
+                    ?>
+                    <!-- <b class="text-success">Transferrred To Agent Payments</b> -->
+                    <?php // endif; 
+                    ?>
                 </div>
             </div>
 <?php
@@ -385,4 +431,20 @@ if ($id > 0) {
             currentMenu.style.display = 'none';
         }
     }
+
+    $(document).ready(function() {
+        $('.row-checkbox').change(function() {
+            let selectedValues = [];
+            $('.row-checkbox:checked').each(function() {
+                let checkbox = $(this);
+                let agAccNoElem = checkbox.closest('tr').find('.ag_clearing_date');
+                if (agAccNoElem.length === 0) {
+                    $('#transfer-alert').text('Please Select #' + checkbox.val() + ' and Add Data to Transfer it!').removeClass('d-none');
+                } else {
+                    selectedValues.push(checkbox.val());
+                }
+            });
+            $('#payment_transfer_ids').val(selectedValues.join(','));
+        });
+    });
 </script>

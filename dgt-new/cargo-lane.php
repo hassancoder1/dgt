@@ -1,50 +1,245 @@
 <?php
 $page_title = 'Cargo Lane';
-$mypageURL = $pageURL = 'cargo-lane';
+$pageURL = 'cargo-lane';
 include("header.php");
+$remove = $start_print = $end_print = $type = $p_id = $l_port = $r_port = $blSearch = $sea_road = $date_type = '';
+$is_search = false;
 global $connect;
-$sql = "SELECT * FROM `general_loading` WHERE 1=1";
+$results_per_page = 50;
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$start_from = ($page - 1) * $results_per_page;
+$sql = "SELECT * FROM `general_loading`";
+$conditions = [];
+$print_filters = [];
+if ($_GET) {
+    $remove = removeFilter('cargo-lane');
+    $is_search = true;
+    if (isset($_GET['p_id']) && !empty($_GET['p_id'])) {
+        $p_id = mysqli_real_escape_string($connect, $_GET['p_id']);
+        $print_filters[] = 'p_id=' . $p_id;
+        $conditions[] = "p_id = '$p_id'";
+    }
+    $date_type = isset($_GET['date_type']) ? $_GET['date_type'] : '';
+    $print_filters[] = 'date_type=' . $date_type;
+    if (!empty($_GET['start'])) {
+        $start_print = mysqli_real_escape_string($connect, $_GET['start']);
+        $print_filters[] = 'start=' . $start_print;
+        if ($date_type == 'loading') {
+            $conditions[] = "JSON_EXTRACT(loading_details, '$.loading_date') >= '$start_print'";
+        } elseif ($date_type == 'receiving') {
+            $conditions[] = "JSON_EXTRACT(receiving_details, '$.receiving_date') >= '$start_print'";
+        }
+    }
+    if (!empty($_GET['end'])) {
+        $end_print = mysqli_real_escape_string($connect, $_GET['end']);
+        $print_filters[] = 'end=' . $end_print;
+        if ($date_type == 'loading') {
+            $conditions[] = "JSON_EXTRACT(loading_details, '$.loading_date') <= '$end_print'";
+        } elseif ($date_type == 'receiving') {
+            $conditions[] = "JSON_EXTRACT(receiving_details, '$.receiving_date') <= '$end_print'";
+        }
+    }
+    if (!empty($_GET['blSearch'])) {
+        $blSearch = mysqli_real_escape_string($connect, $_GET['blSearch']);
+        $print_filters[] = 'blSearch=' . $blSearch;
+        $conditions[] = "bl_no='$blSearch'";
+    }
+    
+    if (!empty($_GET['p_type'])) {
+        $type = mysqli_real_escape_string($connect, $_GET['p_type']);
+        $print_filters[] = 'p_type=' . $type;
+        $conditions[] = "p_type = '$type'";
+    }
+    if (!empty($_GET['l_port'])) {
+        $l_port = mysqli_real_escape_string($connect, $_GET['l_port']);
+        $print_filters[] = 'l_port=' . $l_port;
+        $conditions[] = "JSON_EXTRACT(loading_details, '$.loading_port_name') = '$l_port'";
+    }
+    if (!empty($_GET['r_port'])) {
+        $r_port = mysqli_real_escape_string($connect, $_GET['r_port']);
+        $print_filters[] = 'r_port=' . $r_port;
+        $conditions[] = "JSON_EXTRACT(receiving_details, '$.receiving_port_name') = '$r_port'";
+    }
+    if (!empty($_GET['sea_road'])) {
+        $sea_road = mysqli_real_escape_string($connect, $_GET['sea_road']);
+        $print_filters[] = 'sea_road=' . $sea_road;
+        $conditions[] = "JSON_EXTRACT(shipping_details, '$.transfer_by') = '$sea_road'";
+    }
+}
+if (count($conditions) > 0) {
+    $sql .= " WHERE " . implode(' AND ', $conditions);
+}
+$sql .= " ORDER BY id DESC LIMIT $start_from, $results_per_page";
+$query_string = implode('&', $print_filters);
+$print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
+$count_sql = "SELECT COUNT(id) AS total FROM `general_loading`" . (count($conditions) > 0 ? " WHERE " . implode(' AND ', $conditions) : "");
+$count_result = mysqli_query($connect, $count_sql);
+$total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_page);
 ?>
 <div class="fixed-top">
     <?php require_once('nav-links.php'); ?>
 </div>
 <div class="mx-5 bg-white p-3">
-    <h1 class="mb-2">Cargo Lane</h1>
-    <form class="row mb-3">
-        <div class="col-md-2">
-            <label for="sea_road">Sea/Road: </label>
-            <select name="sea_road" class="form-control" id="sea_road">
-                <option selected value="">View All</option>
-                <option value="sea" <?= isset($_GET['sea_road']) && $_GET['sea_road'] === 'sea' ? 'selected' : ''; ?>>by Sea</option>
-                <option value="road" <?= isset($_GET['sea_road']) && $_GET['sea_road'] === 'road' ? 'selected' : ''; ?>>by Road</option>
-            </select>
+    <div class="d-flex justify-content-between align-items-center w-100">
+        <h1 class="mb-2" style="font-size: 2rem; font-weight: 700; color: #333; text-transform: uppercase; letter-spacing: 1.5px; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">
+            Cargo Lane
+        </h1>
+        <div class="d-flex gap-2">
+            <nav aria-label="Page navigation example">
+                <ul class="pagination justify-content-center pagination-sm">
+                    <?php
+                    $current_url = $_SERVER['REQUEST_URI'];
+                    $url_parts = parse_url($current_url);
+                    parse_str($url_parts['query'] ?? '', $query_params);
+                    unset($query_params['page']);
+                    $base_url = $url_parts['path'] . '?' . http_build_query($query_params);
+                    $count_sql = "SELECT COUNT(id) AS total FROM `general_loading`";
+                    if (count($conditions) > 0) {
+                        $count_sql .= " WHERE " . implode(' AND ', $conditions);
+                    } else {
+                        $count_sql .= " WHERE 1";
+                    }
+                    $count_result = mysqli_query($connect, $count_sql);
+                    if (!$count_result) {
+                        echo "Error: " . mysqli_error($connect);
+                        exit;
+                    }
+                    $row = mysqli_fetch_assoc($count_result);
+                    $total_pages = ceil($row['total'] / $results_per_page);
+                    echo '<ul class="pagination">';
+                    if ($page > 1) {
+                        echo "<li class='page-item'><a class='page-link' href='" . $base_url . "&page=" . ($page - 1) . "'>Previous</a></li>";
+                    } else {
+                        echo "<li class='page-item disabled'><span class='page-link'>Prev</span></li>";
+                    }
+                    for ($i = 1; $i <= $total_pages; $i++) {
+                        $active_class = ($i == $page) ? 'active' : '';
+                        echo "<li class='page-item $active_class'><a class='page-link' href='" . $base_url . "&page=$i'>$i</a></li>";
+                    }
+                    if ($page < $total_pages) {
+                        echo "<li class='page-item'><a class='page-link' href='" . $base_url . "&page=" . ($page + 1) . "'>Next</a></li>";
+                    } else {
+                        echo "<li class='page-item disabled'><span class='page-link'>Next</span></li>";
+                    }
+                    echo '</ul>';
+                    ?>
+                </ul>
+            </nav>
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fa fa-print"></i>
+                </button>
+                <ul class="dropdown-menu mt-2" aria-labelledby="dropdownMenuButton">
+                    <li>
+                        <a class="dropdown-item" href="<?= $print_url; ?>" target="_blank">
+                            <i class="fas text-secondary fa-eye me-2"></i> Print Preview
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="javascript:void(0);" onclick="openAndPrint('<?= $print_url; ?>')">
+                            <i class="fas text-secondary fa-print me-2"></i> Print
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="getFileThrough('pdf', '<?= $print_url; ?>')">
+                            <i id="pdfIcon" class="fas text-secondary fa-file-pdf me-2"></i> Download PDF
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="getFileThrough('word', '<?= $print_url; ?>')">
+                            <i id="wordIcon" class="fas text-secondary fa-file-word me-2"></i> Download Word File
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="getFileThrough('whatsapp', '<?= $print_url; ?>')">
+                            <i id="whatsappIcon" class="fa text-secondary fa-whatsapp me-2"></i> Send in WhatsApp
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="getFileThrough('email', '<?= $print_url; ?>')">
+                            <i id="emailIcon" class="fas text-secondary fa-envelope me-2"></i> Send In Email
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </div>
-        <div class="col-md-2">
-            <label for="loading_country" class="form-label">Loading Country:</label>
-            <input type="text" name="loading_country" id="loading_country" class="form-control" value="<?= isset($_GET['loading_country']) ? htmlspecialchars($_GET['loading_country']) : ''; ?>" placeholder="Enter Loading Country">
-        </div>
-
-        <div class="col-md-2">
-            <label for="receiving_country" class="form-label">Receiving Country:</label>
-            <input type="text" name="receiving_country" id="receiving_country" class="form-control" value="<?= isset($_GET['receiving_country']) ? htmlspecialchars($_GET['receiving_country']) : ''; ?>" placeholder="Enter Receiving Country">
-        </div>
-
-        <div class="col-md-2">
-            <label for="loading_date" class="form-label">Loading Date:</label>
-            <input type="date" name="loading_date" id="loading_date" class="form-control" value="<?= isset($_GET['loading_date']) ? htmlspecialchars($_GET['loading_date']) : ''; ?>">
-        </div>
-
-        <div class="col-md-2">
-            <label for="receiving_date" class="form-label">Receiving Date:</label>
-            <input type="date" name="receiving_date" id="receiving_date" class="form-control" value="<?= isset($_GET['receiving_date']) ? htmlspecialchars($_GET['receiving_date']) : ''; ?>">
-        </div>
-        <div class="col-md-1">
-            <button type="submit" class="btn btn-primary">Query</button>
+    </div>
+    <form name="datesSubmit" class="mt-2" method="get">
+        <div class="input-group input-group-sm">
+            <div class="form-group">
+                <label for="p_id" class="form-label">P#</label>
+                <input type="number" name="p_id" value="<?php echo $p_id; ?>" id="p_id" class="form-control form-control-sm mx-1" style="max-width:80px;" placeholder="e.g. 33">
+            </div>
+            <div class="form-group">
+                <label for="date_type" class="form-label">Date Type</label>
+                <select class="form-select form-select-sm" name="date_type" style="max-width:130px;" id="date_type" onchange="toggleDates()">
+                    <option value="" <?= !in_array($date_type, ['loading', 'receiving']) ? 'selected' : ''; ?>>All</option>
+                    <option value="loading" <?= $date_type == 'loading' ? 'selected' : ''; ?>>Loading</option>
+                    <option value="receiving" <?= $date_type == 'receiving' ? 'selected' : ''; ?>>Receiving</option>
+                </select>
+            </div>
+            <div class="form-group <?= !in_array($date_type, ['loading', 'receiving']) ? 'd-none' : ''; ?>" id="startInput">
+                <label for="start" class="form-label">Start Date</label>
+                <input type="date" name="start" value="<?php echo $start_print; ?>" id="start" class="form-control form-control-sm mx-1" style="max-width:160px;">
+            </div>
+            <div class="form-group <?= !in_array($date_type, ['loading', 'receiving']) ? 'd-none' : ''; ?>" id="endInput">
+                <label for="end" class="form-label">End Date</label>
+                <input type="date" name="end" value="<?php echo $end_print; ?>" id="end" class="form-control form-control-sm mx-2" style="max-width:160px;">
+            </div>
+            <div class="form-group">
+                <label for="p_type" class="form-label">Type</label>
+                <select class="form-select form-select-sm" name="p_type" style="max-width:130px;" id="p_type">
+                    <option value="" selected>All</option>
+                    <?php
+                    $static_types = fetch('static_types', ['type_for' => 'ps_types']);
+                    while ($static_type = mysqli_fetch_assoc($static_types)) {
+                        $sel_tran = $type == $static_type['type_name'] ? 'selected' : '';
+                        echo '<option ' . $sel_tran . '  value="' . $static_type['type_name'] . '">' . strtoupper(htmlspecialchars($static_type['details'])) . '</option>';
+                    }
+                    ?>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="sea_road" class="form-label">SEA/ROAD</label>
+                <select class="form-select form-select-sm" name="sea_road" style="max-width:130px;" id="sea_road">
+                    <option value="" <?= !in_array($sea_road, ['sea', 'road']) ? 'selected' : ''; ?>>All</option>
+                    <option value="sea" <?= $sea_road == 'sea' ? 'selected' : ''; ?>>by Sea</option>
+                    <option value="road" <?= $sea_road == 'road' ? 'selected' : ''; ?>>by Road</option>
+                </select>
+            </div>
+            <div class="form-group mx-1">
+                <label for="blSearch" class="form-label">B/L Search</label>
+                <input type="text" class="form-control form-control-sm mx-1" style="max-width:130px;" name="blSearch" placeholder="B/L Search" value="<?php echo $blSearch; ?>" id="blSearch">
+            </div>
+            <div class="form-group mx-1">
+                <label for="l_port" class="form-label">L Port/Border</label>
+                <input type="text" class="form-control form-control-sm mx-1" style="max-width:130px;" name="l_port" placeholder="L Port/Border" value="<?php echo $l_port; ?>" id="l_port">
+            </div>
+            <div class="form-group mx-1">
+                <label for="r_port" class="form-label">R Port/Border</label>
+                <input type="text" class="form-control form-control-sm mx-1" style="max-width:130px;" name="r_port" placeholder="R Port/Border" value="<?php echo $r_port; ?>" id="r_port">
+            </div>
+            <div class="form-group mt-4 pt-1">
+                <?= $remove ? '<a href="' . $pageURL . '" class="btn btn-sm btn-danger"><i class="fa fa-sync-alt"></i></a>' : ''; ?>
+                <button type="submit" class="btn btn-sm btn-success">Search</button>
+            </div>
         </div>
     </form>
+    <style>
+        #RecordsTable {
+            height: 300px;
+            overflow-y: scroll;
+        }
 
-
-    <div class="table-responsive mt-4">
+        .fixed thead {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background-color: #fff;
+            box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+    <div class="table-responsive mt-4" id="RecordsTable">
         <table class="table table-bordered">
             <thead>
                 <tr class="text-nowrap">
@@ -62,44 +257,13 @@ $sql = "SELECT * FROM `general_loading` WHERE 1=1";
             </thead>
             <tbody>
                 <?php
-                $whereClauses = [];
-                if (isset($_GET['sea_road']) && !empty($_GET['sea_road'])) {
-                    $sea_road = mysqli_real_escape_string($connect, $_GET['sea_road']);
-                    $whereClauses[] = "transactionSingle(id)['sea_road'] = '$sea_road'";
-                }
-                if (!empty($_GET['loading_country'])) {
-                    $loading_country = mysqli_real_escape_string($connect, $_GET['loading_country']);
-                    $whereClauses[] = "JSON_UNQUOTE(JSON_EXTRACT(loading_details, '$.loading_country')) LIKE '%$loading_country%'";
-                }
-                if (!empty($_GET['receiving_country'])) {
-                    $receiving_country = mysqli_real_escape_string($connect, $_GET['receiving_country']);
-                    $whereClauses[] = "JSON_UNQUOTE(JSON_EXTRACT(receiving_details, '$.receiving_country')) LIKE '%$receiving_country%'";
-                }
-                if (!empty($_GET['loading_date'])) {
-                    $loading_date = mysqli_real_escape_string($connect, $_GET['loading_date']);
-                    $whereClauses[] = "JSON_UNQUOTE(JSON_EXTRACT(loading_details, '$.loading_date')) = '$loading_date'";
-                }
-                if (!empty($_GET['receiving_date'])) {
-                    $receiving_date = mysqli_real_escape_string($connect, $_GET['receiving_date']);
-                    $whereClauses[] = "JSON_UNQUOTE(JSON_EXTRACT(receiving_details, '$.receiving_date')) = '$receiving_date'";
-                }
-                if (!empty($whereClauses)) {
-                    $sql .= ' AND ' . implode(' AND ', $whereClauses);
-                }
                 $Loadings = mysqli_query($connect, $sql);
                 $row_count = $p_qty_total = $p_kgs_total = 0;
                 $i = 1;
                 $rowColor = '';
                 $locked = 0;
-
                 while ($SingleLoading = mysqli_fetch_assoc($Loadings)) {
                     $id = $SingleLoading['id'];
-                    $sea_road = isset(transactionSingle($id)['sea_road']) ? transactionSingle($id)['sea_road'] : '';
-                    if (isset($_GET['sea_road']) && !empty($_GET['sea_road'])) {
-                        if ($_GET['sea_road'] !== $sea_road) {
-                            continue;
-                        }
-                    }
                     if (!($SingleLoading['agent_details'])) {
                         $rowColor = 'text-danger';
                     } elseif (isset(json_decode($SingleLoading['agent_details'], true)['transferred'])) {
@@ -110,7 +274,6 @@ $sql = "SELECT * FROM `general_loading` WHERE 1=1";
                         }
                     }
                 ?>
-
                     <tr class="text-nowrap">
                         <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $SingleLoading['id']; ?>)"
                             data-bs-toggle="modal" data-bs-target="#KhaataDetails">
@@ -205,4 +368,14 @@ $sql = "SELECT * FROM `general_loading` WHERE 1=1";
             alert('error!! Refresh the page again');
         }
     }
+</script>
+<script>
+    function toggleDates() {
+        const selectedValue = $('#date_type').val();
+        if (selectedValue === "") {
+            $('#startInput, #endInput').addClass('d-none');
+        } else {
+            $('#startInput, #endInput').removeClass('d-none');
+        }
+    };
 </script>

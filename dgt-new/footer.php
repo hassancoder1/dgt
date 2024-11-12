@@ -27,13 +27,13 @@
     });
 </script>
 <script>
-    $("#tableFilter,.inputFilter").on("keyup", function () {
+    $("#tableFilter,.inputFilter").on("keyup", function() {
         var value = $(this).val().toLowerCase();
-        $("table tbody tr").filter(function () {
+        $("table tbody tr").filter(function() {
             $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
         });
     });
-    $('body').on('keyup keypress', function (e) {
+    $('body').on('keyup keypress', function(e) {
         var keyCode = e.keyCode || e.which;
         if (keyCode == 113 || keyCode == 'ControlLeft') {
             $('#tableFilter').focus();
@@ -51,8 +51,7 @@
 </script>
 <script>
     function smoothScrollToBottom(duration) {
-        $("html, body").animate(
-            {
+        $("html, body").animate({
                 scrollTop: $(document).height()
             },
             duration
@@ -60,11 +59,12 @@
     }
 </script>
 <script>
-    jQuery(document).ready(function ($) {
-        $(".clickable-row").click(function () {
+    jQuery(document).ready(function($) {
+        $(".clickable-row").click(function() {
             window.location = $(this).data("href");
         });
-    });</script>
+    });
+</script>
 <script>
     const toastLiveExample = document.getElementById('liveToast')
 
@@ -83,9 +83,9 @@
             e.preventDefault();
         });
     });*/
-    document.addEventListener('DOMContentLoaded', function () {
-        document.querySelectorAll('.dropdown-submenu .dropdown-toggle').forEach(function (element) {
-            element.addEventListener('click', function (e) {
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.dropdown-submenu .dropdown-toggle').forEach(function(element) {
+            element.addEventListener('click', function(e) {
                 var nextEl = this.nextElementSibling;
                 if (nextEl && nextEl.classList.contains('dropdown-menu')) {
                     e.preventDefault();
@@ -98,13 +98,11 @@
             });
         });
     });
-
-
 </script>
 <script>
-    (function ($) {
-        $.fn.inputFilter = function (callback, errMsg) {
-            return this.on("input keydown keyup mousedown mouseup select contextmenu drop focusout", function (e) {
+    (function($) {
+        $.fn.inputFilter = function(callback, errMsg) {
+            return this.on("input keydown keyup mousedown mouseup select contextmenu drop focusout", function(e) {
                 if (callback(this.value)) {
                     // Accepted value
                     if (["keydown", "mousedown", "focusout"].indexOf(e.type) >= 0) {
@@ -129,12 +127,79 @@
         };
     }(jQuery));
 
-    $(".currency").inputFilter(function (value) {
+    $(".currency").inputFilter(function(value) {
         return /^-?\d*[.,]?\d{0,9}$/.test(value);
     }, "INVALID");
-    $(".numberOnly").inputFilter(function (value) {
+    $(".numberOnly").inputFilter(function(value) {
         return /^\d*$/.test(value);
     }, "INVALID");
 </script>
+
+
+<!-- +++=============== FOR PRINT ==============+++ -->
+<div class="position-fixed top-0 start-0 w-100 h-100 d-none justify-content-center align-items-center" style="background: rgba(25, 26, 25, 0.4); z-index: 60;" id="processingScreen">
+    <div class="spinner-border text-white" style="width: 5rem; height: 5rem;" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+</div>
+<script>
+    function getQueryParameter(name) {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get(name);
+    }
+
+    function openAndPrint(url) {
+        const newWindow = window.open(
+            url,
+            '_blank',
+            'toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=' + screen.width + ',height=' + screen.height
+        );
+        newWindow.onload = () => {
+            newWindow.print();
+        };
+    }
+
+    function getFileThrough(fileType, url) {
+        $('#processingScreen').toggleClass('d-none d-flex');
+        $.ajax({
+            url: 'ajax/generateFile.php',
+            type: 'post',
+            data: {
+                filetype: fileType,
+                pageURL: url
+            },
+            success: function(response) {
+                $('#processingScreen').toggleClass('d-none d-flex');
+                const result = JSON.parse(response);
+
+                if (result.fileURL) {
+                    const fileURL = result.fileURL;
+
+                    if (fileType === 'pdf' || fileType === 'word') {
+                        const downloadLink = document.createElement('a');
+                        downloadLink.href = fileURL;
+                        downloadLink.download = fileURL.split('/').pop(); 
+                        document.body.appendChild(downloadLink);
+                        downloadLink.click();
+                        document.body.removeChild(downloadLink);
+                    } else if (fileType === 'whatsapp') {
+                        const whatsappURL = `https://wa.me/?text=Here+is+your+file: ${encodeURIComponent(fileURL)}`;
+                        window.open(whatsappURL, '_blank');
+                    } else if (fileType === 'email') {
+                        const emailURL = `mailto:?subject=Requested%20File&body=Here%20is%20your%20file:%20${encodeURIComponent(fileURL)}`;
+                        window.open(emailURL, '_blank');
+                    }
+                } else {
+                    alert('Failed to retrieve file URL.');
+                }
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error("AJAX Error: ", textStatus, errorThrown);
+                alert('An error occurred while processing your request. Please Refresh & try again.');
+            }
+        });
+    }
+</script>
 </body>
+
 </html>

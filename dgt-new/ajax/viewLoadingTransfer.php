@@ -183,83 +183,86 @@ if ($id > 0) {
                                                             <td class="border border-dark"><?= isset($Agent['ag_name']) ? $Agent['ag_name'] : '<i class="text-danger fa fa-times"></i>'; ?></td>
                                                             <td class="border border-dark fw-bold"><?= isset($Agent['permission_to_edit']) ? ($Agent['permission_to_edit'] === 'No' ? '<span class="text-danger">No</span>' : '<span class="text-success">Yes</span>') : '<span class="text-danger">No</span>'; ?></td>
                                                             <td class="border border-dark text-success" style="position: relative;">
-                                                                <a href="javascript:void(0);" onclick="toggleDownloadMenu(event, this)" style="text-decoration: none; color: inherit;">
-                                                                    <i class="fa fa-paperclip"></i>
-                                                                </a>
-                                                                <div class="bg-light border border-dark p-2 attachment-menu" style="position: absolute; top: -100%; left: -500%; display: none; z-index: 1000; width: 200px;">
-                                                                    <?php
-                                                                    $attachments = json_decode($record['attachments'], true) ?? [];
+                                                                <?php
+                                                                $attachments = json_decode($record['attachments'], true) ?? [];
+                                                                if ($attachments !== []) {
+                                                                    echo '<a href="javascript:void(0);" onclick="toggleDownloadMenu(event, this)" style="text-decoration: none; color: inherit;">
+                                                <i class="fa fa-paperclip"></i>
+                                            </a>
+                                            <div class="bg-light border border-dark p-2 attachment-menu" style="position: absolute; top: -100%; left: -500%; display: none; z-index: 1000; width: 200px;">';
                                                                     foreach ($attachments as $item) {
                                                                         $fileName = htmlspecialchars($item[1], ENT_QUOTES);
                                                                         $fileExtension = pathinfo($fileName, PATHINFO_EXTENSION);
                                                                         $trimmedName = (strlen($fileName) > 15) ? substr($fileName, 0, 15) . '...' . $fileExtension : $fileName;
                                                                         echo '<a href="attachments/' . $fileName . '" download="' . $fileName . '" class="d-block mb-2">' . $trimmedName . '</a>';
                                                                     }
-                                                                    if (empty($attachments)) echo '<p>No attachments available</p>';
-                                                                    ?>
-                                                                </div>
+                                                                    echo '</div>';
+                                                                } else {
+                                                                    echo '<i class="fw-bold fa fa-times text-danger"></i>';
+                                                                }
+                                                                ?>
                                                             </td>
                                                         </tr>
                                                 <?php }
                                                 } ?>
                                             </tbody>
                                         </table>
-                                        <div class="card mt-3 transfer-form d-none">
-                                            <div class="card-body">
-                                                <span class="fw-bold text-danger tex-sm my-2" id="transfer-alert"></span>
-                                                <form method="post" class="table-form">
-                                                    <input type="hidden" name="openRecord" value="<?= $parent['id']; ?>">
-                                                    <input type="hidden" name="ag_row_id" id="row_id">
-                                                    <!-- value="<?= isset($record['agent_details']) && !empty($record['agent_details']) ? json_decode($record['agent_details'], true)['row_id'] : ''; ?>" -->
-                                                    <h5 class="text-primary">Agent Details</h5>
-                                                    <div class="row g-3">
-                                                        <div class="col-md-1">
-                                                            <label for="ag_acc_no" class="form-label">Acc No</label>
-                                                            <input type="text" name="ag_acc_no" id="ag_acc_no" required class="form-control form-control-sm" onkeyup="agentDetails()">
-                                                            <!-- value="<?= isset($record['agent_details']) && !empty($record['agent_details']) ? json_decode($record['agent_details'], true)['ag_acc_no'] : ''; ?>" -->
-                                                        </div>
-                                                        <div class="col-md-3">
-                                                            <label for="ag_name" class="form-label">AGENT NAME</label>
-                                                            <input type="text" name="ag_name" id="ag_name" required class="form-control form-control-sm">
-                                                            <!-- value="<?= isset($record['agent_details']) && !empty($record['agent_details']) ? json_decode($record['agent_details'], true)['ag_name'] : ''; ?>" -->
-                                                        </div>
-
-                                                        <div class="col-md-2">
-                                                            <label for="ag_id" class="form-label">AGENT ID</label>
-                                                            <input type="text" name="ag_id" id="ag_id" required class="form-control form-control-sm">
-                                                            <!-- value="<?= isset($record['agent_details']) && !empty($record['agent_details']) ? json_decode($record['agent_details'], true)['ag_id'] : ''; ?>" -->
-                                                        </div>
-                                                        <?php
-                                                        // $warehouse = !empty(json_decode($record['agent_details'], true)['cargo_transfer_warehouse']) ? json_decode($record['agent_details'], true)['cargo_transfer_warehouse'] : '';
-                                                        // $warehouseOptions = ['Free Zone', 'OFF Site', 'Transit'];
-                                                        ?>
-
-                                                        <!-- Cargo Transfer Dropdown -->
-                                                        <div class="col-md-3">
-                                                            <label for="cargo_transfer" class="form-label">Cargo Transfer</label>
-                                                            <select id="cargo_transfer" name="cargo_transfer" class="form-select form-control-sm" required>
-                                                                <option disabled selected>Select One</option>
-                                                                <option value="Free Zone">Freezone Warehouse</option>
-                                                                <option value="OFF Site">Offsite Warehouse</option>
-                                                                <option value="Transit">Transit Warehouse</option>
-                                                            </select>
-                                                        </div>
-                                                        <div class="col-md-8">
-                                                            <label for="ag_transfer_ids" class="form-label">Transfer IDs <small> ( Ex:66-4,57-1,66-5 )</small></label>
-                                                            <input type="text" name="ag_transfer_ids" id="ag_transfer_ids" required class="form-control form-control-sm">
-                                                        </div>
+                                    </div>
+                                    <div class="card mt-3">
+                                        <div class="card-body">
+                                            <span class="fw-bold text-danger tex-sm my-2" id="transfer-alert"></span>
+                                            <form method="post" class="table-form">
+                                                <input type="hidden" name="openRecord" value="<?= $parent['id']; ?>">
+                                                <input type="hidden" name="ag_row_id" id="row_id">
+                                                <!-- value="<?= isset($record['agent_details']) && !empty($record['agent_details']) ? json_decode($record['agent_details'], true)['row_id'] : ''; ?>" -->
+                                                <h5 class="text-primary">Agent Details</h5>
+                                                <div class="row g-3">
+                                                    <div class="col-md-1">
+                                                        <label for="ag_acc_no" class="form-label">Acc No</label>
+                                                        <input type="text" name="ag_acc_no" id="ag_acc_no" required class="form-control form-control-sm" onkeyup="agentDetails()">
+                                                        <!-- value="<?= isset($record['agent_details']) && !empty($record['agent_details']) ? json_decode($record['agent_details'], true)['ag_acc_no'] : ''; ?>" -->
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label for="ag_name" class="form-label">AGENT NAME</label>
+                                                        <input type="text" name="ag_name" id="ag_name" required class="form-control form-control-sm">
+                                                        <!-- value="<?= isset($record['agent_details']) && !empty($record['agent_details']) ? json_decode($record['agent_details'], true)['ag_name'] : ''; ?>" -->
                                                     </div>
 
-                                                    <div class="row mt-4">
-                                                        <div class="col-md-12 text-end">
-                                                            <button name="TransferToAgent" id="TransferToAgent" type="submit"
-                                                                class="btn btn-primary btn-sm rounded-0">
-                                                                Transfer To Agent
-                                                            </button>
-                                                        </div>
+                                                    <div class="col-md-2">
+                                                        <label for="ag_id" class="form-label">AGENT ID</label>
+                                                        <input type="text" name="ag_id" id="ag_id" required class="form-control form-control-sm">
+                                                        <!-- value="<?= isset($record['agent_details']) && !empty($record['agent_details']) ? json_decode($record['agent_details'], true)['ag_id'] : ''; ?>" -->
                                                     </div>
-                                                </form>
-                                            </div>
+                                                    <?php
+                                                    // $warehouse = !empty(json_decode($record['agent_details'], true)['cargo_transfer_warehouse']) ? json_decode($record['agent_details'], true)['cargo_transfer_warehouse'] : '';
+                                                    // $warehouseOptions = ['Free Zone', 'OFF Site', 'Transit'];
+                                                    ?>
+
+                                                    <!-- Cargo Transfer Dropdown -->
+                                                    <div class="col-md-3">
+                                                        <label for="cargo_transfer" class="form-label">Cargo Transfer</label>
+                                                        <select id="cargo_transfer" name="cargo_transfer" class="form-select form-control-sm" required>
+                                                            <option disabled selected>Select One</option>
+                                                            <option value="Free Zone">Freezone Warehouse</option>
+                                                            <option value="OFF Site">Offsite Warehouse</option>
+                                                            <option value="Transit">Transit Warehouse</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-8">
+                                                        <label for="ag_transfer_ids" class="form-label">Transfer IDs <small> ( Ex:66-4,57-1,66-5 )</small></label>
+                                                        <input type="text" name="ag_transfer_ids" id="ag_transfer_ids" required class="form-control form-control-sm">
+                                                    </div>
+                                                </div>
+
+                                                <div class="row mt-4">
+                                                    <div class="col-md-12 text-end">
+                                                        <button name="TransferToAgent" id="TransferToAgent" type="submit"
+                                                            class="btn btn-primary btn-sm rounded-0">
+                                                            Transfer To Agent
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </form>
                                         </div>
                                     </div>
                                 </div>
@@ -330,7 +333,7 @@ if ($id > 0) {
                 let agAccNoElem = checkbox.closest('tr').find('.ag_acc_no');
                 if (agAccNoElem.children('i.fa-times').length > 0) {
                     $('#transfer-alert').text('This Row #' + checkbox.val() + ' is not transferred to any Agent Yet!');
-                    document.querySelector('.transfer-form').classList.remove('d-none');
+                    // document.querySelector('.transfer-form').classList.remove('d-none');
                 } else {
                     selectedForPermission.push(checkbox.val());
                 }

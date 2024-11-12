@@ -1,18 +1,18 @@
 <?php
-$page_title = 'Purchases';
-$pageURL = 'purchases';
+$page_title = 'LOCAL TAX INVOICE';
+$pageURL = 'local-tax-invoice';
 include("header.php");
-$remove = $goods_name = $start_print = $end_print = $type = $acc_no = $branch = $p_id = $payment_type = $sea_road = $country = $country_type = $date_type = $is_transferred = '';
+$remove = $goods_name = $start_print = $end_print = $acc_no = $branch = $p_id = $payment_type = $sea_road = $country = $country_type = $date_type = $is_transferred = '';
 $is_search = false;
 global $connect;
 $results_per_page = 50;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $start_from = ($page - 1) * $results_per_page;
-$sql = "SELECT * FROM `transactions` WHERE p_s='p'";
+$sql = "SELECT * FROM `transactions` WHERE p_s='p' AND type='local'";
 $conditions = [];
 $print_filters = [];
 if ($_GET) {
-    $remove = removeFilter('purchases');
+    $remove = removeFilter('local-tax-invoice');
     $is_search = true;
 
     if (isset($_GET['p_id']) && !empty($_GET['p_id'])) {
@@ -35,11 +35,6 @@ if ($_GET) {
         if ($date_type == 'purchase') {
             $conditions[] = "_date <= '$end_print'";
         }
-    }
-    if (isset($_GET['type']) && !empty($_GET['type'])) {
-        $type = mysqli_real_escape_string($connect, $_GET['type']);
-        $print_filters[] = 'type=' . $type;
-        $conditions[] = "type = '$type'";
     }
     if (isset($_GET['is_transferred']) && $_GET['is_transferred'] !== '') {
         $is_transferred = mysqli_real_escape_string($connect, $_GET['is_transferred']);
@@ -90,14 +85,13 @@ $purchases = mysqli_query($connect, $sql);
 $query_string = implode('&', $print_filters);
 $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
 ?>
-
 <div class="fixed-top">
     <?php require_once('nav-links.php'); ?>
 </div>
 <div class="mx-5 bg-white p-3">
     <div class="d-flex justify-content-between align-items-center w-100">
         <h1 class="mb-2" style="font-size: 2rem; font-weight: 700; color: #333; text-transform: uppercase; letter-spacing: 1.5px; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">
-            Purchases
+            LOCAL TAX INVOICE
         </h1>
         <div class="d-flex gap-2">
             <nav aria-label="Page navigation example">
@@ -212,19 +206,6 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
             <div class="form-group <?= !in_array($date_type, ['purchase', 'loading', 'receiving']) ? 'd-none' : ''; ?>" id="endInput">
                 <label for="end" class="form-label">End Date</label>
                 <input type="date" name="end" value="<?php echo $end_print; ?>" id="end" class="form-control form-control-sm mx-2" style="max-width:160px;">
-            </div>
-            <div class="form-group mx-1">
-                <label for="type" class="form-label">Purchase Type</label>
-                <select class="form-select form-select-sm" name="type" style="max-width:130px;" id="type">
-                    <option value="" selected>All</option>
-                    <?php
-                    $static_types = fetch('static_types', ['type_for' => 'ps_types']);
-                    while ($static_type = mysqli_fetch_assoc($static_types)) {
-                        $sel_tran = $type == $static_type['type_name'] ? 'selected' : '';
-                        echo '<option ' . $sel_tran . '  value="' . $static_type['type_name'] . '">' . strtoupper(htmlspecialchars($static_type['details'])) . '</option>';
-                    }
-                    ?>
-                </select>
             </div>
             <div class="form-group mx-1">
                 <label for="branch" class="form-label">Branch</label>
@@ -354,21 +335,46 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                             $_fields_sr = ['l_country' => $sea_road_array->l_country_road, 'l_date' => $sea_road_array->l_date_road, 'r_country' => $sea_road_array->r_country_road, 'r_date' => $sea_road_array->r_date_road];
                         }
                     }
+                    if ($is_search) {
+                        $GoodsKaNaam = $cntrs > 0 ? $totals['Goods'][0] : '';
+                        if ($goods_name != '') {
+                            if ($goods_name != $GoodsKaNaam) continue;
+                        }
+                        if ($size != '') {
+                            if ($size != $totals['Size'][0]) continue;
+                        }
+                        if ($brand != '') {
+                            if ($brand != $totals['Brand'][0]) continue;
+                        }
+
+                        if ($is_transferred != '') {
+                            if ($is_transferred == '1') {
+                                if ($locked == 0) continue;
+                            }
+                            if ($is_transferred == '0') {
+                                if ($locked == 1) continue;
+                            }
+                        }
+                    }
                     $p_qty_total += !empty($totals['Qty']) ? $totals['Qty'] : 0;
                     $p_kgs_total += !empty($totals['KGs']) ? $totals['KGs'] : 0;
                     $rowColor = '';
                     if ($locked == 0) {
                         $rowColor = $is_doc == 0 ? ' text-danger ' : ' text-warning ';
-                    } ?>
+                    }
+                    if (empty($_fields_single['items'][0]['tax_amount'])) {
+                        continue;
+                    }
+                ?>
                     <tr class="text-nowrap">
                         <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $id; ?>)"
                             data-bs-toggle="modal" data-bs-target="#KhaataDetails">
                             <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $id;
                             echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?></td>
                         <td class="<?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['type']); ?></td>
-                        <td class="<?php echo $rowColor; ?> branch"><?php echo branchName($_fields_single['branch_id']); ?></td>
+                        <td class="<?php echo $rowColor; ?>"><?php echo branchName($_fields_single['branch_id']); ?></td>
                         <td class="<?php echo $rowColor; ?>"><?php echo my_date($_fields_single['_date']);; ?></td>
-                        <td class="acc_no <?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['cr_acc']); ?></td>
+                        <td class="s_khaata_id_row <?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['cr_acc']); ?></td>
                         <td class="<?php echo $rowColor; ?>"><?php echo $_fields_single['cr_acc_name']; ?></td>
                         <td class="<?php echo $rowColor; ?>"><?php echo $Goods; ?></td>
                         <td class="<?php echo $rowColor; ?>"><?php echo $Qty; ?></td>
@@ -379,14 +385,14 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                             } ?>
                         </td>
                         <td class="<?php echo $rowColor; ?> px-2"><?= isset($_fields_single['payment_details']->full_advance) ? ucwords($_fields_single['payment_details']->full_advance) : "No Payment Details Available"; ?></td>
-                        <td class="<?php echo $rowColor; ?>"><span class="purchase_country"><?php echo $purchase['country']; ?></span></td>
+                        <td class="<?php echo $rowColor; ?>"><?php echo $purchase['country']; ?></td>
                         <?php
                         if ($sea_road == '') {
                             echo '<td class="<?php echo $rowColor; ?>" colspan="3"></td>';
                         } else {
                             echo '<td class="' . $rowColor . '">' . $sea_road . '</td>';
-                            echo '<td class="' . $rowColor . '"><span class="loading_country">' . $_fields_sr['l_country'] . '</span><span class="loading_date"> ' . $_fields_sr['l_date'] . '</span></td>';
-                            echo '<td class="' . $rowColor . '"><span class="receiving_country">' . $_fields_sr['r_country'] . '</span><span class="receiving_date"> ' . $_fields_sr['r_date'] . '</span></td>';
+                            echo '<td class="' . $rowColor . '">' . $_fields_sr['l_country'] . ' ' . my_date($_fields_sr['l_date']) . '</td>';
+                            echo '<td class="' . $rowColor . '">' . $_fields_sr['r_country'] . ' ' . my_date($_fields_sr['r_date']) . '</td>';
                         }
                         ?>
                         <td class="<?php echo $rowColor; ?>">
@@ -411,7 +417,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="staticBackdropLabel">PURCHASE DETAILS</h5>
-                <a href="<?php echo $mypageURL; ?>" class="btn-close" aria-label="Close"></a>
+                <a href="<?php echo $pageURL; ?>" class="btn-close" aria-label="Close"></a>
             </div>
             <div class="modal-body bg-light pt-0" id="viewDetails"></div>
         </div>
@@ -501,7 +507,6 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
         }
     }
 </script>
-
 <?php if (isset($_POST['deleteTransaction'])) {
     $type = 'danger';
     $msg = 'DB Failed';

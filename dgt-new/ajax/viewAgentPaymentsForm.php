@@ -31,19 +31,32 @@ $parentGLoadingInfo = json_decode($parentRow['gloading_info'], true);
                         <div class="fs-6 fw-bold">Loading Details</div>
                         <div>
                             <?php
-                            $l_date = json_decode($parentRow['loading_details'], true)['loading_date'];
-                            echo '<b>Loading Date: ' . $l_date . '</b><br>';
-                            $bl_no = $parentRow['bl_no'];
-                            $query = "SELECT bl_no, COUNT(DISTINCT JSON_UNQUOTE(JSON_EXTRACT(goods_details, '$.container_no'))) AS unique_container_count FROM general_loading WHERE bl_no = '$bl_no' GROUP BY bl_no";
-                            $result = $connect->query($query);
-                            if ($result) {
-                                $row = $result->fetch_assoc();
-                                echo '<b>B/L No: ' . ($row['bl_no'] ?? $bl_no) . '</b><br>' .
-                                    '<b>Containers: </b>' . ($row['unique_container_count'] ?? 0);
+                            $loadingDetails = json_decode($parentRow['loading_details'] ?? '', true);
+                            $l_date = $loadingDetails['loading_date'] ?? 'Loading Date Not Available';
+                            echo '<b>Loading Date: ' . htmlspecialchars($l_date) . '</b><br>';
+                            $bl_no = $parentRow['bl_no'] ?? 'B/L Number Not Available';
+                            $containers = isset($parentGLoadingInfo['payments_trans_ids']) && is_array($parentGLoadingInfo['payments_trans_ids'])
+                                ? count($parentGLoadingInfo['payments_trans_ids'])
+                                : 'No Containers Transferred';
+                            $query = "SELECT bl_no FROM general_loading WHERE bl_no = ? GROUP BY bl_no";
+                            if ($stmt = $connect->prepare($query)) {
+                                $stmt->bind_param("s", $bl_no);
+                                $stmt->execute();
+                                $result = $stmt->get_result();
+                                if ($result->num_rows > 0) {
+                                    $row = $result->fetch_assoc();
+                                    echo '<b>B/L No: ' . htmlspecialchars($row['bl_no']) . '</b><br>';
+                                } else {
+                                    echo '<b>B/L No: ' . htmlspecialchars($bl_no) . '</b><br>';
+                                }
+                                $stmt->close();
                             } else {
-                                echo '<b>B/L No: ' . $bl_no . '</b> - No containers found';
+                                echo '<b>Error in database query.</b><br>';
                             }
+
+                            echo '<b>Containers: </b>' . htmlspecialchars($containers);
                             ?>
+
                         </div>
                     </div>
 
@@ -84,7 +97,7 @@ $parentGLoadingInfo = json_decode($parentRow['gloading_info'], true);
                     $rows = [];
                     while ($row = mysqli_fetch_assoc($result)) {
                         $rows[] = $row;
-                        if($row['id'] == $editId){
+                        if ($row['id'] == $editId) {
                             $editRow = $row;
                         }
                     }
@@ -213,19 +226,37 @@ $parentGLoadingInfo = json_decode($parentRow['gloading_info'], true);
                                     <td class="border border-dark"><?= htmlspecialchars($row['tax_percentage'], ENT_QUOTES); ?></td>
                                     <td class="border border-dark"><?= htmlspecialchars($row['tax_amount'], ENT_QUOTES); ?></td>
                                     <td class="border border-dark"><?= htmlspecialchars($row['grand_total'], ENT_QUOTES); ?></td>
-                                    <td class="border border-dark text-center">
+                                    <td class="border border-dark text-center" style="position: relative;">
                                         <?php if (SuperAdmin() || $TtoAdmin) { ?>
-                                            <a href="agent-payments-form?view=1&editId=<?= $row['id']; ?>&id=<?= $parentId; ?>" class="text-primary me-2">
-                                                <i class="fa fa-edit"></i>
-                                            </a>
                                             <?php if ($row['id'] !== $firstRowId): ?>
                                                 <a href="agent-payments-form?deleteAgPaymentEntry=true&billEntryId=<?= $row['id']; ?>&loading_id=<?= $parentId; ?>" class="text-danger" onclick="return confirm('Are you sure you want to delete this record?');">
                                                     <i class="fa fa-trash"></i>
                                                 </a>
-                                        <?php endif;
-                                        } else {
-                                            echo "Transferred";
-                                        } ?>
+                                            <?php else: ?>
+                                                <?php
+                                                $attachments = json_decode($row['agent_file'], true) ?? [];
+                                                if ($attachments !== []) {
+                                                    echo '<a href="javascript:void(0);" onclick="toggleDownloadMenu(event, this)" style="text-decoration: none; color: inherit;">
+                                                <i class="fa fa-paperclip text-success me-2"></i>
+                                            </a>
+                                            <div class="bg-light border border-dark p-2 attachment-menu" style="position: absolute; top: -100%; left: -140%; display: none; z-index: 1000; width: 200px;">';
+                                                    foreach ($attachments as $item) {
+                                                        $fileName = htmlspecialchars($item, ENT_QUOTES);
+                                                        $fileExtension = pathinfo($fileName, PATHINFO_EXTENSION);
+                                                        $trimmedName = (strlen($fileName) > 15) ? substr($fileName, 0, 15) . '...' . $fileExtension : $fileName;
+                                                        echo '<a href="attachments/' . $fileName . '" download="' . $fileName . '" class="d-block mb-2">' . $trimmedName . '</a>';
+                                                    }
+                                                    echo '</div>';
+                                                } else {
+                                                    echo '<i class="fw-bold fa fa-times text-danger"></i>';
+                                                }
+                                                ?>
+                                            <?php endif; ?><a href="agent-payments-form?view=1&editId=<?= $row['id']; ?>&id=<?= $parentId; ?>" class="text-primary me-2">
+                                                <i class="fa fa-edit"></i>
+                                            </a><?php
+                                            } else {
+                                                echo "Transferred";
+                                            } ?>
 
                                     </td>
                                 </tr>
@@ -255,7 +286,7 @@ $parentGLoadingInfo = json_decode($parentRow['gloading_info'], true);
             <form method="post">
                 <?php
                 if (!empty($firstRow)) {
-                    if (SuperAdmin() || json_decode($firstRow['transfer_details'], true)['transferred_to_admin'] === false):
+                    if (json_decode($firstRow['transfer_details'], true)['transferred_to_admin'] === false):
                 ?>
                         <input type="hidden" name="total_amount" value="<?= $total_amount; ?>">
                         <input type="hidden" name="total_tax_amount" value="<?= $total_tax; ?>">

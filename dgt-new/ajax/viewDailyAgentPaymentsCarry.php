@@ -133,16 +133,36 @@ $parentGLoadingInfo = json_decode($parentRow['gloading_info'], true);
                                     <td class="border border-dark"><?= htmlspecialchars($row['tax_percentage'], ENT_QUOTES); ?></td>
                                     <td class="border border-dark"><?= htmlspecialchars($row['tax_amount'], ENT_QUOTES); ?></td>
                                     <td class="border border-dark"><?= htmlspecialchars($row['grand_total'], ENT_QUOTES); ?></td>
-                                    <td class="border border-dark text-center">
-                                        <?php if (SuperAdmin() || $TtoAccounts) { ?>
-                                            <a href="agent-payments-form?view=1&editId=<?= $row['id']; ?>&id=<?= $parentId; ?>" class="text-primary me-2">
-                                                <i class="fa fa-edit"></i>
-                                            </a>
+                                    <td class="border border-dark text-center" style="position: relative;">
+                                        <?php if (SuperAdmin() || $TtoAdmin) { ?>
                                             <?php if ($row['id'] !== $firstRowId): ?>
                                                 <a href="agent-payments-form?deleteAgPaymentEntry=true&billEntryId=<?= $row['id']; ?>&loading_id=<?= $parentId; ?>" class="text-danger" onclick="return confirm('Are you sure you want to delete this record?');">
                                                     <i class="fa fa-trash"></i>
                                                 </a>
-                                        <?php endif;
+                                            <?php else: ?>
+                                                <?php
+                                                $attachments = json_decode($row['agent_file'], true) ?? [];
+                                                if ($attachments !== []) {
+                                                    echo '<a href="javascript:void(0);" onclick="toggleDownloadMenu(event, this)" style="text-decoration: none; color: inherit;">
+                                                <i class="fa fa-paperclip text-success me-2"></i>
+                                            </a>
+                                            <div class="bg-light border border-dark p-2 attachment-menu" style="position: absolute; top: -100%; left: -140%; display: none; z-index: 1000; width: 200px;">';
+                                                    foreach ($attachments as $item) {
+                                                        $fileName = htmlspecialchars($item, ENT_QUOTES);
+                                                        $fileExtension = pathinfo($fileName, PATHINFO_EXTENSION);
+                                                        $trimmedName = (strlen($fileName) > 15) ? substr($fileName, 0, 15) . '...' . $fileExtension : $fileName;
+                                                        echo '<a href="attachments/' . $fileName . '" download="' . $fileName . '" class="d-block mb-2">' . $trimmedName . '</a>';
+                                                    }
+                                                    echo '</div>';
+                                                } else {
+                                                    echo '<i class="fw-bold fa fa-times text-danger"></i>';
+                                                }
+                                                ?>
+                                            <?php endif; ?>
+                                            <a href="agent-payments-form?view=1&editId=<?= $row['id']; ?>&id=<?= $parentId; ?>" class="text-primary me-2">
+                                                <i class="fa fa-edit"></i>
+                                            </a>
+                                        <?php
                                         } else {
                                             echo "Transferred";
                                         } ?>
@@ -165,7 +185,7 @@ $parentGLoadingInfo = json_decode($parentRow['gloading_info'], true);
         $agKhaataNo = $parentAgent['ag_acc_no'];
         $AgKhaata = mysqli_fetch_assoc(mysqli_query($connect, "SELECT id FROM khaata WHERE khaata_no='$agKhaataNo'"));
         ?>
-        <div class="card transfer-form d-none">
+        <div class="card d-none transfer-form">
             <div class="card-body p-2">
                 <form method="post">
                     <div class="row gx-1 gy-3 table-form mb-3">
@@ -267,179 +287,191 @@ $parentGLoadingInfo = json_decode($parentRow['gloading_info'], true);
                         <input type="hidden" name="child_ids" value="<?= $child_ids; ?>">
                         <input type="hidden" name="existing_data" value='<?= $firstRow['transfer_details']; ?>'>
                         <div class="col-2">
-                            <button name="agPaymentSubmit" type="submit"
+                            <button name="agPaymentSubmit" type="submit" id="SubmitForm"
                                 class="btn btn-primary w-100 btn-sm"><i class="fa fa-upload"></i>Transfer
                             </button>
                         </div>
                     </div>
-                </form>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-body p-2">
-                <?php
-                $transferDetails = json_decode($firstRow['transfer_details'], true);
-                if (isset($transferDetails['transfer_info']) && $transferDetails['transfer_info'] != '') {
-                    $rozQ = fetch('roznamchaas', array('r_type' => 'Agent Bill', 'transfered_from_id' => $firstRow['id'], 'transfered_from' => 'agent_payments'));
-                    if (mysqli_num_rows($rozQ) > 0) { ?>
-                        <table class="table table-sm table-bordered mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Sr#</th>
-                                    <th>Date</th>
-                                    <th>A/c#</th>
-                                    <th>Roz.#</th>
-                                    <th>Name</th>
-                                    <th>No</th>
-                                    <th>Details</th>
-                                    <th>Dr.</th>
-                                    <th>Cr.</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php while ($roz = mysqli_fetch_assoc($rozQ)) {
-                                    $dr = $cr = 0; ?>
-                                    <input type="hidden" value="<?php echo $roz['r_date']; ?>"
-                                        id="temp_transfer_date">
-                                    <input type="hidden" value="<?php echo $roz['r_id']; ?>"
-                                        name="r_id[]">
+                    <?php
+                    $transferDetails = json_decode($firstRow['transfer_details'], true);
+                    if (isset($transferDetails['transfer_info']) && $transferDetails['transfer_info'] != '') {
+                        $rozQ = fetch('roznamchaas', array('r_type' => 'Agent Bill', 'transfered_from_id' => $firstRow['id'], 'transfered_from' => 'agent_payments'));
+                        if (mysqli_num_rows($rozQ) > 0) { ?>
+                            <table class="table table-sm table-bordered mb-0">
+                                <thead>
                                     <tr>
-                                        <td>
-                                            <?php echo SuperAdmin() ? $roz['r_id'] . '-' . $roz['branch_serial'] : $roz['branch_serial']; ?>
-                                        </td>
-                                        <td><?php echo $roz['r_date']; ?></td>
-                                        <td>
-                                            <a href="ledger?back-khaata-no=<?php echo $roz['khaata_no']; ?>"
-                                                target="_blank"><?php echo $roz['khaata_no']; ?></a>
-                                        </td>
-                                        <td><?php echo $roz['roznamcha_no']; ?></td>
-                                        <td class="small"><?php echo $roz['r_name']; ?></td>
-                                        <td><?php echo $roz['r_no']; ?></td>
-                                        <td class="small"><?php echo $roz['details']; ?></td>
-                                        <?php if ($roz['dr_cr'] == "dr") {
-                                            $dr = $roz['amount'];
-                                        } else {
-                                            $cr = $roz['amount'];
-                                        } ?>
-                                        <td class="text-success"><?php echo $dr; ?></td>
-                                        <td class="text-danger"><?php echo $cr; ?></td>
+                                        <th>Sr#</th>
+                                        <th>Date</th>
+                                        <th>A/c#</th>
+                                        <th>Roz.#</th>
+                                        <th>Name</th>
+                                        <th>No</th>
+                                        <th>Details</th>
+                                        <th>Dr.</th>
+                                        <th>Cr.</th>
                                     </tr>
-                                <?php } ?>
-                            </tbody>
-                        </table>
-                <?php }
-                } ?>
+                                </thead>
+                                <tbody>
+                                    <?php while ($roz = mysqli_fetch_assoc($rozQ)) {
+                                        $dr = $cr = 0; ?>
+                                        <input type="hidden" value="<?php echo $roz['r_date']; ?>"
+                                            id="temp_transfer_date">
+                                        <input type="hidden" value="<?php echo $roz['r_id']; ?>"
+                                            name="r_id[]">
+                                        <input type="hidden" value="<?php echo $roz['branch_serial']; ?>"
+                                            name="b_serial[]">
+                                        <tr>
+                                            <td>
+                                                <?php echo SuperAdmin() ? $roz['r_id'] . '-' . $roz['branch_serial'] : $roz['branch_serial']; ?>
+                                            </td>
+                                            <td><?php echo $roz['r_date']; ?></td>
+                                            <td>
+                                                <a href="ledger?back-khaata-no=<?php echo $roz['khaata_no']; ?>"
+                                                    target="_blank"><?php echo $roz['khaata_no']; ?></a>
+                                            </td>
+                                            <td><?php echo $roz['roznamcha_no']; ?></td>
+                                            <td class="small"><?php echo $roz['r_name']; ?></td>
+                                            <td><?php echo $roz['r_no']; ?></td>
+                                            <td class="small"><?php echo $roz['details']; ?></td>
+                                            <?php if ($roz['dr_cr'] == "dr") {
+                                                $dr = $roz['amount'];
+                                            } else {
+                                                $cr = $roz['amount'];
+                                            } ?>
+                                            <td class="text-success"><?php echo $dr; ?></td>
+                                            <td class="text-danger"><?php echo $cr; ?></td>
+                                        </tr>
+                                    <?php } ?>
+                                </tbody>
+                            </table>
+                    <?php }
+                    } ?>
                 </form>
             </div>
         </div>
-    </div>
-    <div class="col-2 order-1 fixed-sidebar table-form" style="top: 60px !important;">
-        <div class="my-3">
-            <!-- Total Details  -->
-            <b>T. AMOUNT: </b><span id="show_total_amount"><?= isset($total_amount) ? $total_amount : ''; ?></span><br>
-            <b>T. TAX: </b><span id="show_total_amount"><?= isset($total_tax) ? $total_tax : ''; ?></span><br>
-            <b>T.B. AMOUNT: </b><span id="show_total_amount"><?= isset($total_bill_amount) ? $total_bill_amount : ''; ?></span>
+        <div class="col-2 order-1 fixed-sidebar table-form" style="top: 60px !important;">
+        <div class="align-items-center justify-content-between flex-wrap pt-2">
+                    <div>
+                        <strong><?php echo strtoupper($_fields['p_s_name']) . ' #'; ?></strong>
+                        <?php echo $_fields['sr_no']; ?>
+                    </div>
+                    <div>
+                        <strong>User:</strong> <?php echo $_fields['username']; ?>
+                    </div>
+                    <div>
+                        <strong>Date:</strong> <?php echo my_date($_fields['_date']); ?>
+                    </div>
+                    <div>
+                        <strong>Type:</strong> <?php echo badge(strtoupper($_fields['type']), 'dark'); ?>
+                    </div>
+                    <div>
+                        <strong>Country:</strong> <?php echo $_fields['country']; ?>
+                    </div>
+                    <div>
+                        <strong>Branch:</strong> <?php echo branchName($_fields['branch_id']); ?>
+                    </div>
+                </div>
+            <div class="my-3">
+                <!-- Total Details  -->
+                <b>T. AMOUNT: </b><span id="show_total_amount"><?= isset($total_amount) ? $total_amount : ''; ?></span><br>
+                <b>T. TAX: </b><span id="show_total_amount"><?= isset($total_tax) ? $total_tax : ''; ?></span><br>
+                <b>T.B. AMOUNT: </b><span id="show_total_amount"><?= isset($total_bill_amount) ? $total_bill_amount : ''; ?></span>
+            </div>
+            <div class="d-flex mb-2" style="align-items: center;">
+                <a href="print/carry-bill?t_id=<?php echo $id; ?>&action=order&secret=<?php echo base64_encode('powered-by-upsol') . "&print_type=full"; ?>"
+                    target="_blank" class="btn btn-dark btn-sm me-2">PRINT</a>
+            </div>
+            <?php if (!empty($firstRow) && json_decode($firstRow['transfer_details'], true)['transferred_to_accounts'] === true) { echo '<b class="text-success mt-3"><i class="fa fa-check"></i> Transferred</b>'; } ?></button>
+            <button class="btn btn-warning d-block btn-sm" onclick="document.querySelector('.transfer-form').classList.toggle('d-none');">Toggle Form</button>
         </div>
-        <div class="d-flex mb-2" style="align-items: center;">
-            <a href="print/carry-bill?t_id=<?php echo $id; ?>&action=order&secret=<?php echo base64_encode('powered-by-upsol') . "&print_type=full"; ?>"
-                target="_blank" class="btn btn-dark btn-sm me-2">PRINT</a>
-        </div>
-        <?php if (!empty($firstRow)) {
-            if (json_decode($firstRow['transfer_details'], true)['transferred_to_accounts'] === false) {
-                echo '<button class="btn btn-warning btn-sm mt-2" onclick="document.querySelector(\'.transfer-form\').classList.toggle(\'d-none\');"> Transfer in Accounts </button>';
-            } else {
-                echo '<b class="text-success mt-3"><i class="fa fa-check"></i> Transferred</b>';
-            }
-        } ?></button>
-    </div>
-    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
-    <script>
-        function agentDetails() {
-            var agentAccNo = $('#ag_acc_no').val().toUpperCase();
-            $.ajax({
-                type: 'POST',
-                url: 'ajax/fetchAgentDetails.php',
-                data: 'agent_acc_no=' + agentAccNo,
-                success: function(html) {
-                    let data = JSON.parse(html).data;
-                    if (data.ag_acc_no !== '') {
-                        $('#ag_acc_no').addClass('is-valid');
-                        $('#ag_acc_no').removeClass('is-invalid');
-                        $('#ag_name').val(data.ag_name);
-                        $('#ag_id').val(data.ag_id);
-                    } else {
-                        $('#ag_acc_no').removeClass('is-valid');
-                        $('#ag_acc_no').addClass('is-invalid');
-                        $('#ag_name').val('');
-                        $('#ag_id').val('');
+        <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+        <script>
+            function agentDetails() {
+                var agentAccNo = $('#ag_acc_no').val().toUpperCase();
+                $.ajax({
+                    type: 'POST',
+                    url: 'ajax/fetchAgentDetails.php',
+                    data: 'agent_acc_no=' + agentAccNo,
+                    success: function(html) {
+                        let data = JSON.parse(html).data;
+                        if (data.ag_acc_no !== '') {
+                            $('#ag_acc_no').addClass('is-valid');
+                            $('#ag_acc_no').removeClass('is-invalid');
+                            $('#ag_name').val(data.ag_name);
+                            $('#ag_id').val(data.ag_id);
+                        } else {
+                            $('#ag_acc_no').removeClass('is-valid');
+                            $('#ag_acc_no').addClass('is-invalid');
+                            $('#ag_name').val('');
+                            $('#ag_id').val('');
+                        }
+                    },
+                    error: function(err) {
+
                     }
-                },
-                error: function(err) {
-
-                }
-            });
-        }
-
-        function toggleDownloadMenu(event, iconElement) {
-            event.preventDefault();
-            document.querySelectorAll('.attachment-menu').forEach(menu => {
-                menu.style.display = 'none';
-            });
-            const currentMenu = iconElement.nextElementSibling;
-            if (currentMenu.style.display === 'none' || currentMenu.style.display === '') {
-                currentMenu.style.display = 'block';
-            } else {
-                currentMenu.style.display = 'none';
+                });
             }
-        }
 
-        function calcGrand(value1, value2, Operator, totalInput) {
-            let grand_Total = 0;
-            grand_Total = Operator === 'multi' ? parseFloat($(value1).val()) * parseFloat($(value2).val()) : parseFloat($(value1).val()) + parseFloat($(value2).val());
-            $(totalInput).val(isNaN(grand_Total) ? '' : grand_Total);
-        }
-
-        function calcTax(taxPercentageSelector, totalSelector, taxSelector) {
-            var taxPercentage = parseFloat($(taxPercentageSelector).val().replace('%', '')) || 0;
-            $(taxSelector).val(((taxPercentage / 100) * (parseFloat($(totalSelector).val()) || 0)).toFixed(2));
-            calcGrand('#total', '#tax', 'plus', '#grand_total');
-        }
-
-        function lastAmount() {
-            let amount = $("#amount").val();
-            let rate = $("#rate").val();
-            let operator = $('#opr').find(":selected").val();
-            let final_amount;
-
-            if (amount && rate) { // Ensure both amount and rate have values
-                if (operator === "/") {
-                    final_amount = Number(amount) / Number(rate);
+            function toggleDownloadMenu(event, iconElement) {
+                event.preventDefault();
+                document.querySelectorAll('.attachment-menu').forEach(menu => {
+                    menu.style.display = 'none';
+                });
+                const currentMenu = iconElement.nextElementSibling;
+                if (currentMenu.style.display === 'none' || currentMenu.style.display === '') {
+                    currentMenu.style.display = 'block';
                 } else {
-                    final_amount = Number(amount) * Number(rate);
+                    currentMenu.style.display = 'none';
                 }
-                final_amount = final_amount.toFixed(2);
-                $("#final_amount").val(final_amount);
+            }
 
-                let balance = $("#balance").val();
-                balance = parseFloat(balance);
-                // if (balance !== 0) {
-                //     if (final_amount > balance) {
-                //         disableButton('agPaymentSubmit');
-                //     } else {
-                //         enableButton('agPaymentSubmit');
-                //     }
-                // } else {
-                //     disableButton('agPaymentSubmit');
-                // }
-                if (balance >= 1) {
-                    if (final_amount <= balance + 0.5) {
-                        enableButton('agPaymentSubmit');
+            function calcGrand(value1, value2, Operator, totalInput) {
+                let grand_Total = 0;
+                grand_Total = Operator === 'multi' ? parseFloat($(value1).val()) * parseFloat($(value2).val()) : parseFloat($(value1).val()) + parseFloat($(value2).val());
+                $(totalInput).val(isNaN(grand_Total) ? '' : grand_Total);
+            }
+
+            function calcTax(taxPercentageSelector, totalSelector, taxSelector) {
+                var taxPercentage = parseFloat($(taxPercentageSelector).val().replace('%', '')) || 0;
+                $(taxSelector).val(((taxPercentage / 100) * (parseFloat($(totalSelector).val()) || 0)).toFixed(2));
+                calcGrand('#total', '#tax', 'plus', '#grand_total');
+            }
+
+            function lastAmount() {
+                let amount = $("#amount").val();
+                let rate = $("#rate").val();
+                let operator = $('#opr').find(":selected").val();
+                let final_amount;
+
+                if (amount && rate) { // Ensure both amount and rate have values
+                    if (operator === "/") {
+                        final_amount = Number(amount) / Number(rate);
+                    } else {
+                        final_amount = Number(amount) * Number(rate);
+                    }
+                    final_amount = final_amount.toFixed(2);
+                    $("#final_amount").val(final_amount);
+
+                    let balance = $("#balance").val();
+                    balance = parseFloat(balance);
+                    // if (balance !== 0) {
+                    //     if (final_amount > balance) {
+                    //         disableButton('agPaymentSubmit');
+                    //     } else {
+                    //         enableButton('agPaymentSubmit');
+                    //     }
+                    // } else {
+                    //     disableButton('agPaymentSubmit');
+                    // }
+                    if (balance >= 1) {
+                        if (final_amount <= balance + 0.5) {
+                            enableButton('agPaymentSubmit');
+                        } else {
+                            disableButton('agPaymentSubmit');
+                        }
                     } else {
                         disableButton('agPaymentSubmit');
                     }
-                } else {
-                    disableButton('agPaymentSubmit');
                 }
             }
-        }
-    </script>
+        </script>

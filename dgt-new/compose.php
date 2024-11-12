@@ -1,9 +1,5 @@
 <?php 
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
 
-// Include the Composer autoloader for PHPMailer
-require 'vendor/autoload.php';
 
 $page_title = 'Compose Email';
 include("header.php"); 
