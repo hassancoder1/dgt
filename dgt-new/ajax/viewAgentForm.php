@@ -31,6 +31,13 @@ if ($id > 0) {
                 }
             }
 ?>
+            <div class="modal-header d-flex justify-content-between bg-white align-items-center">
+                <h5 class="modal-title" id="staticBackdropLabel">CUSTOM CLEARING AGENT FORM</h5>
+                <div class="d-flex align-items-center gap-2">
+                    <a href="print/index?secret=<?= base64_encode('bl-no-print'); ?>&blSearch=<?= $parent['bl_no']; ?>&agent-print=true" target="_blank" id="printButton" class="btn btn-dark btn-sm me-2">PRINT</a>
+                    <a href="agent-form" class="btn-close ms-3" aria-label="Close"></a>
+                </div>
+            </div>
             <div class="row">
                 <div class="col-md-10">
                     <div class="card my-2">

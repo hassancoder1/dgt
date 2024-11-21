@@ -8,7 +8,7 @@ global $connect;
 $results_per_page = 50;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $start_from = ($page - 1) * $results_per_page;
-$sql = "SELECT * FROM `transactions` WHERE p_s='p'";
+$sql = "SELECT * FROM `transactions` WHERE p_s='p' AND type='booking'";
 $conditions = [];
 $print_filters = [];
 if ($_GET) {
@@ -28,11 +28,6 @@ if ($_GET) {
         $end_print = mysqli_real_escape_string($connect, $_GET['end']);
         $print_filters[] = 'end=' . $end_print;
         $conditions[] = "_date <= '$end_print'";
-    }
-    if (isset($_GET['type']) && !empty($_GET['type'])) {
-        $type = mysqli_real_escape_string($connect, $_GET['type']);
-        $print_filters[] = 'type=' . $type;
-        $conditions[] = "type = '$type'";
     }
     if (isset($_GET['is_transferred']) && $_GET['is_transferred'] !== '') {
         $is_transferred = mysqli_real_escape_string($connect, $_GET['is_transferred']);
@@ -78,7 +73,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Print General Loading <?= $page >= 1 ? " - Page $page" : ''; ?></title>
-    
+
     <?php
     echo "<script>";
     include '../assets/fa/fontawesome.js';
@@ -89,11 +84,18 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
     include '../assets/css/custom.css';
     echo "</style>";
     ?>
+    <style>
+        @media print {
+            .hide-on-print {
+                display: none;
+            }
+        }
+    </style>
 </head>
 
 <body class="mx-2">
     <div class="bg-white mt-3">
-    <div class="d-flex justify-content-between align-items-center w-100">
+        <div class="d-flex justify-content-between align-items-center w-100">
             <h1 class="mb-2" style="font-size: 2rem; font-weight: 700; color: #333; text-transform: uppercase; letter-spacing: 1.5px; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">
                 General Loading
                 <span class="text-muted" style="font-size: 12px; display: block;">
@@ -103,7 +105,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     if ($start_print || $end_print) $applied_filters[] = "From $start_print to $end_print";
                     if ($type) $applied_filters[] = "Purchase Type: $type";
                     if ($sea_road) $applied_filters[] = "Sea/Road: $sea_road";
-                    if ($is_transferred) $applied_filters[] = "Transferred: ". ($is_transferred == '1' ? "YES" : "NO");
+                    if ($is_transferred) $applied_filters[] = "Transferred: " . ($is_transferred == '1' ? "YES" : "NO");
                     if ($acc_no) $applied_filters[] = "Acc No: $acc_no";
                     if (count($applied_filters) > 0) {
                         echo " | Applied Filters: " . implode(", ", $applied_filters);
@@ -116,10 +118,10 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
             </h1>
             <div class="d-flex gap-2">
                 <div>
-                    <button class="btn btn-sm btn-dark" onclick="window.location.href = '/general-loading'"><i class="fa fa-arrow-left"></i> Back</button>
+                    <button class="btn btn-sm btn-dark hide-on-print" onclick="window.location.href = '/purchases'"><i class="fa fa-arrow-left"></i> Back</button>
                 </div>
                 <div class="dropdown">
-                    <button class="btn btn-success btn-sm" onclick="window.print();">
+                    <button class="btn btn-success btn-sm hide-on-print" onclick="window.print();">
                         <i class="fa fa-print"></i>
                     </button>
                 </div>
@@ -246,20 +248,20 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
     </div>
     <script>
         function getQueryParameter(name) {
-        const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get(name);
-    }
-    $(document).ready(function() {
-        var acc_no = getQueryParameter('acc_no') ? getQueryParameter('acc_no').toUpperCase() : '';
-        var acc_name = getQueryParameter('acc_name') ? getQueryParameter('acc_name').toUpperCase() : '';
-        $('tbody tr').each(function() {
-            var rowAccNo = $(this).find('td.acc_no').text().trim().toUpperCase();
-            var rowAccName = $(this).find('td.acc_name').text().trim().toUpperCase();
-            if ((acc_no && rowAccNo !== acc_no) || (acc_name && !rowAccName.includes(acc_name))) {
-                $(this).hide();
-            }
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+        $(document).ready(function() {
+            var acc_no = getQueryParameter('acc_no') ? getQueryParameter('acc_no').toUpperCase() : '';
+            var acc_name = getQueryParameter('acc_name') ? getQueryParameter('acc_name').toUpperCase() : '';
+            $('tbody tr').each(function() {
+                var rowAccNo = $(this).find('td.acc_no').text().trim().toUpperCase();
+                var rowAccName = $(this).find('td.acc_name').text().trim().toUpperCase();
+                if ((acc_no && rowAccNo !== acc_no) || (acc_name && !rowAccName.includes(acc_name))) {
+                    $(this).hide();
+                }
+            });
         });
-    });
     </script>
 </body>
 

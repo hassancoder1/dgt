@@ -8,6 +8,13 @@ $parentId = $parentRow['id'];
 $parentAgent = json_decode($parentRow['agent_details'], true);
 $parentGLoadingInfo = json_decode($parentRow['gloading_info'], true);
 ?>
+<div class="modal-header d-flex justify-content-between bg-white align-items-center">
+    <h5 class="modal-title" id="staticBackdropLabel">AGENT BILL</h5>
+    <div class="d-flex align-items-center gap-2">
+        <a href="print/index?secret=<?= base64_encode('agent-bill-print'); ?>&id=<?= $parentId; ?>" target="_blank" id="printButton" class="btn btn-dark btn-sm me-2">PRINT</a>
+        <a href="carry-bill" class="btn-close ms-3" aria-label="Close"></a>
+    </div>
+</div>
 <div class="row">
     <div class="col-md-10 order-0 content-column">
         <div class="card my-2">
@@ -273,7 +280,7 @@ $parentGLoadingInfo = json_decode($parentRow['gloading_info'], true);
             </div>
         </div>
     </div>
-    <div class="col-2 order-1 fixed-sidebar table-form" style="top: 60px !important;">
+    <div class="col-2 order-1 table-form bg-white">
         <div class="my-3">
             <!-- Total Details  -->
             <b>T. AMOUNT: </b><span id="show_total_amount"><?= isset($total_amount) ? $total_amount : ''; ?></span><br>

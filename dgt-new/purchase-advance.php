@@ -232,25 +232,33 @@ $mypageURL = $pageURL;
                                 $_fields_sr = ['l_country' => '', 'l_date' => '', 'r_country' => '', 'r_date' => ''];
                                 if (!empty($sea_road_array)) {
                                     $sea_road = $sea_road_array->sea_road ?? '';
-                                    if ($sea_road == 'sea') {
+                                    $_fields_sr = [];
+                                    if ($sea_road === 'sea') {
                                         $_fields_sr = [
-                                            'l_country' => $sea_road_array->l_country,
-                                            'l_date' => $sea_road_array->l_date,
-                                            'r_country' => $sea_road_array->r_country,
-                                            'r_date' => $sea_road_array->r_date
+                                            'l_country' => $sea_road_array->l_country ?? '',
+                                            'l_date'    => $sea_road_array->l_date ?? '',
+                                            'r_country' => $sea_road_array->r_country ?? '',
+                                            'r_date'    => $sea_road_array->r_date ?? '',
+                                            'truck_no' => $sea_road_array->truck_no ?? '',
+                                            'truck_name' => $sea_road_array->truck_name ?? '',
+                                            'loading_company_name' => $sea_road_array->loading_company_name ?? '',
+                                            'loading_date' => $sea_road_array->loading_date ?? '',
+                                            'transfer_name' => $sea_road_array->transfer_name ?? ''
                                         ];
-                                    }
-                                    if ($sea_road == 'road') {
+                                    } elseif ($sea_road === 'road') {
                                         $_fields_sr = [
-                                            'l_country' => $sea_road_array->l_country_road,
-                                            'l_date' => $sea_road_array->l_date_road,
-                                            'r_country' => $sea_road_array->r_country_road,
-                                            'r_date' => $sea_road_array->r_date_road
+                                            'l_country' => $sea_road_array->l_country_road ?? '',
+                                            'l_date'    => $sea_road_array->l_date_road ?? '',
+                                            'r_country' => $sea_road_array->r_country_road ?? '',
+                                            'r_date'    => $sea_road_array->r_date_road ?? '',
+                                            'old_company_name' => $sea_road_array->old_company_name ?? '',
+                                            'transfer_company_name' => $sea_road_array->transfer_company_name ?? '',
+                                            'warehouse_date' => $sea_road_array->warehouse_date ?? '',
                                         ];
                                     }
                                 }
 
-                                $adv_paid_final = purchaseSpecificData($id, 'adv_paid_total');
+                                $adv_paid_final = purchaseSpecificData($id, 'adv_paid_total', 'amount');
                                 $bal = $payments['partial_amount1'] - $adv_paid_final;
                                 $bal = (float)$bal < 0.5 ? 0 : $bal;
 
@@ -264,7 +272,7 @@ $mypageURL = $pageURL;
                                 } else {
                                     $rowColor = ''; // Default case (no color)
                                 }
-                                
+
                             ?>
                                 <tr class="text-nowrap">
                                     <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $id; ?>)"
@@ -378,7 +386,7 @@ if (isset($_POST['tAdvSubmit'])) {
     $final_amount = mysqli_real_escape_string($connect, $_POST['final_amount']);
     $transfer_date = mysqli_real_escape_string($connect, $_POST['transfer_date']);
     $report = mysqli_real_escape_string($connect, $_POST['report']);
-    $details = $_POST['action'] == 'update' ? $report : $report . ' Amount: ' . $amount . $currency1 . ' Rate: ' . $rate . '/' . $currency2 . ' TransferDate' . $transfer_date;
+    $details = $_POST['action'] == 'update' ? $report : $report . " | Amount: $amount " . $_POST['currency1'] . " " . $_POST['opr'] . " " . $_POST['rate'] . ' = ' . $final_amount . " " . $_POST['currency2'];
 
     $data = array(
         'type' => 'p_adv',

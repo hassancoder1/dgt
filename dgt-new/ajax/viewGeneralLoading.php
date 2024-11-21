@@ -7,8 +7,7 @@ if ($id > 0) {
     $record = mysqli_fetch_assoc($records);
     $_fields = transactionSingle($id);
     $notify_party = isset($record['notify_party_details']) ? json_decode($record['notify_party_details'], true) : false;
-    if (!empty($_fields)) { ?>
-        <?php
+    if (!empty($_fields)) {
         $result = mysqli_query($connect, "SELECT * FROM general_loading where p_id=$id");
         $firstRow = null;
         $uniqueBlNumbers = [];
@@ -68,23 +67,18 @@ if ($id > 0) {
             <h5 class="modal-title" id="staticBackdropLabel">GENERAL LOADING</h5>
             <div class="d-flex align-items-center gap-2">
                 <?php if ($firstRow): ?>
-                    <form action="print/gloading-bl-print" class="d-flex gap-2 align-items-center">
-                        <input type="hidden" name="p_id" value="<?= $id; ?>">
-                        <input type="hidden" name="secret" value="<?= base64_encode("powered-by-upsol"); ?>">
+                    <div class="d-flex gap-2 align-items-center">
                         <label for="blSearch" style="text-wrap:nowrap;">B/L No Print </label>
                         <select name="blSearch" id="blSearch" class="form-select form-select-sm">
-                            <?php
-                            foreach ($uniqueBlNumbers as $onebl) {
-                                echo '<option value="' . $onebl . '">' . $onebl . '</option>';
-                            }
-                            ?>
+                            <option value="">Select B/L No</option>
+                            <?php foreach ($uniqueBlNumbers as $onebl): ?>
+                                <option value="<?= $onebl; ?>"><?= $onebl; ?></option>
+                            <?php endforeach; ?>
                         </select>
-                        <button type="submit" class="btn btn-dark btn-sm me-2">PRINT</button>
-                    </form>
+                        <a href="#" target="_blank" id="printButton" class="btn btn-dark btn-sm me-2 disabled">PRINT</a>
+                    </div>
                 <?php endif; ?>
-                <!-- Print Button -->
-                <!-- <a href="print/purchase-single?t_id=<?php echo $id; ?>&action=order&secret=<?php echo base64_encode('powered-by-upsol') . "&print_type=full"; ?>"
-                        target="_blank" class="btn btn-dark btn-sm me-2">PRINT</a> -->
+
                 <button class="btn btn-warning btn-sm" onclick="document.querySelector('.transfer-form').classList.toggle('d-none');">Toggle Form</button>
                 <!-- Close Button -->
                 <a href="general-loading" class="btn-close ms-3" aria-label="Close"></a>
@@ -852,6 +846,21 @@ if ($id > 0) {
 
         // Update pct_amt when user inputs a number in pct
         $("#pct").on("input", updatePctAmt);
+
+        $('#blSearch').on('change', function() {
+            const selectedValue = $(this).val();
+            const printButton = $('#printButton');
+            if (selectedValue) {
+                printButton
+                    .removeClass('disabled')
+                    .attr('href', `print/index?secret=<?= base64_encode("bl-no-print"); ?>&blSearch=${selectedValue}`);
+            } else {
+                printButton
+                    .addClass('disabled')
+                    .attr('href', '#')
+                    .attr('onclick', 'return false;');
+            }
+        });
     });
 
     function lastAmount() {

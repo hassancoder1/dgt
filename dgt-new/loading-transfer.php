@@ -5,10 +5,10 @@ include("header.php");
 $remove = $start_print = $end_print = $type = $acc_no = $p_id = $blSearch = $sea_road = $transferred = $date_type = '';
 $is_search = false;
 global $connect;
-$results_per_page = 50;
+$results_per_page = 25;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $start_from = ($page - 1) * $results_per_page;
-$sql = "SELECT * FROM `general_loading`";
+$sql = "SELECT * FROM `general_loading` WHERE p_type='booking'";
 $conditions = [];
 $print_filters = [];
 if ($_GET) {
@@ -44,11 +44,6 @@ if ($_GET) {
         $print_filters[] = 'blSearch=' . $blSearch;
         $conditions[] = "bl_no='$blSearch'";
     }
-    if (!empty($_GET['p_type'])) {
-        $type = mysqli_real_escape_string($connect, $_GET['p_type']);
-        $print_filters[] = 'p_type=' . $type;
-        $conditions[] = "p_type = '$type'";
-    }
     if (isset($_GET['transferred']) && $_GET['transferred'] !== '') {
         $transferred = mysqli_real_escape_string($connect, $_GET['transferred']);
         $print_filters[] = 'transferred=' . $transferred;
@@ -66,14 +61,11 @@ if ($_GET) {
     }
 }
 if (count($conditions) > 0) {
-    $sql .= " WHERE " . implode(' AND ', $conditions);
+    $sql .= " AND " . implode(' AND ', $conditions);
 }
-$sql .= " ORDER BY id DESC LIMIT $start_from, $results_per_page";
+$sql .= " ORDER BY id ASC LIMIT $start_from, $results_per_page";
 $query_string = implode('&', $print_filters);
 $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
-$count_sql = "SELECT COUNT(id) AS total FROM `general_loading`" . (count($conditions) > 0 ? " WHERE " . implode(' AND ', $conditions) : "");
-$count_result = mysqli_query($connect, $count_sql);
-$total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_page);
 ?>
 <div class="fixed-top">
     <?php require_once('nav-links.php'); ?>
@@ -92,35 +84,57 @@ $total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_pa
                     parse_str($url_parts['query'] ?? '', $query_params);
                     unset($query_params['page']);
                     $base_url = $url_parts['path'] . '?' . http_build_query($query_params);
-                    $count_sql = "SELECT COUNT(id) AS total FROM `general_loading`";
+
+                    $count_sql = "SELECT COUNT(id) AS total FROM `general_loading` WHERE p_type='booking'";
                     if (count($conditions) > 0) {
-                        $count_sql .= " WHERE " . implode(' AND ', $conditions);
-                    } else {
-                        $count_sql .= " WHERE 1";
+                        $count_sql .= " AND " . implode(' AND ', $conditions);
                     }
                     $count_result = mysqli_query($connect, $count_sql);
-                    if (!$count_result) {
-                        echo "Error: " . mysqli_error($connect);
-                        exit;
-                    }
                     $row = mysqli_fetch_assoc($count_result);
                     $total_pages = ceil($row['total'] / $results_per_page);
-                    echo '<ul class="pagination">';
+
+                    // Previous button
                     if ($page > 1) {
-                        echo "<li class='page-item'><a class='page-link' href='" . $base_url . "&page=" . ($page - 1) . "'>Previous</a></li>";
+                        echo "<li class='page-item'><a class='page-link' href='" . $base_url . "&page=" . ($page - 1) . "'>Prev</a></li>";
                     } else {
                         echo "<li class='page-item disabled'><span class='page-link'>Prev</span></li>";
                     }
-                    for ($i = 1; $i <= $total_pages; $i++) {
-                        $active_class = ($i == $page) ? 'active' : '';
-                        echo "<li class='page-item $active_class'><a class='page-link' href='" . $base_url . "&page=$i'>$i</a></li>";
+
+                    // Pagination logic with ellipsis
+                    $max_displayed_pages = 5; // Maximum number of pages to display
+                    if ($total_pages <= $max_displayed_pages) {
+                        for ($i = 1; $i <= $total_pages; $i++) {
+                            $active_class = ($i == $page) ? 'active' : '';
+                            echo "<li class='page-item $active_class'><a class='page-link' href='" . $base_url . "&page=$i'>$i</a></li>";
+                        }
+                    } else {
+                        // Always display the first page
+                        echo "<li class='page-item'><a class='page-link' href='" . $base_url . "&page=1'>1</a></li>";
+                        if ($page > 3) {
+                            echo "<li class='page-item disabled'><span class='page-link'>...</span></li>";
+                        }
+
+                        // Display pages around the current page
+                        $start = max(2, $page - 1);
+                        $end = min($total_pages - 1, $page + 1);
+                        for ($i = $start; $i <= $end; $i++) {
+                            $active_class = ($i == $page) ? 'active' : '';
+                            echo "<li class='page-item $active_class'><a class='page-link' href='" . $base_url . "&page=$i'>$i</a></li>";
+                        }
+
+                        // Always display the last page
+                        if ($page < $total_pages - 2) {
+                            echo "<li class='page-item disabled'><span class='page-link'>...</span></li>";
+                        }
+                        echo "<li class='page-item'><a class='page-link' href='" . $base_url . "&page=$total_pages'>$total_pages</a></li>";
                     }
+
+                    // Next button
                     if ($page < $total_pages) {
                         echo "<li class='page-item'><a class='page-link' href='" . $base_url . "&page=" . ($page + 1) . "'>Next</a></li>";
                     } else {
                         echo "<li class='page-item disabled'><span class='page-link'>Next</span></li>";
                     }
-                    echo '</ul>';
                     ?>
                 </ul>
             </nav>
@@ -186,19 +200,6 @@ $total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_pa
                 <input type="date" name="end" value="<?php echo $end_print; ?>" id="end" class="form-control form-control-sm mx-2" style="max-width:160px;">
             </div>
             <div class="form-group">
-                <label for="p_type" class="form-label">Type</label>
-                <select class="form-select form-select-sm" name="p_type" style="max-width:130px;" id="p_type">
-                    <option value="" selected>All</option>
-                    <?php
-                    $static_types = fetch('static_types', ['type_for' => 'ps_types']);
-                    while ($static_type = mysqli_fetch_assoc($static_types)) {
-                        $sel_tran = $type == $static_type['type_name'] ? 'selected' : '';
-                        echo '<option ' . $sel_tran . '  value="' . $static_type['type_name'] . '">' . strtoupper(htmlspecialchars($static_type['details'])) . '</option>';
-                    }
-                    ?>
-                </select>
-            </div>
-            <div class="form-group">
                 <label for="sea_road" class="form-label">SEA/ROAD</label>
                 <select class="form-select form-select-sm" name="sea_road" style="max-width:130px;" id="sea_road">
                     <option value="" <?= !in_array($sea_road, ['sea', 'road']) ? 'selected' : ''; ?>>All</option>
@@ -228,20 +229,7 @@ $total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_pa
             </div>
         </div>
     </form>
-    <style>
-        #RecordsTable {
-            height: 300px;
-            overflow-y: scroll;
-        }
 
-        .fixed thead {
-            position: sticky;
-            top: 0;
-            z-index: 1;
-            background-color: #fff;
-            box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1);
-        }
-    </style>
     <div class="table-responsive mt-4" id="RecordsTable">
         <table class="table table-bordered">
             <thead>
@@ -337,34 +325,6 @@ $total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_pa
     role="dialog" aria-labelledby="staticBackdropLabel" aria-hidden="true">
     <div class="modal-dialog modal-fullscreen -modal-xl -modal-dialog-centered" role="document">
         <div class="modal-content">
-            <div class="modal-header d-flex justify-content-between align-items-center">
-                <h5 class="modal-title" id="staticBackdropLabel">LOADING TRANSFER</h5>
-                <div class="d-flex align-items-center">
-                    <a href="print/purchase-single?t_id=<?php echo $id; ?>&action=order&secret=<?php echo base64_encode('powered-by-upsol') . "&print_type=full"; ?>"
-                        target="_blank" class="btn btn-dark btn-sm me-2">PRINT</a>
-                    <form id="attachmentSubmit" method="post" enctype="multipart/form-data" class="d-flex align-items-center me-2">
-                        <input type="hidden" name="t_id_hidden_attach" value="<?php echo $id; ?>">
-                        <input type="file" id="attachments" name="attachments[]" class="d-none" multiple>
-                        <input type="button" class="form-control rounded-1 bg-dark text-white" value="+ Contract File"
-                            onclick="document.getElementById('attachments').click();" />
-                    </form>
-                    <script>
-                        document.getElementById("attachments").onchange = function() {
-                            document.getElementById("attachmentSubmit").submit();
-                        }
-                    </script>
-                    <div class="">
-                        <?php
-                        // $atts = getAttachments($id, 'purchase_contract');
-                        // $no = 0;
-                        // foreach ($atts as $att) {
-                        //     echo ++$no . '.<a class="text-decoration-underline me-2" href="attachments/' . $att['attachment'] . '" title="' . $att['created_at'] . '" target="_blank">' . readMore($att['attachment'], 20) . '</a><br>';
-                        // } 
-                        ?>
-                    </div>
-                    <a href="<?php echo $pageURL; ?>" class="btn-close ms-3" aria-label="Close"></a>
-                </div>
-            </div>
             <div class="modal-body bg-light pt-0" id="viewDetails"></div>
         </div>
     </div>

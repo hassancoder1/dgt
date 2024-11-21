@@ -5,9 +5,14 @@ $purchase_pays_id = $_POST['purchase_pays_id'];
 if ($id > 0) {
     $records = fetch('transactions', array('id' => $id));
     $record = mysqli_fetch_assoc($records);
+    $sea_road = json_decode($record['sea_road'], true);
     $purchase_type = $record['type'];
     $_fields = transactionSingle($id);
+    $_fields['sea_road_array'] = array_merge($_fields['sea_road_array'], !empty($sea_road) ? $sea_road : []);
     $notify_party = isset($record['notify_party_details']) ? json_decode($record['notify_party_details'], true) : false;
+    if ($record['type'] === 'local') {
+        $notify_party = '';
+    }
     if (!empty($_fields)) { ?>
         <div class="row">
             <div class="col-10 order-0 content-column">
@@ -55,77 +60,93 @@ if ($id > 0) {
                                     echo '<div><b>Company Details </b>' . nl2br($_fields['cr_acc_details']) . '</div>';
                                 } ?>
                             </div>
-                            <div class="col-md-4">
-                                <strong>Notify Party Details</strong>
-                                <?php if ($notify_party) { ?>
-                                    <div><b>Acc No. </b><?= $notify_party['np_acc']; ?></div>
-                                    <div><b>Acc Name </b><?php echo $notify_party['np_acc_name']; ?></div>
-                                <?php
-                                    if (!empty($notify_party['np_acc_details'])) {
-                                        $details = $notify_party['np_acc_details'];
-                                        $countryPos = strpos($details, 'Country');
-                                        if ($countryPos !== false) {
-                                            $companyName = substr($details, 0, $countryPos);
-                                            $remainingDetails = substr($details, $countryPos);
-                                            echo '<div><b>Company Name: </b>' . trim($companyName) . '</div>';
-                                            echo '<div><b>Details: </b>' . nl2br($remainingDetails) . '</div>';
-                                        } else {
-                                            echo '<div><b>Company Details: </b>' . nl2br($details) . '</div>';
+                            <?php if ($notify_party !== ''): ?>
+                                <div class="col-md-4">
+                                    <strong>Notify Party Details</strong>
+                                    <?php if ($notify_party) { ?>
+                                        <div><b>Acc No. </b><?= $notify_party['np_acc']; ?></div>
+                                        <div><b>Acc Name </b><?php echo $notify_party['np_acc_name']; ?></div>
+                                    <?php
+                                        if (!empty($notify_party['np_acc_details'])) {
+                                            $details = $notify_party['np_acc_details'];
+                                            $countryPos = strpos($details, 'Country');
+                                            if ($countryPos !== false) {
+                                                $companyName = substr($details, 0, $countryPos);
+                                                $remainingDetails = substr($details, $countryPos);
+                                                echo '<div><b>Company Name: </b>' . trim($companyName) . '</div>';
+                                                echo '<div><b>Details: </b>' . nl2br($remainingDetails) . '</div>';
+                                            } else {
+                                                echo '<div><b>Company Details: </b>' . nl2br($details) . '</div>';
+                                            }
                                         }
+                                    } else {
+                                        echo "Notify Party Details Not Added!";
                                     }
-                                } else {
-                                    echo "Notify Party Details Not Added!";
-                                }
-                                ?>
+                                    ?>
 
-                            </div>
+                                </div>
+                            <?php endif; ?>
                         </div>
                         <?php if (!empty($_fields['sea_road_array'])): ?>
                             <div class="row gy-1 border-bottom py-1">
                                 <div class="col-md-12">
-                                    <span class="fs-6 fw-bold">By </span>
-                                    <?php echo $_fields['sea_road']; ?>
+                                    <span class="fs-6 fw-bold">
+                                        <?= $_fields['type'] === 'booking' ? 'By ' . $_fields['sea_road'] : (isset($_fields['sea_road_array']['truck_no']) ? 'Loading Transfer' : 'WareHouse Transfer'); ?> </span>
+
                                 </div>
-                                <div class="col-md-3">
-                                    <div class="fs-6 fw-bold">Loading Details</div>
-                                    <div>
-                                        <?php
-                                        $loadingDetails = [];
-                                        foreach ($_fields['sea_road_array'] as $key => $value) {
-                                            if (strpos($key, 'l_') === 0) {
-                                                if (is_array($value)) {
-                                                    echo '<b>' . $value[0] . ':</b> ' . $value[1] . '<br>';
-                                                    $loadingDetails[$value[0]] = $value[1];
-                                                } else {
-                                                    echo '<b>' . strtoupper($key) . ':</b> ' . $value . '<br>';
-                                                    $loadingDetails[strtoupper($key)] = $value;
+                                <?php if ($_fields['type'] === 'booking'):
+                                    $_fields['sea_road_array']['l_date_road'] = '';
+                                    $_fields['sea_road_array']['r_date_road'] = ''; ?>
+                                    <div class="col-md-3">
+                                        <div class="fs-6 fw-bold">Loading Details</div>
+                                        <div>
+                                            <?php
+                                            foreach ($_fields['sea_road_array'] as $key => $value) {
+                                                if (strpos($key, 'l_') === 0 && !empty($value)) {
+                                                    if (is_array($value)) {
+                                                        echo '<b>' . $value[0] . ':</b> ' . $value[1] . '<br>';
+                                                    } else {
+                                                        echo '<b>' . ucwords(str_replace('_', ' ', str_replace('l_', '', $key))) . ':</b> ' . $value . '<br>';
+                                                    }
                                                 }
                                             }
-                                        }
-                                        ?>
+                                            ?>
+                                        </div>
                                     </div>
-                                    <input type="hidden" id="loadingDetailsJSON" value='<?= json_encode($loadingDetails); ?>'>
-                                </div>
-
-
-                                <!-- Receiving Country Column -->
-                                <div class="col-md-3">
-                                    <div class="fs-6 fw-bold">Receiving Details</div>
-                                    <?php foreach ($_fields['sea_road_array'] as $key => $value): ?>
+                                    <!-- Receiving Country Column -->
+                                    <div class="col-md-3">
+                                        <div class="fs-6 fw-bold">Receiving Details</div>
+                                        <?php foreach ($_fields['sea_road_array'] as $key => $value): ?>
+                                            <?php
+                                            if (!empty($value) && strpos($key, 'r_') === 0):
+                                                if (is_array($value)) {
+                                                    $label = ($key === 'd_date_road') ? 'Arrival Date' : $value[0];
+                                                    echo '<b>' . $label . ':</b> ' . $value[1] . '<br>';
+                                                } else {
+                                                    echo '<b>' . ucwords(str_replace('_', ' ', str_replace('r_', '', $key))) . ':</b> ' . $value . '<br>';
+                                                }
+                                            endif;
+                                            ?>
+                                        <?php endforeach; ?>
+                                    </div>
+                                    <?php else: ?>
+                                    <div class="col-md-4">
                                         <?php
-                                        // Check if the key starts with 'r_' (receiving-related) or 'd_' (delivery-related)
-                                        if (strpos($key, 'r_') === 0 || strpos($key, 'd_') === 0):
-                                            if (is_array($value)) {
-                                                // For delivery dates, show the label as "Arrival Date" instead of just the key
-                                                $label =  $value[0];
-                                                echo '<b>' . $label . ':</b> ' . $value[1] . '<br>';
-                                            } else {
-                                                echo '<b>' . strtoupper($key) . ':</b> ' . $value . '<br>';
-                                            }
-                                        endif;
-                                        ?>
-                                    <?php endforeach; ?>
-                                </div>
+                                        if ($_fields['sea_road_array']['sea_road'] === 'sea'): ?>
+                                            <b>Truck No:</b> <?= $_fields['sea_road_array']['truck_no'] ?? 'N/A'; ?><br>
+                                            <b>Truck Name:</b> <?= $_fields['sea_road_array']['truck_name'] ?? 'N/A'; ?><br>
+                                            <b>Loading Company:</b> <?= $_fields['sea_road_array']['loading_company_name'] ?? 'N/A'; ?><br>
+                                            <b>Loading Date:</b> <?= $_fields['sea_road_array']['loading_date'] ?? 'N/A'; ?><br>
+                                            <b>Transfer Name:</b> <?= $_fields['sea_road_array']['transfer_name'] ?? 'N/A'; ?><br>
+                                        <?php endif; ?>
+                                        <?php if ($_fields['sea_road_array']['sea_road'] === 'road'): ?>
+                                            <b>Old Company Name:</b> <?= $_fields['sea_road_array']['old_company_name'] ?? 'N/A'; ?><br>
+                                            <b>Transfer Company Name:</b> <?= $_fields['sea_road_array']['transfer_company_name'] ?? 'N/A'; ?><br>
+                                            <b>Warehouse Date:</b> <?= $_fields['sea_road_array']['warehouse_date'] ?? 'N/A'; ?><br>
+                                        <?php endif; ?>
+                                        </ul>
+                                    </div>
+                                <?php endif; ?>
 
                                 <div class="col-md-6">
                                     <div class="fs-6 fw-bold">Payment Details</div>
@@ -193,59 +214,57 @@ if ($id > 0) {
                             </div>
                         <?php endif; ?>
                         <?php if (!empty($_fields['items'])) { ?>
-                            <table class="table mb-0 table-hover table-sm">
+                            <table class="table table-hover mb-0">
                                 <thead>
-                                    <tr>
+                                    <tr class="text-nowrap">
                                         <th>#</th>
-                                        <th>Goods</th>
-                                        <th>SIZE</th>
-                                        <th>BRAND</th>
-                                        <th>ORIGIN</th>
-                                        <th>Qty</th>
-                                        <th>Total KGs</th>
-                                        <th>Total Qty KGs</th>
-                                        <th>Net KGs</th>
-                                        <th>Wt.</th>
-                                        <th>Total</th>
-                                        <th>Price</th>
-                                        <th>Amount</th>
-                                        <th>Final</th>
+                                        <th>GOODS / SIZE / BRAND / ORIGIN</th>
+                                        <th>QTY</th>
+                                        <th>KGs</th>
+                                        <th>NET KGs</th>
+                                        <th>TOTAL</th>
+                                        <th>PRICE</th>
+                                        <th>AMOUNT</th>
+                                        <?php if ($record['type'] !== 'local') { ?>
+                                            <th class="text-end">FINAL</th>
+                                        <?php } else {; ?>
+                                            <th>Tax%</th>
+                                            <th>Tax.Amt</th>
+                                            <th>Amt+Tax</th>
+                                        <?php } ?>
+                                        <th></th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php $items = $_fields['items'];
-                                    $qty_no = $qty_kgs = $total_kgs = $total_qty_kgs = $net_kgs = $total = $amount = $final_amount = 0;
-                                    $i = 0;
-                                    $rate = 0;
-                                    foreach ($items as $details) {
-                                        $goods = goodsName($details['goods_id']);
-                                        $t_country = $details['origin'];
-                                        $allot = $details['allotment_name'];
-                                        $curr1 = $details['currency1'];
-                                        $curr2 = $details['currency2'];
+                                    <?php $sr_details = 1;
+                                    $qty_no = $qty_kgs = $total_kgs = $total_qty_kgs = $net_kgs = $total = $amount = $final_amount = $total_tax_amount = $total_total_with_tax = 0;
+                                    $pur_d_q = fetch('transaction_items', array('parent_id' => $id));
+                                    while ($details = mysqli_fetch_assoc($pur_d_q)) {
+                                        $details_id = $details['id'];
                                         echo '<tr>';
                                         echo '<td>' . $details['sr'] . '</td>';
-                                        echo '<td>' . goodsName($details['goods_id']) . '</td>';
-                                        echo '<td>' . $details['size'] . '</td>';
-                                        echo '<td>' . $details['brand'] . '</td>';
-                                        echo '<td>' . $details['origin'] . '</td>';
+                                        echo '<td><a class="text-dark">' . goodsName($details['goods_id']) . '</a> / ' . $details['size'] . ' / ' . $details['brand'] . ' / ' . $details['origin'] . '</td>';
                                         echo '<td>' . $details['qty_no'] . '<sub>' . $details['qty_name'] . '</sub></td>';
                                         echo '<td>' . round($details['total_kgs'], 2) . '</td>';
-                                        echo '<td>' . round($details['total_qty_kgs'], 2) . '</td>';
                                         echo '<td>' . round($details['net_kgs'], 2);
                                         echo '<sub>' . $details['divide'] . '</sub>';
                                         echo '</td>';
-                                        echo '<td>' . $details['weight'] . '</td>';
                                         echo '<td>' . $details['total'] . '</td>';
                                         echo '<td>' . $details['price'] . '</td>';
                                         echo '<td>' . round($details['amount'], 2);
                                         echo '<sub>' . $details['currency1'] . '</sub>';
                                         echo '</td>';
-                                        echo '<td class="text-end">' . round($details['final_amount'], 2);
-                                        echo '<sub>' . $details['currency2'] . '</sub>';
+                                        if ($record['type'] !== 'local') {
+                                            echo '<td class="text-end">' . round($details['final_amount'], 2);
+                                            echo '<sub>' . $details['currency2'] . '</sub>';
+                                        } else {
+                                            echo '<td>' . $details['tax_percent'] . "%";
+                                            echo '<td>' . $details['tax_amount'];
+                                            echo '<td>' . $details['total_with_tax'];
+                                        };
                                         echo '</td>';
                                         echo '</tr>';
-                                        $rate += $details['rate1'];
+                                        $sr_details++;
                                         $qty_no += $details['qty_no'];
                                         $qty_kgs += $details['qty_kgs'];
                                         $total_kgs += $details['total_kgs'];
@@ -254,33 +273,30 @@ if ($id > 0) {
                                         $total += $details['total'];
                                         $amount += $details['amount'];
                                         $final_amount += $details['final_amount'];
-                                        $i++;
+                                        $total_tax_amount += (float)$details['tax_amount'];
+                                        $total_total_with_tax += (float)$details['total_with_tax'];
                                     }
+                                    $prepareGoodsReport = '';
                                     if ($qty_no > 0) {
-                                        $goodsTotals = [
-                                            'Quantity' => $qty_no,
-                                            'Total KGs' => round($total_kgs, 2),
-                                            'Total Quantity KGs' => round($total_qty_kgs, 2),
-                                            'Net KGs' => round($net_kgs, 2),
-                                            'Total' => round($total, 2),
-                                            'Final' => round($final_amount, 2)
-                                        ];
-                                        echo '<input type="hidden" id="goodsTotalsJSON" value=\'' . json_encode($goodsTotals) . '\'>';
-                                        echo '<tr>
-                                                <th colspan="5"></th>
-                                                <th class="fw-bold">' . $qty_no . '</th>
-                                                <th class="fw-bold">' . round($total_kgs, 2) . '</th>
-                                                <th class="fw-bold">' . round($total_qty_kgs, 2) . '</th>
-                                                <th class="fw-bold">' . round($net_kgs, 2) . '</th>
-                                                <th colspan="1"></th>
-                                                <th class="fw-bold">' . round($total, 2) . '</th>
-                                                <th></th>
-                                                <th class="fw-bold">' . round($amount, 2) . '</th>
-                                                <th class="fw-bold text-end">' . round($final_amount, 2) . '</th>
-                                                <th></th>
-                                              </tr>';
+                                        echo '<tr>';
+                                        echo '<th colspan="2"></th>';
+                                        echo '<th class="fw-bold">' . $qty_no . '</th>';
+                                        echo '<th class="fw-bold">' . round($total_kgs, 2) . '</th>';
+                                        echo '<th class="fw-bold">' . round($net_kgs, 2) . '</th>';
+                                        echo '<th class="fw-bold">' . round($total, 2) . '</th>';
+                                        echo '<th></th>';
+                                        echo '<th class="fw-bold">' . round($amount, 2) . '</th>';
+                                        if ($record['type'] === 'local') {
+                                            echo '<th></th>';
+                                            echo '<th class="fw-bold">' . round($total_tax_amount, 2) . '</th>';
+                                            echo '<th class="fw-bold">' . round($total_total_with_tax, 2) . '</th>';
+                                        }
+                                        if ($record['type'] !== 'local') {
+                                            echo '<th class="fw-bold text-end">' . round($final_amount, 2) . '</th>';
+                                        }
+                                        echo '<th></th>';
+                                        echo '</tr>';   
                                     }
-
                                     ?>
                                 </tbody>
                             </table>
@@ -310,7 +326,7 @@ if ($id > 0) {
                             array('Advance', round($partial_amount1, 2)),
                         );
                     }
-                    $adv_paid_final = purchaseSpecificData($record['id'], 'adv_paid_total');
+                    $adv_paid_final = purchaseSpecificData($record['id'], 'adv_paid_total', 'amount');
                     $bal = $partial_amount1 - $adv_paid_final;
                     ?>
                     <hr class="my-0">
@@ -341,7 +357,7 @@ if ($id > 0) {
                                     <td class="border border-dark"><?php echo $roz_arr1[3][1]; ?></td> <!-- Branch -->
                                     <td class="border border-dark"><?php echo $roz_arr2[0][1]; ?></td> <!-- Roz# -->
                                     <td class="border border-dark"><?php echo $roz_arr2[1][1]; ?></td> <!-- Name -->
-                                    <td class="border border-dark"><?php echo $roz_arr4[0][1]; ?></td> <!-- Total Amount -->
+                                    <td class="border border-dark"><?php echo $roz_arr3[0][1]; ?></td> <!-- Total Amount -->
                                     <td class="border border-dark"><?php echo $roz_arr4[1][1]; ?></td> <!-- Percent -->
                                     <td class="border border-dark"><?php echo $roz_arr4[2][1]; ?></td> <!-- Advance -->
                                     <td class="border border-dark text-success"><?php echo round($adv_paid_final); ?></td> <!-- Total -->
@@ -549,7 +565,7 @@ if ($id > 0) {
                                     <input type="hidden" name="purchase_pays_id_hidden" value="<?php echo $adv_arr['finish']['purchase_pays_id']; ?>">
                                     <input type="hidden" name="action" value="<?php echo $adv_arr['finish']['action']; ?>">
                                     <?php
-                                     if ($purchase_pays_id > 0) {
+                                    if ($purchase_pays_id > 0) {
                                         $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'transfered_from_id' => $purchase_pays_id, 'transfered_from' => 'purchase_advance'));
                                         if (mysqli_num_rows($rozQ) > 0) { ?>
                                             <table class="table table-sm table-bordered">
@@ -736,7 +752,7 @@ if ($id > 0) {
                         //     disableButton('recordSubmit');
                         // }
                         if (balance >= 1) {
-                            if (final_amount <= balance+0.5) {
+                            if (final_amount <= balance + 0.5) {
                                 enableButton('recordSubmit');
                             } else {
                                 disableButton('recordSubmit');

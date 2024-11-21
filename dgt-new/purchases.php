@@ -5,7 +5,7 @@ include("header.php");
 $remove = $goods_name = $start_print = $end_print = $type = $acc_no = $branch = $p_id = $payment_type = $sea_road = $country = $country_type = $date_type = $is_transferred = '';
 $is_search = false;
 global $connect;
-$results_per_page = 50;
+$results_per_page = 25;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $start_from = ($page - 1) * $results_per_page;
 $sql = "SELECT * FROM `transactions` WHERE p_s='p'";
@@ -94,36 +94,64 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
 <div class="fixed-top">
     <?php require_once('nav-links.php'); ?>
 </div>
-<div class="mx-5 bg-white p-3">
+<div class="mx-5 bg-white p-3" style="margin-top:-30px;">
     <div class="d-flex justify-content-between align-items-center w-100">
         <h1 class="mb-2" style="font-size: 2rem; font-weight: 700; color: #333; text-transform: uppercase; letter-spacing: 1.5px; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">
             Purchases
         </h1>
         <div class="d-flex gap-2">
+            <?php
+            // Calculate the total number of entries
+            $count_sql = "SELECT COUNT(id) AS total FROM `transactions` WHERE p_s='p'";
+            if (count($conditions) > 0) {
+                $count_sql .= ' AND ' . implode(' AND ', $conditions);
+            }
+            $count_result = mysqli_query($connect, $count_sql);
+            $row = mysqli_fetch_assoc($count_result);
+            $total_entries = $row['total'];
+            $results_per_page = 25; // Define the number of results per page
+            $total_pages = ceil($total_entries / $results_per_page);
+
+            // Determine the current page
+            $page = isset($_GET['page']) && is_numeric($_GET['page']) ? intval($_GET['page']) : 1;
+            $page = max(1, min($page, $total_pages)); // Ensure the page is within range
+
+            // Calculate the start and end entry numbers
+            $start_entry = ($page - 1) * $results_per_page + 1;
+            $end_entry = min($page * $results_per_page, $total_entries);
+
+            // Generate the base URL for pagination
+            $current_url = $_SERVER['REQUEST_URI'];
+            $url_parts = parse_url($current_url);
+            parse_str($url_parts['query'] ?? '', $query_params);
+            unset($query_params['page']);
+            $base_url = $url_parts['path'] . '?' . http_build_query($query_params);
+            ?>
+
+            <!-- Showing X-Y entries of Z -->
+            <div class="text-center mb-2">
+                <p>Showing <?= $start_entry; ?>-<?= $end_entry; ?> entries of <?= $total_entries; ?></p>
+            </div>
+
             <nav aria-label="Page navigation example">
                 <ul class="pagination justify-content-center pagination-sm">
                     <?php
-                    $current_url = $_SERVER['REQUEST_URI'];
-                    $url_parts = parse_url($current_url);
-                    parse_str($url_parts['query'] ?? '', $query_params);
-                    unset($query_params['page']);
-                    $base_url = $url_parts['path'] . '?' . http_build_query($query_params);
-                    $count_sql = "SELECT COUNT(id) AS total FROM `transactions` WHERE p_s='p'";
-                    if (count($conditions) > 0) {
-                        $count_sql .= ' AND ' . implode(' AND ', $conditions);
-                    }
-                    $count_result = mysqli_query($connect, $count_sql);
-                    $row = mysqli_fetch_assoc($count_result);
-                    $total_pages = ceil($row['total'] / $results_per_page);
+                    // Previous button
                     if ($page > 1) {
                         echo "<li class='page-item'><a class='page-link' href='" . $base_url . "&page=" . ($page - 1) . "'>Prev</a></li>";
                     } else {
                         echo "<li class='page-item disabled'><span class='page-link'>Prev</span></li>";
                     }
-                    for ($i = 1; $i <= $total_pages; $i++) {
-                        $active_class = ($i == $page) ? 'active' : '';
-                        echo "<li class='page-item $active_class'><a class='page-link' href='" . $base_url . "&page=$i'>$i</a></li>";
+
+                    // Display current page
+                    echo "<li class='page-item active'><span class='page-link'>$page</span></li>";
+
+                    // Display the next page, if it exists
+                    if ($page + 1 <= $total_pages) {
+                        echo "<li class='page-item'><a class='page-link' href='" . $base_url . "&page=" . ($page + 1) . "'>" . ($page + 1) . "</a></li>";
                     }
+
+                    // Next button
                     if ($page < $total_pages) {
                         echo "<li class='page-item'><a class='page-link' href='" . $base_url . "&page=" . ($page + 1) . "'>Next</a></li>";
                     } else {
@@ -132,6 +160,10 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     ?>
                 </ul>
             </nav>
+
+
+
+
             <div class="dropdown me-2">
                 <button class="btn btn-dark btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown">
                     New
@@ -293,24 +325,61 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
 
     <style>
         #RecordsTable {
-            height: 300px;
-            overflow-y: scroll;
+            height: calc(100vh - 250px);
+            overflow-y: auto;
+            display: block;
+            width: 100%;
         }
 
-        .fixed thead {
+        #RecordsTable table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #RecordsTable thead {
+            position: sticky;
+            top: -1px;
+            z-index: 2;
+            background-color: #f8f9fa !important;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        #RecordsTable thead th{
+            background-color: #f8f9fa !important;
+        }
+
+        #RecordsTable th,
+        #RecordsTable td {
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+
+        #RecordsTable .sticky-column {
+            position: sticky;
+            background-color: #f8f9fa !important;
+            z-index: 1;
+            /* Ensures sticky columns are on top of the other content */
+        }
+
+        #RecordsTable .sticky-row {
             position: sticky;
             top: 0;
-            z-index: 1;
-            background-color: #fff;
-            box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1);
+            background-color: #f8f9fa;
+            z-index: 3;
+        }
+        #RecordsTable .sticky-column:first-child{
+            left: 0;
+        }
+        #RecordsTable .sticky-column:nth-child(2){
+            left: 66px;
         }
     </style>
     <div class="table-responsive mt-4" id="RecordsTable">
         <table class="table table-bordered">
             <thead>
-                <tr class="text-nowrap">
-                    <th>Bill#</th>
-                    <th>Type</th>
+                <tr class="text-nowrap sticky-row">
+                    <th class="sticky-column">Bill#</th>
+                    <th class="sticky-column">Type</th>
                     <th>BR.</th>
                     <th>Date</th>
                     <th>A/c</th>
@@ -321,6 +390,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     <th>AMOUNT</th>
                     <th>PAYMENT TYPE</th>
                     <th>COUNTRY</th>
+                    <th>Delivery Terms</th>
                     <th>ROAD</th>
                     <th>LOADING COUNTRY | DATE</th>
                     <th>RECEIVING COUNTRY | DATE</th>
@@ -347,13 +417,32 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     $_fields_sr = ['l_country' => '', 'l_date' => '', 'r_country' => '', 'r_date' => ''];
                     if (!empty($sea_road_array)) {
                         $sea_road = $sea_road_array->sea_road ?? '';
-                        if ($sea_road == 'sea') {
-                            $_fields_sr = ['l_country' => $sea_road_array->l_country, 'l_date' => $sea_road_array->l_date, 'r_country' => $sea_road_array->r_country, 'r_date' => $sea_road_array->r_date];
-                        }
-                        if ($sea_road == 'road') {
-                            $_fields_sr = ['l_country' => $sea_road_array->l_country_road, 'l_date' => $sea_road_array->l_date_road, 'r_country' => $sea_road_array->r_country_road, 'r_date' => $sea_road_array->r_date_road];
+                        $_fields_sr = [];
+                        if ($sea_road === 'sea') {
+                            $_fields_sr = [
+                                'l_country' => $sea_road_array->l_country ?? '',
+                                'l_date'    => $sea_road_array->l_date ?? '',
+                                'r_country' => $sea_road_array->r_country ?? '',
+                                'r_date'    => $sea_road_array->r_date ?? '',
+                                'truck_no' => $sea_road_array->truck_no ?? '',
+                                'truck_name' => $sea_road_array->truck_name ?? '',
+                                'loading_company_name' => $sea_road_array->loading_company_name ?? '',
+                                'loading_date' => $sea_road_array->loading_date ?? '',
+                                'transfer_name' => $sea_road_array->transfer_name ?? ''
+                            ];
+                        } elseif ($sea_road === 'road') {
+                            $_fields_sr = [
+                                'l_country' => $sea_road_array->l_country_road ?? '',
+                                'l_date'    => $sea_road_array->l_date_road ?? '',
+                                'r_country' => $sea_road_array->r_country_road ?? '',
+                                'r_date'    => $sea_road_array->r_date_road ?? '',
+                                'old_company_name' => $sea_road_array->old_company_name ?? '',
+                                'transfer_company_name' => $sea_road_array->transfer_company_name ?? '',
+                                'warehouse_date' => $sea_road_array->warehouse_date ?? '',
+                            ];
                         }
                     }
+
                     $p_qty_total += !empty($totals['Qty']) ? $totals['Qty'] : 0;
                     $p_kgs_total += !empty($totals['KGs']) ? $totals['KGs'] : 0;
                     $rowColor = '';
@@ -361,11 +450,11 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                         $rowColor = $is_doc == 0 ? ' text-danger ' : ' text-warning ';
                     } ?>
                     <tr class="text-nowrap">
-                        <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $id; ?>)"
+                        <td class="sticky-column pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $id; ?>)"
                             data-bs-toggle="modal" data-bs-target="#KhaataDetails">
                             <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $id;
                             echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?></td>
-                        <td class="<?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['type']); ?></td>
+                        <td class="sticky-column <?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['type']); ?></td>
                         <td class="<?php echo $rowColor; ?> branch"><?php echo branchName($_fields_single['branch_id']); ?></td>
                         <td class="<?php echo $rowColor; ?>"><?php echo my_date($_fields_single['_date']);; ?></td>
                         <td class="acc_no <?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['cr_acc']); ?></td>
@@ -380,6 +469,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                         </td>
                         <td class="<?php echo $rowColor; ?> px-2"><?= isset($_fields_single['payment_details']->full_advance) ? ucwords($_fields_single['payment_details']->full_advance) : "No Payment Details Available"; ?></td>
                         <td class="<?php echo $rowColor; ?>"><span class="purchase_country"><?php echo $purchase['country']; ?></span></td>
+                        <td class="<?php echo $rowColor; ?>"><?php echo $purchase['delivery_terms']; ?></td>
                         <?php
                         if ($sea_road == '') {
                             echo '<td class="<?php echo $rowColor; ?>" colspan="3"></td>';
@@ -411,7 +501,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="staticBackdropLabel">PURCHASE DETAILS</h5>
-                <a href="<?php echo $mypageURL; ?>" class="btn-close" aria-label="Close"></a>
+                <a href="<?php echo $pageURL; ?>" class="btn-close" aria-label="Close"></a>
             </div>
             <div class="modal-body bg-light pt-0" id="viewDetails"></div>
         </div>
@@ -474,7 +564,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     hideRow = true;
                 }
             }
-            if(branch !== '' && branch !== rowBranch){
+            if (branch !== '' && branch !== rowBranch) {
                 hideRow = true;
             }
             if (hideRow) {

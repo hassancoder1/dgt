@@ -233,60 +233,69 @@ $mypageURL = $pageURL;
                                 $_fields_sr = ['l_country' => '', 'l_date' => '', 'r_country' => '', 'r_date' => ''];
                                 if (!empty($sea_road_array)) {
                                     $sea_road = $sea_road_array->sea_road ?? '';
-                                    if ($sea_road == 'sea') {
+                                    $_fields_sr = [];
+                                    if ($sea_road === 'sea') {
                                         $_fields_sr = [
-                                            'l_country' => $sea_road_array->l_country,
-                                            'l_date' => $sea_road_array->l_date,
-                                            'r_country' => $sea_road_array->r_country,
-                                            'r_date' => $sea_road_array->r_date
+                                            'l_country' => $sea_road_array->l_country ?? '',
+                                            'l_date'    => $sea_road_array->l_date ?? '',
+                                            'r_country' => $sea_road_array->r_country ?? '',
+                                            'r_date'    => $sea_road_array->r_date ?? '',
+                                            'truck_no' => $sea_road_array->truck_no ?? '',
+                                            'truck_name' => $sea_road_array->truck_name ?? '',
+                                            'loading_company_name' => $sea_road_array->loading_company_name ?? '',
+                                            'loading_date' => $sea_road_array->loading_date ?? '',
+                                            'transfer_name' => $sea_road_array->transfer_name ?? ''
                                         ];
-                                    }
-                                    if ($sea_road == 'road') {
+                                    } elseif ($sea_road === 'road') {
                                         $_fields_sr = [
-                                            'l_country' => $sea_road_array->l_country_road,
-                                            'l_date' => $sea_road_array->l_date_road,
-                                            'r_country' => $sea_road_array->r_country_road,
-                                            'r_date' => $sea_road_array->r_date_road
+                                            'l_country' => $sea_road_array->l_country_road ?? '',
+                                            'l_date'    => $sea_road_array->l_date_road ?? '',
+                                            'r_country' => $sea_road_array->r_country_road ?? '',
+                                            'r_date'    => $sea_road_array->r_date_road ?? '',
+                                            'old_company_name' => $sea_road_array->old_company_name ?? '',
+                                            'transfer_company_name' => $sea_road_array->transfer_company_name ?? '',
+                                            'warehouse_date' => $sea_road_array->warehouse_date ?? '',
                                         ];
                                     }
                                 }
 
                                 // $rowColor = $locked == 0 ? ($is_doc == 0 ? ' text-danger ' : ' text-warning ') : '';
-                                $trans_from = ucwords(str_replace('purchase-', '',$purchase['from']));
+                                $trans_from = ucwords(str_replace('purchase-', '', $purchase['from']));
                                 $type = '';
                                 $my_amount = '';
-                                if($purchase['from'] === 'purchase-advance'){
-                                    $type='adv';
+                                if ($purchase['from'] === 'purchase-advance') {
+                                    $type = 'adv';
                                     $my_amount = $payments['partial_amount1'];
-                                }elseif($purchase['from'] === 'purchase-remaining'){
-                                    $type='rem';
+                                } elseif ($purchase['from'] === 'purchase-remaining') {
+                                    $type = 'rem';
                                     $my_amount = $payments['partial_amount2'];
-                                }elseif($purchase['from'] === 'purchase-credit'){
-                                    $type='crdt';
+                                } elseif ($purchase['from'] === 'purchase-credit') {
+                                    $type = 'crdt';
                                     $my_amount = $payments['p_total_amount'];
-                                }elseif($purchase['from'] === 'bill-transfer'){
-                                    $type='';
+                                } elseif ($purchase['from'] === 'bill-transfer') {
+                                    $type = '';
                                     $trans_from = "Bill Transfer";
                                 }
-                                if($purchase['from'] !== 'bill-transfer'){
-                                $paid_final = purchaseSpecificData($id, $type.'_paid_total');
-                                $paid_final = (float)$paid_final;
-                                $bal = (float)$my_amount - $paid_final;
-                                $bal = $bal < 0.5 ? 0 : $bal;
+                                if ($purchase['from'] !== 'bill-transfer') {
+                                    $paid_final = purchaseSpecificData($id, $type . '_paid_total', 'amount');
+                                    $paid_final = (float)$paid_final;
+                                    $bal = (float)$my_amount - $paid_final;
+                                    $bal = $bal < 0.5 ? 0 : $bal;
 
-                                // Determine the row color based on the conditions
-                                if ($paid_final <= 0) {
-                                    $rowColor = 'text-danger'; // Red color for zero or near zero advance paid
-                                } elseif ($bal == 0) {
-                                    $rowColor = 'text-dark'; // No color if balance is zero
-                                } elseif ($paid_final > 0) {
-                                    $rowColor = 'text-warning'; // Warning color if there's some total
+                                    // Determine the row color based on the conditions
+                                    if ($paid_final <= 0) {
+                                        $rowColor = 'text-danger'; // Red color for zero or near zero advance paid
+                                    } elseif ($bal == 0) {
+                                        $rowColor = 'text-dark'; // No color if balance is zero
+                                    } elseif ($paid_final > 0) {
+                                        $rowColor = 'text-warning'; // Warning color if there's some total
+                                    } else {
+                                        $rowColor = ''; // Default case (no color)
+                                    }
                                 } else {
-                                    $rowColor = ''; // Default case (no color)
+                                    $rowColor = '';
+                                    $bal = (int)$payments['p_total_amount'] - (int)$payments['p_total_amount'];
                                 }
-                            }else{
-                                $rowColor = '';
-                            }
                             ?>
                                 <tr class="text-nowrap">
                                     <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $id; ?>)"
@@ -433,7 +442,7 @@ if (isset($_POST['tRemSubmit'])) {
     $type = 'P.R';
     if ($adv_payment_added) {
         $msg = 'Payment saved in DB. ';
-//$msg = 'Transferred to Business Roznamcha ' . $str . ' Also, transferred Loading form.';
+        //$msg = 'Transferred to Business Roznamcha ' . $str . ' Also, transferred Loading form.';
         $msgType = 'success';
         $pdQ = fetch('transactions', array('id' => $p_id));
         $p_data = mysqli_fetch_assoc($pdQ);
@@ -484,9 +493,11 @@ if (isset($_POST['tRemSubmit'])) {
                 $transferred = update('roznamchaas', $dataArrayUpdate, array('r_id' => $r_id));
             }
         } else {
-            for ($i = 1;
-                 $i <= 2;
-                 $i++) {
+            for (
+                $i = 1;
+                $i <= 2;
+                $i++
+            ) {
                 if ($i == 1) {
                     $k_data = fetch('khaata', array('id' => $jmaa_khaata_id));
                     $k_datum = mysqli_fetch_assoc($k_data);
@@ -516,7 +527,7 @@ if (isset($_POST['tRemSubmit'])) {
         }
         if ($transferred) {
             $msg .= ' And transferred to Roznamcha successfully. ';
-//$preData = array('khaata_adv' => $post_json);\
+            //$preData = array('khaata_adv' => $post_json);\
         } else {
             $msg .= ' Transfer Error :(';
             $msgType = 'danger';

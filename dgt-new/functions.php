@@ -964,7 +964,7 @@ function getSeaRoadArray($transaction_id)
     }
 }
 
-function purchaseSpecificData($purchaseId, $type)
+function purchaseSpecificData($purchaseId, $type, $GetValue = 'final_amount')
 {
     $query = fetch('transactions', array('id' => $purchaseId));
     $purchase = mysqli_fetch_assoc($query);
@@ -1013,13 +1013,13 @@ function purchaseSpecificData($purchaseId, $type)
             $data = purchasePaysArray($purchaseId, 'p_crdt');
             break;
         case 'adv_paid_total':
-            $data = purchasePaysArray($purchaseId, 'p_adv', true);
+            $data = purchasePaysArray($purchaseId, 'p_adv', true, $GetValue);
             break;
         case 'crdt_paid_total':
-            $data = purchasePaysArray($purchaseId, 'p_crdt', true);
+            $data = purchasePaysArray($purchaseId, 'p_crdt', true, $GetValue);
             break;
         case 'rem_paid_total':
-            $data = purchasePaysArray($purchaseId, 'p_rem', true);
+            $data = purchasePaysArray($purchaseId, 'p_rem', true, $GetValue);
             break;
         case 'rem':
             $data = purchasePaysArray($purchaseId, 'p_rem');
@@ -1062,7 +1062,7 @@ function purchaseSpecificData($purchaseId, $type)
     return $data;
 }
 
-function purchasePaysArray($purchaseId, $type, $final_amount = false)
+function purchasePaysArray($purchaseId, $type, $final_amount = false, $GetValue = 'final_amount')
 {
     $purchase_pays = fetch('purchase_pays', array('purchase_id' => $purchaseId, 'type' => $type));
     $x = 0;
@@ -1070,7 +1070,7 @@ function purchasePaysArray($purchaseId, $type, $final_amount = false)
     if ($final_amount) {
         if (mysqli_num_rows($purchase_pays) > 0) {
             while ($d = mysqli_fetch_assoc($purchase_pays)) {
-                $x += $d['final_amount'];
+                $x += $d[$GetValue];
             }
         }
         return $x;
@@ -1087,7 +1087,7 @@ function purchasePaysArray($purchaseId, $type, $final_amount = false)
                 'currency2' => $d['currency2'],
                 'rate' => $d['rate'],
                 'opr' => $d['opr'],
-                'final_amount' => $d['final_amount'],
+                'final_amount' => $d[$GetValue],
                 'transfer_date' => $d['transfer_date'],
                 'report' => $d['report'],
                 'created_at' => $d['created_at'],

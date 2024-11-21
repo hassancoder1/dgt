@@ -5,7 +5,7 @@ include("header.php");
 $remove = $start_print = $end_print = $type = $acc_no = $p_id = $truck_no = $sea_road = $billStatus = $blSearch = $date_type = '';
 $is_search = false;
 global $connect;
-$results_per_page = 50;
+$results_per_page = 25;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $start_from = ($page - 1) * $results_per_page;
 $sql = "SELECT * FROM `general_loading` WHERE JSON_EXTRACT(gloading_info, '$.parent_id') IS NULL";
@@ -83,9 +83,6 @@ if ($user !== 'admin') {
 $sql .= " AND JSON_EXTRACT(agent_details, '$.ag_id') IS NOT NULL ORDER BY id DESC LIMIT $start_from, $results_per_page";
 $query_string = implode('&', $print_filters);
 $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
-$count_sql = "SELECT COUNT(id) AS total FROM `general_loading`" . (count($conditions) > 0 ? " WHERE " . implode(' AND ', $conditions) : "");
-$count_result = mysqli_query($connect, $count_sql);
-$total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_page);
 ?>
 <div class="fixed-top">
     <?php require_once('nav-links.php'); ?>
@@ -104,35 +101,57 @@ $total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_pa
                     parse_str($url_parts['query'] ?? '', $query_params);
                     unset($query_params['page']);
                     $base_url = $url_parts['path'] . '?' . http_build_query($query_params);
-                    $count_sql = "SELECT COUNT(id) AS total FROM `general_loading`";
+
+                    $count_sql = "SELECT COUNT(id) AS total FROM `general_loading` WHERE JSON_EXTRACT(gloading_info, '$.parent_id') IS NULL AND JSON_EXTRACT(agent_details, '$.ag_id') IS NOT NULL";
                     if (count($conditions) > 0) {
-                        $count_sql .= " WHERE " . implode(' AND ', $conditions);
-                    } else {
-                        $count_sql .= " WHERE 1";
+                        $count_sql .= ' AND ' . implode(' AND ', $conditions);
                     }
                     $count_result = mysqli_query($connect, $count_sql);
-                    if (!$count_result) {
-                        echo "Error: " . mysqli_error($connect);
-                        exit;
-                    }
                     $row = mysqli_fetch_assoc($count_result);
                     $total_pages = ceil($row['total'] / $results_per_page);
-                    echo '<ul class="pagination">';
+
+                    // Previous button
                     if ($page > 1) {
-                        echo "<li class='page-item'><a class='page-link' href='" . $base_url . "&page=" . ($page - 1) . "'>Previous</a></li>";
+                        echo "<li class='page-item'><a class='page-link' href='" . $base_url . "&page=" . ($page - 1) . "'>Prev</a></li>";
                     } else {
                         echo "<li class='page-item disabled'><span class='page-link'>Prev</span></li>";
                     }
-                    for ($i = 1; $i <= $total_pages; $i++) {
-                        $active_class = ($i == $page) ? 'active' : '';
-                        echo "<li class='page-item $active_class'><a class='page-link' href='" . $base_url . "&page=$i'>$i</a></li>";
+
+                    // Pagination logic with ellipsis
+                    $max_displayed_pages = 5; // Maximum number of pages to display
+                    if ($total_pages <= $max_displayed_pages) {
+                        for ($i = 1; $i <= $total_pages; $i++) {
+                            $active_class = ($i == $page) ? 'active' : '';
+                            echo "<li class='page-item $active_class'><a class='page-link' href='" . $base_url . "&page=$i'>$i</a></li>";
+                        }
+                    } else {
+                        // Always display the first page
+                        echo "<li class='page-item'><a class='page-link' href='" . $base_url . "&page=1'>1</a></li>";
+                        if ($page > 3) {
+                            echo "<li class='page-item disabled'><span class='page-link'>...</span></li>";
+                        }
+
+                        // Display pages around the current page
+                        $start = max(2, $page - 1);
+                        $end = min($total_pages - 1, $page + 1);
+                        for ($i = $start; $i <= $end; $i++) {
+                            $active_class = ($i == $page) ? 'active' : '';
+                            echo "<li class='page-item $active_class'><a class='page-link' href='" . $base_url . "&page=$i'>$i</a></li>";
+                        }
+
+                        // Always display the last page
+                        if ($page < $total_pages - 2) {
+                            echo "<li class='page-item disabled'><span class='page-link'>...</span></li>";
+                        }
+                        echo "<li class='page-item'><a class='page-link' href='" . $base_url . "&page=$total_pages'>$total_pages</a></li>";
                     }
+
+                    // Next button
                     if ($page < $total_pages) {
                         echo "<li class='page-item'><a class='page-link' href='" . $base_url . "&page=" . ($page + 1) . "'>Next</a></li>";
                     } else {
                         echo "<li class='page-item disabled'><span class='page-link'>Next</span></li>";
                     }
-                    echo '</ul>';
                     ?>
                 </ul>
             </nav>
@@ -252,22 +271,6 @@ $total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_pa
             </div>
         </div>
     </form>
-
-    <style>
-        #RecordsTable {
-            height: 300px;
-            overflow-y: scroll;
-        }
-
-        .fixed thead {
-            position: sticky;
-            top: 0;
-            z-index: 1;
-            background-color: #fff;
-            box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1);
-        }
-    </style>
-
     <div class="table-responsive mt-4" id="RecordsTable">
         <table class="table table-bordered">
             <thead>
@@ -332,9 +335,6 @@ $total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_pa
                     $currentBillNumber = json_decode($SingleLoading['gloading_info'], true)['billNumber'] ?? '';
                     $grandTotal = $paymentTotals[$loadingId];
                     $SuperCode = $rowColor . ' pointer" onclick="window.location.href = \'carry-bill?view=1&id=' . $loadingId . '\';"';
-                    if (SuperAdmin()) {
-                        $SuperCode .= ' data-bs-toggle="modal" data-bs-target="#KhaataDetails"';
-                    }
                     $primaryId = $paymentsData[$loadingId] ?? null;
                     $roznamchaasDisplay = $createdAt = '';
                     if ($primaryId && isset($roznamchaasData[$primaryId])) {
@@ -379,17 +379,6 @@ $total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_pa
     role="dialog" aria-labelledby="staticBackdropLabel" aria-hidden="true">
     <div class="modal-dialog modal-fullscreen -modal-xl -modal-dialog-centered" role="document">
         <div class="modal-content">
-            <div class="modal-header d-flex justify-content-between align-items-center">
-                <h5 class="modal-title" id="staticBackdropLabel">Agent Carry Bill</h5>
-                <div class="d-flex align-items-center">
-
-
-                    <!-- Close Button -->
-                    <a href="<?php echo $pageURL; ?>" class="btn-close ms-3" aria-label="Close"></a>
-                </div>
-            </div>
-
-
             <div class="modal-body bg-light pt-0" id="viewDetails"></div>
         </div>
     </div>
@@ -448,10 +437,10 @@ if (isset($_POST['agPaymentSubmit'])) {
     $jmaa_khaata_id = mysqli_real_escape_string($connect, $_POST['dr_khaata_id']);
     $bnaam_khaata_no = mysqli_real_escape_string($connect, $_POST['cr_khaata_no']);
     $bnaam_khaata_id = mysqli_real_escape_string($connect, $_POST['cr_khaata_id']);
-
     $transfer_date = mysqli_real_escape_string($connect, $_POST['transfer_date']);
     $amount = mysqli_real_escape_string($connect, $_POST['amount']);
-    $details = mysqli_real_escape_string($connect, $_POST['details']);
+    $final_amount = mysqli_real_escape_string($connect, $_POST['final_amount']);
+    $details = mysqli_real_escape_string($connect, $_POST['details']) . " | Amount: $amount " . $_POST['currency1'] . " " . $_POST['opr'] . " " . $_POST['rate'] . ' = ' . $final_amount . " " . $_POST['currency2'];
     $p_id = mysqli_real_escape_string($connect, $_POST['parent_payment_id']);
     $type_post = "Agent Bill";
     $url = $pageURL . '?view=1&id=' . $_POST['loading_id'];
@@ -487,24 +476,24 @@ if (isset($_POST['agPaymentSubmit'])) {
                     /*$k_data = fetch('khaata', array('id' => $jmaa_khaata_id));
                     $k_datum = mysqli_fetch_assoc($k_data);*/
                     $k_datum = khaataSingle($jmaa_khaata_id);
-                    $dataArrayUpdate['details'] = 'Dr. A/c:' . $bnaam_khaata_no . " $amount " . $details;
+                    $dataArrayUpdate['details'] = 'Dr. A/c:' . $bnaam_khaata_no . " " . $details;
                     $dataArrayUpdate['r_name'] = $type;
                     $dataArrayUpdate['cat_id'] = $k_datum['cat_id'];
                     $dataArrayUpdate['khaata_branch_id'] = $k_datum['branch_id'];
                     $dataArrayUpdate['khaata_id'] = $jmaa_khaata_id;
                     $dataArrayUpdate['khaata_no'] = $jmaa_khaata_no;
-                    $dataArrayUpdate['amount'] = $amount;
+                    $dataArrayUpdate['amount'] = $final_amount;
                     $str .= "<span class='badge bg-dark mx-2'> Dr. " . $jmaa_khaata_no . "</span>";
                 }
                 if ($i == 2) {
                     $k_datum = khaataSingle($bnaam_khaata_id);
-                    $dataArrayUpdate['details'] = 'Cr. A/c:' . $jmaa_khaata_no . " $amount " . $details;
+                    $dataArrayUpdate['details'] = 'Cr. A/c:' . $jmaa_khaata_no . " " . $details;
                     $dataArrayUpdate['r_name'] = $type;
                     $dataArrayUpdate['cat_id'] = $k_datum['cat_id'];
                     $dataArrayUpdate['khaata_branch_id'] = $k_datum['branch_id'];
                     $dataArrayUpdate['khaata_id'] = $bnaam_khaata_id;
                     $dataArrayUpdate['khaata_no'] = $bnaam_khaata_no;
-                    $dataArrayUpdate['amount'] = $amount;
+                    $dataArrayUpdate['amount'] = $final_amount;
                     $str .= "<span class='badge bg-dark mx-2'> Cr. " . $bnaam_khaata_no . "</span>";
                 }
                 $done = update('roznamchaas', $dataArrayUpdate, array('r_id' => $r_id));
@@ -518,9 +507,9 @@ if (isset($_POST['agPaymentSubmit'])) {
                     $dataArray['khaata_branch_id'] = $k_datum['branch_id'];
                     $dataArray['khaata_id'] = $jmaa_khaata_id;
                     $dataArray['khaata_no'] = $jmaa_khaata_no;
-                    $dataArray['amount'] = $amount;
+                    $dataArray['amount'] = $final_amount;
                     $dataArray['dr_cr'] = 'dr';
-                    $dataArray['details'] = 'Dr. A/c:' . $bnaam_khaata_no . ' ' . $details;
+                    $dataArray['details'] = 'Dr. A/c:' . $bnaam_khaata_no . " " . $details;
                     $str .= "<span class='badge bg-dark mx-2'>Dr." . $jmaa_khaata_no . "</span>";
                 }
                 if ($i == 2) {
@@ -530,9 +519,9 @@ if (isset($_POST['agPaymentSubmit'])) {
                     $dataArray['khaata_branch_id'] = $k_datum['branch_id'];
                     $dataArray['khaata_id'] = $bnaam_khaata_id;
                     $dataArray['khaata_no'] = $bnaam_khaata_no;
-                    $dataArray['amount'] = $amount;
+                    $dataArray['amount'] = $final_amount;
                     $dataArray['dr_cr'] = 'cr';
-                    $dataArray['details'] = 'Cr. A/c:' . $jmaa_khaata_no . ' ' . $details;
+                    $dataArray['details'] = 'Cr. A/c:' . $jmaa_khaata_no . " " . $details;
                     $str .= "<span class='badge bg-dark mx-2'>Cr." . $bnaam_khaata_no . "</span>";
                 }
                 $done = insert('roznamchaas', $dataArray);

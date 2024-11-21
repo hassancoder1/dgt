@@ -219,17 +219,35 @@ $mypageURL = $pageURL;
                             $KGs = empty($_fields_single['items_sum']) ? '' : $_fields_single['items_sum']['sum_total_kgs'];
 
                             $sea_road = '';
-                            $sea_road_array = json_decode(getSeaRoadArray($id));
-                            $_fields_sr = ['l_country' => '', 'l_date' => '', 'r_country' => '', 'r_date' => ''];
-                            if (!empty($sea_road_array)) {
-                                $sea_road = $sea_road_array->sea_road ?? '';
-                                if ($sea_road == 'sea') {
-                                    $_fields_sr = ['l_country' => $sea_road_array->l_country, 'l_date' => $sea_road_array->l_date, 'r_country' => $sea_road_array->r_country, 'r_date' => $sea_road_array->r_date];
-                                }
-                                if ($sea_road == 'road') {
-                                    $_fields_sr = ['l_country' => $sea_road_array->l_country_road, 'l_date' => $sea_road_array->l_date_road, 'r_country' => $sea_road_array->r_country_road, 'r_date' => $sea_road_array->r_date_road];
-                                }
-                            }
+                    $sea_road_array = json_decode(getSeaRoadArray($id));
+                    $_fields_sr = ['l_country' => '', 'l_date' => '', 'r_country' => '', 'r_date' => ''];
+                    if (!empty($sea_road_array)) {
+                        $sea_road = $sea_road_array->sea_road ?? '';
+                        $_fields_sr = [];
+                        if ($sea_road === 'sea') {
+                            $_fields_sr = [
+                                'l_country' => $sea_road_array->l_country ?? '',
+                                'l_date'    => $sea_road_array->l_date ?? '',
+                                'r_country' => $sea_road_array->r_country ?? '',
+                                'r_date'    => $sea_road_array->r_date ?? '',
+                                'truck_no' => $sea_road_array->truck_no ?? '',
+                                'truck_name' => $sea_road_array->truck_name ?? '',
+                                'loading_company_name' => $sea_road_array->loading_company_name ?? '',
+                                'loading_date' => $sea_road_array->loading_date ?? '',
+                                'transfer_name' => $sea_road_array->transfer_name ?? ''
+                            ];
+                        } elseif ($sea_road === 'road') {
+                            $_fields_sr = [
+                                'l_country' => $sea_road_array->l_country_road ?? '',
+                                'l_date'    => $sea_road_array->l_date_road ?? '',
+                                'r_country' => $sea_road_array->r_country_road ?? '',
+                                'r_date'    => $sea_road_array->r_date_road ?? '',
+                                'old_company_name' => $sea_road_array->old_company_name ?? '',
+                                'transfer_company_name' => $sea_road_array->transfer_company_name ?? '',
+                                'warehouse_date' => $sea_road_array->warehouse_date ?? '',
+                            ];
+                        }
+                    }
 
                             if ($is_search) {
                                 // if ($start != '') {
@@ -361,7 +379,12 @@ if (isset($_POST['ttrFirstSubmit'])) {
 
     $transfer_date = mysqli_real_escape_string($connect, $_POST['transfer_date']);
     $amount = mysqli_real_escape_string($connect, $_POST['amount']);
-    $details = mysqli_real_escape_string($connect, $_POST['details']);
+    $final_amount = mysqli_real_escape_string($connect, $_POST['final_amount']);
+    if(!empty($final_amount)){
+    $details = mysqli_real_escape_string($connect, $_POST['details']) . " | Amount: $amount " . $_POST['currency1'] . " " . $_POST['opr'] . " " . $_POST['rate'] . ' = ' . $final_amount . " " . $_POST['currency2'];
+    }else{
+    $details = mysqli_real_escape_string($connect, $_POST['details']) . " | Amount: $amount ";
+    }
     $p_id = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
     $type_post = mysqli_real_escape_string($connect, $_POST['type']);
     $url = $pageURL . '?id=' . $p_id;
@@ -397,24 +420,24 @@ if (isset($_POST['ttrFirstSubmit'])) {
                     /*$k_data = fetch('khaata', array('id' => $jmaa_khaata_id));
                     $k_datum = mysqli_fetch_assoc($k_data);*/
                     $k_datum = khaataSingle($jmaa_khaata_id);
-                    $dataArrayUpdate['details'] = 'Dr. A/c:' . $bnaam_khaata_no . ' ' . $details;
+                    $dataArrayUpdate['details'] = 'Dr. A/c:' . $bnaam_khaata_no . " " . $details;
                     $dataArrayUpdate['r_name'] = $type;
                     $dataArrayUpdate['cat_id'] = $k_datum['cat_id'];
                     $dataArrayUpdate['khaata_branch_id'] = $k_datum['branch_id'];
                     $dataArrayUpdate['khaata_id'] = $jmaa_khaata_id;
                     $dataArrayUpdate['khaata_no'] = $jmaa_khaata_no;
-                    $dataArrayUpdate['amount'] = $amount;
+                    $dataArrayUpdate['amount'] = !empty($final_amount) ? $final_amount : $amount;
                     $str .= "<span class='badge bg-dark mx-2'> Dr. " . $jmaa_khaata_no . "</span>";
                 }
                 if ($i == 2) {
                     $k_datum = khaataSingle($bnaam_khaata_id);
-                    $dataArrayUpdate['details'] = 'Cr. A/c:' . $jmaa_khaata_no . ' ' . $details;
+                    $dataArrayUpdate['details'] = 'Cr. A/c:' . $jmaa_khaata_no . " " . $details;
                     $dataArrayUpdate['r_name'] = $type;
                     $dataArrayUpdate['cat_id'] = $k_datum['cat_id'];
                     $dataArrayUpdate['khaata_branch_id'] = $k_datum['branch_id'];
                     $dataArrayUpdate['khaata_id'] = $bnaam_khaata_id;
                     $dataArrayUpdate['khaata_no'] = $bnaam_khaata_no;
-                    $dataArrayUpdate['amount'] = $amount;
+                    $dataArrayUpdate['amount'] = !empty($final_amount) ? $final_amount : $amount;
                     $str .= "<span class='badge bg-dark mx-2'> Cr. " . $bnaam_khaata_no . "</span>";
                 }
                 $done = update('roznamchaas', $dataArrayUpdate, array('r_id' => $r_id));
@@ -428,9 +451,9 @@ if (isset($_POST['ttrFirstSubmit'])) {
                     $dataArray['khaata_branch_id'] = $k_datum['branch_id'];
                     $dataArray['khaata_id'] = $jmaa_khaata_id;
                     $dataArray['khaata_no'] = $jmaa_khaata_no;
-                    $dataArray['amount'] = $amount;
+                    $dataArray['amount'] = !empty($final_amount) ? $final_amount : $amount;
                     $dataArray['dr_cr'] = 'dr';
-                    $dataArray['details'] = 'Dr. A/c:' . $bnaam_khaata_no . ' ' . $details;
+                    $dataArray['details'] = 'Dr. A/c:' . $bnaam_khaata_no . " " . $details;
                     $str .= "<span class='badge bg-dark mx-2'>Dr." . $jmaa_khaata_no . "</span>";
                 }
                 if ($i == 2) {
@@ -440,9 +463,9 @@ if (isset($_POST['ttrFirstSubmit'])) {
                     $dataArray['khaata_branch_id'] = $k_datum['branch_id'];
                     $dataArray['khaata_id'] = $bnaam_khaata_id;
                     $dataArray['khaata_no'] = $bnaam_khaata_no;
-                    $dataArray['amount'] = $amount;
+                    $dataArray['amount'] = !empty($final_amount) ? $final_amount : $amount;
                     $dataArray['dr_cr'] = 'cr';
-                    $dataArray['details'] = 'Cr. A/c:' . $jmaa_khaata_no . ' ' . $details;
+                    $dataArray['details'] = 'Cr. A/c:' . $jmaa_khaata_no . " " . $details;
                     $str .= "<span class='badge bg-dark mx-2'>Cr." . $bnaam_khaata_no . "</span>";
                 }
                 $done = insert('roznamchaas', $dataArray);

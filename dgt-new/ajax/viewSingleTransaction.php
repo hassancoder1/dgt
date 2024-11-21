@@ -4,8 +4,13 @@ $level = $_POST['level'];
 if ($id > 0) {
     $records = fetch('transactions', array('id' => $id));
     $record = mysqli_fetch_assoc($records);
+    $sea_road = json_decode($record['sea_road'], true);
     $_fields = transactionSingle($id);
+    $_fields['sea_road_array'] = array_merge($_fields['sea_road_array'], !empty($sea_road) ? $sea_road : []);
     $notify_party = isset($record['notify_party_details']) ? json_decode($record['notify_party_details'], true) : false;
+    if ($record['type'] === 'local') {
+        $notify_party = '';
+    }
     if (!empty($_fields)) { ?>
         <div class="row">
             <div class="col-10 order-0 content-column">
@@ -53,77 +58,94 @@ if ($id > 0) {
                                     echo '<div><b>Company Details </b>' . nl2br($_fields['cr_acc_details']) . '</div>';
                                 } ?>
                             </div>
-                            <div class="col-md-4">
-                                <strong>Notify Party Details</strong>
-                                <?php if ($notify_party) { ?>
-                                    <div><b>Acc No. </b><?= $notify_party['np_acc']; ?></div>
-                                    <div><b>Acc Name </b><?php echo $notify_party['np_acc_name']; ?></div>
-                                <?php
-                                    if (!empty($notify_party['np_acc_details'])) {
-                                        $details = $notify_party['np_acc_details'];
-                                        $countryPos = strpos($details, 'Country');
-                                        if ($countryPos !== false) {
-                                            $companyName = substr($details, 0, $countryPos);
-                                            $remainingDetails = substr($details, $countryPos);
-                                            echo '<div><b>Company Name: </b>' . trim($companyName) . '</div>';
-                                            echo '<div><b>Details: </b>' . nl2br($remainingDetails) . '</div>';
-                                        } else {
-                                            echo '<div><b>Company Details: </b>' . nl2br($details) . '</div>';
+                            <?php if ($notify_party !== ''): ?>
+                                <div class="col-md-4">
+                                    <strong>Notify Party Details</strong>
+                                    <?php if ($notify_party) { ?>
+                                        <div><b>Acc No. </b><?= $notify_party['np_acc']; ?></div>
+                                        <div><b>Acc Name </b><?php echo $notify_party['np_acc_name']; ?></div>
+                                    <?php
+                                        if (!empty($notify_party['np_acc_details'])) {
+                                            $details = $notify_party['np_acc_details'];
+                                            $countryPos = strpos($details, 'Country');
+                                            if ($countryPos !== false) {
+                                                $companyName = substr($details, 0, $countryPos);
+                                                $remainingDetails = substr($details, $countryPos);
+                                                echo '<div><b>Company Name: </b>' . trim($companyName) . '</div>';
+                                                echo '<div><b>Details: </b>' . nl2br($remainingDetails) . '</div>';
+                                            } else {
+                                                echo '<div><b>Company Details: </b>' . nl2br($details) . '</div>';
+                                            }
                                         }
+                                    } else {
+                                        echo "Notify Party Details Not Added!";
                                     }
-                                } else {
-                                    echo "Notify Party Details Not Added!";
-                                }
-                                ?>
+                                    ?>
 
-                            </div>
+                                </div>
+                            <?php endif; ?>
                         </div>
                         <?php if (!empty($_fields['sea_road_array'])): ?>
                             <div class="row gy-1 border-bottom py-1">
                                 <div class="col-md-12">
-                                    <span class="fs-6 fw-bold">By </span>
-                                    <?php echo $_fields['sea_road']; ?>
+                                    <span class="fs-6 fw-bold">
+                                        <?= $_fields['type'] === 'booking' ? 'By ' . $_fields['sea_road'] : (isset($_fields['sea_road_array']['truck_no']) ? 'Loading Transfer' : 'WareHouse Transfer'); ?> </span>
+
                                 </div>
-                                <div class="col-md-3">
-                                    <div class="fs-6 fw-bold">Loading Details</div>
-                                    <div>
-                                        <?php
-                                        $loadingDetails = [];
-                                        foreach ($_fields['sea_road_array'] as $key => $value) {
-                                            if (strpos($key, 'l_') === 0) {
-                                                if (is_array($value)) {
-                                                    echo '<b>' . $value[0] . ':</b> ' . $value[1] . '<br>';
-                                                    $loadingDetails[$value[0]] = $value[1];
-                                                } else {
-                                                    echo '<b>' . strtoupper($key) . ':</b> ' . $value . '<br>';
-                                                    $loadingDetails[strtoupper($key)] = $value;
+                                <?php if ($_fields['type'] === 'booking'):
+                                    $_fields['sea_road_array']['l_date_road'] = '';
+                                    $_fields['sea_road_array']['r_date_road'] = ''; ?>
+                                    <div class="col-md-3">
+                                        <div class="fs-6 fw-bold">Loading Details</div>
+                                        <div>
+                                            <?php
+                                            foreach ($_fields['sea_road_array'] as $key => $value) {
+                                                if (strpos($key, 'l_') === 0 && !empty($value)) {
+                                                    if (is_array($value)) {
+                                                        echo '<b>' . $value[0] . ':</b> ' . $value[1] . '<br>';
+                                                    } else {
+                                                        echo '<b>' . ucwords(str_replace('_', ' ', str_replace('l_', '', $key))) . ':</b> ' . $value . '<br>';
+                                                    }
                                                 }
                                             }
-                                        }
-                                        ?>
+                                            ?>
+                                        </div>
                                     </div>
-                                    <input type="hidden" id="loadingDetailsJSON" value='<?= json_encode($loadingDetails); ?>'>
-                                </div>
-
-
-                                <!-- Receiving Country Column -->
-                                <div class="col-md-3">
-                                    <div class="fs-6 fw-bold">Receiving Details</div>
-                                    <?php foreach ($_fields['sea_road_array'] as $key => $value): ?>
+                                    <!-- Receiving Country Column -->
+                                    <div class="col-md-3">
+                                        <div class="fs-6 fw-bold">Receiving Details</div>
+                                        <?php foreach ($_fields['sea_road_array'] as $key => $value): ?>
+                                            <?php
+                                            if (!empty($value) && strpos($key, 'r_') === 0):
+                                                if (is_array($value)) {
+                                                    $label = ($key === 'd_date_road') ? 'Arrival Date' : $value[0];
+                                                    echo '<b>' . $label . ':</b> ' . $value[1] . '<br>';
+                                                } else {
+                                                    echo '<b>' . ucwords(str_replace('_', ' ', str_replace('r_', '', $key))) . ':</b> ' . $value . '<br>';
+                                                }
+                                            endif;
+                                            ?>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="col-md-4">
                                         <?php
-                                        // Check if the key starts with 'r_' (receiving-related) or 'd_' (delivery-related)
-                                        if (strpos($key, 'r_') === 0 || strpos($key, 'd_') === 0):
-                                            if (is_array($value)) {
-                                                // For delivery dates, show the label as "Arrival Date" instead of just the key
-                                                $label = ($key === 'd_date_road') ? 'Arrival Date' : $value[0];
-                                                echo '<b>' . $label . ':</b> ' . $value[1] . '<br>';
-                                            } else {
-                                                echo '<b>' . strtoupper($key) . ':</b> ' . $value . '<br>';
-                                            }
-                                        endif;
-                                        ?>
-                                    <?php endforeach; ?>
-                                </div>
+                                        if ($_fields['sea_road_array']['sea_road'] === 'sea'): ?>
+                                            <b>Truck No:</b> <?= $_fields['sea_road_array']['truck_no'] ?? 'N/A'; ?><br>
+                                            <b>Truck Name:</b> <?= $_fields['sea_road_array']['truck_name'] ?? 'N/A'; ?><br>
+                                            <b>Loading Company:</b> <?= $_fields['sea_road_array']['loading_company_name'] ?? 'N/A'; ?><br>
+                                            <b>Loading Date:</b> <?= $_fields['sea_road_array']['loading_date'] ?? 'N/A'; ?><br>
+                                            <b>Transfer Name:</b> <?= $_fields['sea_road_array']['transfer_name'] ?? 'N/A'; ?><br>
+                                        <?php endif; ?>
+                                        <?php if ($_fields['sea_road_array']['sea_road'] === 'road'): ?>
+                                            <b>Old Company Name:</b> <?= $_fields['sea_road_array']['old_company_name'] ?? 'N/A'; ?><br>
+                                            <b>Transfer Company Name:</b> <?= $_fields['sea_road_array']['transfer_company_name'] ?? 'N/A'; ?><br>
+                                            <b>Warehouse Date:</b> <?= $_fields['sea_road_array']['warehouse_date'] ?? 'N/A'; ?><br>
+                                        <?php endif; ?>
+                                        </ul>
+                                    </div>
+                                <?php endif; ?>
+
 
                                 <div class="col-md-6">
                                     <div class="fs-6 fw-bold">Payment Details</div>
@@ -201,59 +223,57 @@ if ($id > 0) {
                             </div>
                         <?php endif; ?>
                         <?php if (!empty($_fields['items'])) { ?>
-                            <table class="table mb-0 table-hover table-sm">
+                            <table class="table table-hover mb-0">
                                 <thead>
-                                    <tr>
+                                    <tr class="text-nowrap">
                                         <th>#</th>
-                                        <th>Goods</th>
-                                        <th>SIZE</th>
-                                        <th>BRAND</th>
-                                        <th>ORIGIN</th>
-                                        <th>Qty</th>
-                                        <th>Total KGs</th>
-                                        <th>Total Qty KGs</th>
-                                        <th>Net KGs</th>
-                                        <th>Wt.</th>
-                                        <th>Total</th>
-                                        <th>Price</th>
-                                        <th>Amount</th>
-                                        <th>Final</th>
+                                        <th>GOODS / SIZE / BRAND / ORIGIN</th>
+                                        <th>QTY</th>
+                                        <th>KGs</th>
+                                        <th>NET KGs</th>
+                                        <th>TOTAL</th>
+                                        <th>PRICE</th>
+                                        <th>AMOUNT</th>
+                                        <?php if ($record['type'] !== 'local') { ?>
+                                            <th class="text-end">FINAL</th>
+                                        <?php } else {; ?>
+                                            <th>Tax%</th>
+                                            <th>Tax.Amt</th>
+                                            <th>Amt+Tax</th>
+                                        <?php } ?>
+                                        <th></th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php $items = $_fields['items'];
-                                    $qty_no = $qty_kgs = $total_kgs = $total_qty_kgs = $net_kgs = $total = $amount = $final_amount = 0;
-                                    $i = 0;
-                                    $rate = 0;
-                                    foreach ($items as $details) {
-                                        $goods = goodsName($details['goods_id']);
-                                        $t_country = $details['origin'];
-                                        $allot = $details['allotment_name'];
-                                        $curr1 = $details['currency1'];
-                                        $curr2 = $details['currency2'];
+                                    <?php $sr_details = 1;
+                                    $qty_no = $qty_kgs = $total_kgs = $total_qty_kgs = $net_kgs = $total = $amount = $final_amount = $total_tax_amount = $total_total_with_tax = 0;
+                                    $pur_d_q = fetch('transaction_items', array('parent_id' => $id));
+                                    while ($details = mysqli_fetch_assoc($pur_d_q)) {
+                                        $details_id = $details['id'];
                                         echo '<tr>';
                                         echo '<td>' . $details['sr'] . '</td>';
-                                        echo '<td>' . goodsName($details['goods_id']) . '</td>';
-                                        echo '<td>' . $details['size'] . '</td>';
-                                        echo '<td>' . $details['brand'] . '</td>';
-                                        echo '<td>' . $details['origin'] . '</td>';
+                                        echo '<td><a class="text-dark">' . goodsName($details['goods_id']) . '</a> / ' . $details['size'] . ' / ' . $details['brand'] . ' / ' . $details['origin'] . '</td>';
                                         echo '<td>' . $details['qty_no'] . '<sub>' . $details['qty_name'] . '</sub></td>';
                                         echo '<td>' . round($details['total_kgs'], 2) . '</td>';
-                                        echo '<td>' . round($details['total_qty_kgs'], 2) . '</td>';
                                         echo '<td>' . round($details['net_kgs'], 2);
                                         echo '<sub>' . $details['divide'] . '</sub>';
                                         echo '</td>';
-                                        echo '<td>' . $details['weight'] . '</td>';
                                         echo '<td>' . $details['total'] . '</td>';
                                         echo '<td>' . $details['price'] . '</td>';
                                         echo '<td>' . round($details['amount'], 2);
                                         echo '<sub>' . $details['currency1'] . '</sub>';
                                         echo '</td>';
-                                        echo '<td class="text-end">' . round($details['final_amount'], 2);
-                                        echo '<sub>' . $details['currency2'] . '</sub>';
+                                        if ($record['type'] !== 'local') {
+                                            echo '<td class="text-end">' . round($details['final_amount'], 2);
+                                            echo '<sub>' . $details['currency2'] . '</sub>';
+                                        } else {
+                                            echo '<td>' . $details['tax_percent'] . "%";
+                                            echo '<td>' . $details['tax_amount'];
+                                            echo '<td>' . $details['total_with_tax'];
+                                        };
                                         echo '</td>';
                                         echo '</tr>';
-                                        $rate += $details['rate1'];
+                                        $sr_details++;
                                         $qty_no += $details['qty_no'];
                                         $qty_kgs += $details['qty_kgs'];
                                         $total_kgs += $details['total_kgs'];
@@ -262,113 +282,36 @@ if ($id > 0) {
                                         $total += $details['total'];
                                         $amount += $details['amount'];
                                         $final_amount += $details['final_amount'];
-                                        $i++;
+                                        $total_tax_amount += (float)$details['tax_amount'];
+                                        $total_total_with_tax += (float)$details['total_with_tax'];
                                     }
+                                    $prepareGoodsReport = '';
                                     if ($qty_no > 0) {
-                                        $goodsTotals = [
-                                            'Quantity' => $qty_no,
-                                            'Total KGs' => round($total_kgs, 2),
-                                            'Total Quantity KGs' => round($total_qty_kgs, 2),
-                                            'Net KGs' => round($net_kgs, 2),
-                                            'Total' => round($total, 2),
-                                            'Final' => round($final_amount, 2)
-                                        ];
-                                        echo '<input type="hidden" id="goodsTotalsJSON" value=\'' . json_encode($goodsTotals) . '\'>';
-                                        echo '<tr>
-                                                <th colspan="5"></th>
-                                                <th class="fw-bold">' . $qty_no . '</th>
-                                                <th class="fw-bold">' . round($total_kgs, 2) . '</th>
-                                                <th class="fw-bold">' . round($total_qty_kgs, 2) . '</th>
-                                                <th class="fw-bold">' . round($net_kgs, 2) . '</th>
-                                                <th colspan="1"></th>
-                                                <th class="fw-bold">' . round($total, 2) . '</th>
-                                                <th></th>
-                                                <th class="fw-bold">' . round($amount, 2) . '</th>
-                                                <th class="fw-bold text-end">' . round($final_amount, 2) . '</th>
-                                                <th></th>
-                                              </tr>';
+                                        echo '<tr>';
+                                        echo '<th colspan="2"></th>';
+                                        echo '<th class="fw-bold">' . $qty_no . '</th>';
+                                        echo '<th class="fw-bold">' . round($total_kgs, 2) . '</th>';
+                                        echo '<th class="fw-bold">' . round($net_kgs, 2) . '</th>';
+                                        echo '<th class="fw-bold">' . round($total, 2) . '</th>';
+                                        echo '<th></th>';
+                                        echo '<th class="fw-bold">' . round($amount, 2) . '</th>';
+                                        if ($record['type'] === 'local') {
+                                            echo '<th></th>';
+                                            echo '<th class="fw-bold">' . round($total_tax_amount, 2) . '</th>';
+                                            echo '<th class="fw-bold">' . round($total_total_with_tax, 2) . '</th>';
+                                        }
+                                        if ($record['type'] !== 'local') {
+                                            echo '<th class="fw-bold text-end">' . round($final_amount, 2) . '</th>';
+                                        }
+                                        echo '<th></th>';
+                                        echo '</tr>';   
                                     }
-
                                     ?>
                                 </tbody>
                             </table>
                         <?php } ?>
                     </div>
                     <?php if ($_POST['page'] !== "bill-transfer") { ?>
-                        <script>
-                            function presetValue(SelectValue = '') {
-                                let reportType = SelectValue !== '' ? SelectValue : document.getElementById('reportType').value;
-                                let reportTextArea = document.getElementById('reportBox');
-
-                                let content = {};
-                                if (reportType === 'goods_details') {
-                                    content = JSON.parse(document.getElementById('goodsTotalsJSON').value);
-                                } else if (reportType === 'loading_details') {
-                                    content = JSON.parse(document.getElementById('loadingDetailsJSON').value);
-                                } else if (reportType === 'payment_details') {
-                                    content = JSON.parse(document.getElementById('paymentDetailsJSON').value);
-                                }
-
-                                if (Object.keys(content).length > 0) {
-                                    let contentString = '';
-                                    for (const [key, value] of Object.entries(content)) {
-                                        contentString += `${key}: ${value} `;
-                                    }
-                                    contentString = contentString.trim();
-
-                                    let currentText = reportTextArea.value.trim();
-                                    // Check for duplication before prepending
-                                    if (!currentText.startsWith(contentString)) {
-                                        reportTextArea.value = contentString + ' ' + currentText;
-                                    }
-                                } else {
-                                    reportTextArea.value = ''; // Clear the textarea if no content is found
-                                }
-                            }
-
-
-                            // This listener will clear the textarea when the report type changes
-                            document.getElementById('reportType').addEventListener('change', function() {
-                                document.getElementById('reportBox').value = ''; // Clear the textarea
-                                presetValue(this.value); // Set the preset value based on the new selection
-                            });
-
-                            function openModal(reportType = '', reportText = '') {
-                                document.getElementById('customModal').style.display = 'block';
-                                document.getElementById('reportType').value = reportType !== '' ? reportType : '';
-
-                                // Set the textarea with the preset value
-                                presetValue(reportType);
-
-                                // Additional handling to get report details for editing
-                                if (reportText !== '') {
-                                    let reportForEdit = document.getElementById(reportText).textContent.trim();
-                                    document.getElementById('reportBox').value = reportForEdit; // Set the textarea for editing
-                                }
-
-                                if (reportType === '' && reportText === '') {
-                                    document.getElementById('modalHeading').innerText = 'Add Report';
-                                    document.getElementById('modalButton').innerText = 'Add Report';
-                                    document.getElementById('reportBox').value = ''; // Clear the textarea for new report
-                                } else {
-                                    document.getElementById('modalHeading').innerText = 'Update Report';
-                                    document.getElementById('modalButton').innerText = 'Update Report';
-                                }
-                            }
-
-                            function closeModal() {
-                                document.getElementById('customModal').style.display = 'none';
-                            }
-
-                            window.onclick = event => {
-                                if (event.target === document.getElementById('customModal')) closeModal();
-                            };
-
-                            // let reportsData;
-                        </script>
-
-
-
                         <?php
                         if (isset($record['reports']) && !empty($record['reports']) && $record['reports'] !== '[]') {
                             $purchase_reports = json_decode($record['reports'], true);
@@ -410,24 +353,17 @@ if ($id > 0) {
                                         </tbody>
                                     </table>
                                 </div>
-                                <script>
-                                    // reportsData = <?php echo json_encode($purchase_reports, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
-                                </script>
+
                             <?php
                             } else {
                                 echo '<strong class="p-3">No Reports Found!</strong>';
                             ?>
-                                <script>
-                                    // reportsData = '';
-                                </script>
+
                             <?php
                             }
                         } else {
                             echo '<strong class="p-3">No Reports Found!</strong>';
                             ?>
-                            <script>
-                                // reportsData = '';
-                            </script>
                     <?php
                         }
                     }
@@ -436,8 +372,8 @@ if ($id > 0) {
                 </div>
                 <?php
                 if ($record['locked'] == 1 && ($_POST['page'] === "bill-transfer" || $_POST['page'] === "purchase-advance" || $_POST['page'] === "purchase-remaining")) {
-                    // $ddd = '';
-                    $ddd = 'ENTRY:' . $i . ' GOODS:' . $goods . ' COUNTRY:' . $t_country . ' ALLOT:' . $allot . ' T.Qty:' . $qty_no . ' T.KGs:' . $total_kgs . ' RATE:' . $rate / $i . ' T.AMNT:' . $amount . $curr1 . ' EXCH.:' . $curr2;
+                    $ddd = '';
+                    // $ddd = 'ENTRY:' . $i . ' GOODS:' . $goods . ' COUNTRY:' . $t_country . ' ALLOT:' . $allot . ' T.Qty:' . $qty_no . ' T.KGs:' . $total_kgs . ' RATE:' . $rate / $i . ' T.AMNT:' . $amount . $curr1 . ' EXCH.:' . $curr2;
                 ?>
                     <div class="card">
                         <div class="card-body p-2">
@@ -476,9 +412,10 @@ if ($id > 0) {
                                     <div class="col-3">
                                         <div class="input-group">
                                             <label for="amount" class="mb-0">Amount</label>
-                                            <input value="<?php echo round($final_amount, 2); ?>" id="amount"
+                                            <input value="<?php echo round((!empty($total_total_with_tax) ? $total_total_with_tax : $final_amount), 2); ?>" id="amount"
                                                 readonly
                                                 name="amount" class="form-control" required tabindex="-1">
+                                                <input type="hidden" name="total_with_tax" value="<?= !empty($total_total_with_tax) ? $total_total_with_tax : ''; ?>">
                                         </div>
                                     </div>
 
@@ -599,7 +536,7 @@ if ($id > 0) {
 
                 <?php /* if ($_POST['page'] !== "bill-transfer" && $_POST['page'] !== "general-stock-form") { ?>
                     <button class="btn btn-dark btn-sm w-100 mt-3" onclick="openModal('', '')">Add Reports</button>
-                <?php } */?>
+                <?php } */ ?>
 
                 <!-- <div id="customModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); z-index: 1000;">
                     <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 75%; padding: 20px; background-color: white; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
@@ -628,7 +565,7 @@ if ($id > 0) {
                         <?php $update_url = $_fields['type'] == 'booking' ? 'purchase-add' : ($_fields['type'] == 'market' ? 'purchase-market-add' : 'purchase-local-add');
                         if ($_POST['page'] !== "bill-transfer" && $_POST['page'] !== 'general-stock-form') {
                         ?>
-                            <a href="<?php echo 'purchase-add?id=' . $id.'&type='.$_fields['type']; ?>" class="btn btn-dark btn-sm w-100 mt-2">UPDATE</a>
+                            <a href="<?php echo 'purchase-add?id=' . $id . '&type=' . $_fields['type']; ?>" class="btn btn-dark btn-sm w-100 mt-2">UPDATE</a>
                         <?php } ?>
                         <a href="print/purchase-single?t_id=<?php echo $id; ?>&action=order&secret=<?php echo base64_encode('powered-by-upsol') . "&print_type=full"; ?>"
                             target="_blank" class="btn btn-dark btn-sm w-100 mt-2">PRINT</a>
@@ -642,49 +579,49 @@ if ($id > 0) {
                         <?php } ?>
                     </div>
                 </div>
+                </div>
             </div>
-        </div>
-    <?php }
-    ?>
-    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
-    <script>
-        $(document).ready(function() {
-            function hidePctInputs() {
-                $("#pct, #pct_amt").hide();
-            }
-
-            function showPctInputs() {
-                $("#pct, #pct_amt").show();
-            }
-
-            function updatePctAmt() {
-                var pctValue = parseFloat($("#pct").val()) || 0;
-                var finalAmt = parseFloat($("#final_amt_hidden").val()) || 0;
-                var pctAmt = (pctValue / 100) * finalAmt;
-
-                $("#pct_amt").val(pctAmt.toFixed(2));
-            }
-
-            // Initialize: Hide pct inputs
-            hidePctInputs();
-
-            // Show/hide pct inputs based on the selected option
-            $("#transfer").change(function() {
-                showHidePctInputs($(this).val());
-            });
-
-            function showHidePctInputs(transfer = null) {
-                if (transfer == "1") {
-                    showPctInputs();
-                } else {
-                    hidePctInputs();
+        <?php }
+        ?>
+        <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+        <script>
+            $(document).ready(function() {
+                function hidePctInputs() {
+                    $("#pct, #pct_amt").hide();
                 }
-            }
 
-            let transfer = $('#transfer').find(":selected").val();
-            showHidePctInputs(transfer);
+                function showPctInputs() {
+                    $("#pct, #pct_amt").show();
+                }
 
-            // Update pct_amt when user inputs a number in pct
-            $("#pct").on("input", updatePctAmt);
-        });
-    </script>
+                function updatePctAmt() {
+                    var pctValue = parseFloat($("#pct").val()) || 0;
+                    var finalAmt = parseFloat($("#final_amt_hidden").val()) || 0;
+                    var pctAmt = (pctValue / 100) * finalAmt;
+
+                    $("#pct_amt").val(pctAmt.toFixed(2));
+                }
+
+                // Initialize: Hide pct inputs
+                hidePctInputs();
+
+                // Show/hide pct inputs based on the selected option
+                $("#transfer").change(function() {
+                    showHidePctInputs($(this).val());
+                });
+
+                function showHidePctInputs(transfer = null) {
+                    if (transfer == "1") {
+                        showPctInputs();
+                    } else {
+                        hidePctInputs();
+                    }
+                }
+
+                let transfer = $('#transfer').find(":selected").val();
+                showHidePctInputs(transfer);
+
+                // Update pct_amt when user inputs a number in pct
+                $("#pct").on("input", updatePctAmt);
+            });
+        </script>

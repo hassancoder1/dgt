@@ -54,7 +54,7 @@ if (isset($_GET['id']) && $_GET['id'] > 0) {
         $keys = ['acc_no', 'acc_name', 'company', 'iban', 'branch_code', 'currency', 'country', 'state', 'city', 'address', 'indexes4', 'vals4'];
         $bank_details = array_filter(get_object_vars($bank_details), fn($key) => in_array($key, $keys), ARRAY_FILTER_USE_KEY);
     }
-    
+
     if (isset($_GET['d_id']) && $_GET['d_id'] > 0) {
         $d_id = mysqli_real_escape_string($connect, $_GET['d_id']);
         $khaata_details_comp = fetch('khaata_details', array('id' => $d_id, 'type' => 'company'));
@@ -62,9 +62,17 @@ if (isset($_GET['id']) && $_GET['id'] > 0) {
             $details_comp = mysqli_fetch_assoc($khaata_details_comp);
             $json_data = json_decode($details_comp['json_data']);
             $company_details = [
-                'owner_name' => $json_data->owner_name, 'company_name' => $json_data->company_name, 'business_title' => $json_data->business_title,
-                'indexes1' => $json_data->indexes1, 'vals1' => $json_data->vals1, 'country' => $json_data->country, 'state' => $json_data->state,
-                'city' => $json_data->city, 'address' => $json_data->address, 'indexes2' => $json_data->indexes2, 'vals2' => $json_data->vals2
+                'owner_name' => $json_data->owner_name,
+                'company_name' => $json_data->company_name,
+                'business_title' => $json_data->business_title,
+                'indexes1' => $json_data->indexes1,
+                'vals1' => $json_data->vals1,
+                'country' => $json_data->country,
+                'state' => $json_data->state,
+                'city' => $json_data->city,
+                'address' => $json_data->address,
+                'indexes2' => $json_data->indexes2,
+                'vals2' => $json_data->vals2
             ];
         }
         $khaata_details_ware = fetch('khaata_details', array('id' => $d_id, 'type' => 'warehouse'));
@@ -72,9 +80,14 @@ if (isset($_GET['id']) && $_GET['id'] > 0) {
             $details_ware = mysqli_fetch_assoc($khaata_details_ware);
             $json_data2 = json_decode($details_ware['json_data']);
             $warehouse_details = [
-                'owner_name' => $json_data2->owner_name, 'warehouse_name' => $json_data2->warehouse_name, 'country' => $json_data2->country,
-                'state' => $json_data2->state, 'city' => $json_data2->city, 'address' => $json_data2->address,
-                'indexes3' => $json_data2->indexes3, 'vals3' => $json_data2->vals3
+                'owner_name' => $json_data2->owner_name,
+                'warehouse_name' => $json_data2->warehouse_name,
+                'country' => $json_data2->country,
+                'state' => $json_data2->state,
+                'city' => $json_data2->city,
+                'address' => $json_data2->address,
+                'indexes3' => $json_data2->indexes3,
+                'vals3' => $json_data2->vals3
             ];
         }
     }
@@ -94,11 +107,21 @@ if (isset($_GET['acc_for']) && array_key_exists($_GET['acc_for'], $types_array))
         $types_array['agent'] = '';
         $types_array['bank'] = '';
     }
-}*/ ?>
+}*/
+$countries = [];
+$countryQ = mysqli_query($connect, "SELECT * FROM countries");
+while ($cn = mysqli_fetch_assoc($countryQ)) {
+    $countries[] = [
+        'id' => $cn['id'],
+        'name' => $cn['name'],
+        'code' => $cn['code']
+    ];
+}
+?>
 <div class="row">
     <div class="col-xl-12">
         <form method="post" onsubmit="return confirm('Are you sure to save data?');"
-              enctype="multipart/form-data" class="table-form">
+            enctype="multipart/form-data" class="table-form">
             <div class="d-flex align-items-center justify-content-between mb-md-2 flex-wrap">
                 <div class="fs-5 text-uppercase"><?php echo $page_title; ?></div>
                 <div>
@@ -133,36 +156,36 @@ if (isset($_GET['acc_for']) && array_key_exists($_GET['acc_for'], $types_array))
                                     <div class="input-group">
                                         <label for="khaata_no">A/C No.</label>
                                         <input id="khaata_no" name="khaata_no" class="form-control" required
-                                               autofocus
-                                               value="<?php echo $khaata_no; ?>">
+                                            autofocus
+                                            value="<?php echo $khaata_no; ?>">
                                     </div>
                                 </div>
                                 <div class="col-md-5">
                                     <div class="input-group">
                                         <label for="khaata_name">A/c. Name</label>
                                         <input type="text" id="khaata_name" name="khaata_name" class="form-control"
-                                               value="<?php echo $khaata_name; ?>">
+                                            value="<?php echo $khaata_name; ?>">
                                     </div>
                                 </div>
                                 <div class="col-md-4">
                                     <div class="input-group">
                                         <label for="email">Email</label>
                                         <input type="email" id="email" name="email" class="form-control"
-                                               value="<?php echo $email; ?>">
+                                            value="<?php echo $email; ?>">
                                     </div>
                                 </div>
                                 <div class="col-md-4">
                                     <div class="input-group">
                                         <label for="phone">Phone</label>
                                         <input id="phone" name="phone" class="form-control"
-                                               value="<?php echo $phone; ?>">
+                                            value="<?php echo $phone; ?>">
                                     </div>
                                 </div>
                                 <div class="col-md-4">
                                     <div class="input-group">
                                         <label for="branch_id">BRANCH</label>
                                         <select id="branch_id" name="branch_id" class="form-select branch_id"
-                                                required>
+                                            required>
                                             <option hidden value="">Select</option>
                                             <?php $branches = fetch('branches');
                                             while ($branch = mysqli_fetch_assoc($branches)) {
@@ -218,45 +241,49 @@ if (isset($_GET['acc_for']) && array_key_exists($_GET['acc_for'], $types_array))
             <div class="row">
                 <div class="col-md-2 order-md-1">
                     <div class="nav mt-2 flex-md-column sticky-top nav-pills me-3" id="v-pills-tab" role="tablist"
-                         aria-orientation="vertical">
-                        <?php // if ($acc_for == 'bank') { ?>
-                            <button class="nav-link- btn-sm btn btn-light active" id="v-pills-bank-tab"
-                                    data-bs-toggle="pill" data-bs-target="#v-pills-bank" type="button" role="tab"
-                                    aria-controls="v-pills-bank"
-                                    aria-selected="false">Bank Details
-                            </button>
-                        <?php //  } else { ?>
-                            <button class="nav-link- btn-sm btn btn-light" id="v-pills-contact-tab"
-                                    data-bs-toggle="pill" data-bs-target="#v-pills-contact" type="button" role="tab"
-                                    aria-controls="v-pills-contact"
-                                    aria-selected="true">Contact Details
-                            </button>
-                            <button class="nav-link- btn-sm btn btn-light" id="v-pills-company-tab"
-                                    data-bs-toggle="pill"
-                                    data-bs-target="#v-pills-company" type="button" role="tab"
-                                    aria-controls="v-pills-company"
-                                    aria-selected="false">Company Details
-                            </button>
-                            <button class="nav-link- btn-sm btn btn-light" id="v-pills-warehouse-tab"
-                                    data-bs-toggle="pill"
-                                    data-bs-target="#v-pills-warehouse" type="button" role="tab"
-                                    aria-controls="v-pills-warehouse"
-                                    aria-selected="false">Warehouse Details
-                            </button>
-                        <?php // } ?>
+                        aria-orientation="vertical">
+                        <?php // if ($acc_for == 'bank') { 
+                        ?>
+                        <button class="nav-link- btn-sm btn btn-light active" id="v-pills-bank-tab"
+                            data-bs-toggle="pill" data-bs-target="#v-pills-bank" type="button" role="tab"
+                            aria-controls="v-pills-bank"
+                            aria-selected="false">Bank Details
+                        </button>
+                        <?php //  } else { 
+                        ?>
+                        <button class="nav-link- btn-sm btn btn-light" id="v-pills-contact-tab"
+                            data-bs-toggle="pill" data-bs-target="#v-pills-contact" type="button" role="tab"
+                            aria-controls="v-pills-contact"
+                            aria-selected="true">Contact Details
+                        </button>
+                        <button class="nav-link- btn-sm btn btn-light" id="v-pills-company-tab"
+                            data-bs-toggle="pill"
+                            data-bs-target="#v-pills-company" type="button" role="tab"
+                            aria-controls="v-pills-company"
+                            aria-selected="false">Company Details
+                        </button>
+                        <button class="nav-link- btn-sm btn btn-light" id="v-pills-warehouse-tab"
+                            data-bs-toggle="pill"
+                            data-bs-target="#v-pills-warehouse" type="button" role="tab"
+                            aria-controls="v-pills-warehouse"
+                            aria-selected="false">Warehouse Details
+                        </button>
+                        <?php // } 
+                        ?>
                     </div>
                 </div>
                 <div class="col-md">
                     <div class="card border-top-0 border-bottom-0">
                         <div class="card-body">
                             <div class="tab-content" id="v-pills-tabContent">
-                                <?php // if ($acc_for == 'bank') { ?>
-                                    <div class="tab-pane fade show active" id="v-pills-bank" role="tabpanel"
-                                         aria-labelledby="v-pills-bank-tab" tabindex="0">
-                                        <?php if (!empty($bank_details['acc_no'])) { ?>
-                                            <div class="table-responsive">
-                                                <table class="table table-borderless">
-                                                    <tbody>
+                                <?php // if ($acc_for == 'bank') { 
+                                ?>
+                                <div class="tab-pane fade show active" id="v-pills-bank" role="tabpanel"
+                                    aria-labelledby="v-pills-bank-tab" tabindex="0">
+                                    <?php if (!empty($bank_details['acc_no'])) { ?>
+                                        <div class="table-responsive">
+                                            <table class="table table-borderless">
+                                                <tbody>
                                                     <tr>
                                                         <td>
                                                             <span class="me-1 fw-bold">A/C NO.</span><?php echo $bank_details['acc_no']; ?>
@@ -292,7 +319,7 @@ if (isset($_GET['acc_for']) && array_key_exists($_GET['acc_for'], $types_array))
                                                     </tr>
                                                     <tr>
                                                         <td colspan="3"><span
-                                                                    class="me-1 fw-bold">ADDRESS</span><?php echo $bank_details['address']; ?>
+                                                                class="me-1 fw-bold">ADDRESS</span><?php echo $bank_details['address']; ?>
                                                         </td>
                                                     </tr>
                                                     <?php echo '<tr>';
@@ -302,20 +329,21 @@ if (isset($_GET['acc_for']) && array_key_exists($_GET['acc_for'], $types_array))
                                                         }
                                                     }
                                                     echo '</tr>'; ?>
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        <?php } else {
-                                            echo '<div class="text-center">No data to show</div>';
-                                        } ?>
-                                    </div>
-                                <?php // } else { ?>
-                                    <div class="tab-pane fade show" id="v-pills-contact" role="tabpanel"
-                                         aria-labelledby="v-pills-contact-tab" tabindex="0">
-                                        <?php if (!empty($person_details['full_name'])) { ?>
-                                            <div class="table-responsive">
-                                                <table class="table table-borderless">
-                                                    <tbody>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    <?php } else {
+                                        echo '<div class="text-center">No data to show</div>';
+                                    } ?>
+                                </div>
+                                <?php // } else { 
+                                ?>
+                                <div class="tab-pane fade show" id="v-pills-contact" role="tabpanel"
+                                    aria-labelledby="v-pills-contact-tab" tabindex="0">
+                                    <?php if (!empty($person_details['full_name'])) { ?>
+                                        <div class="table-responsive">
+                                            <table class="table table-borderless">
+                                                <tbody>
                                                     <tr>
                                                         <td>
                                                             <span class="me-1 fw-bold">NAME</span><?php echo $person_details['full_name']; ?>
@@ -350,7 +378,7 @@ if (isset($_GET['acc_for']) && array_key_exists($_GET['acc_for'], $types_array))
                                                     </tr>
                                                     <tr>
                                                         <td colspan="3"><span
-                                                                    class="me-1 fw-bold">ADDRESS</span><?php echo $person_details['address']; ?>
+                                                                class="me-1 fw-bold">ADDRESS</span><?php echo $person_details['address']; ?>
                                                         </td>
                                                     </tr>
                                                     <tr>
@@ -371,20 +399,20 @@ if (isset($_GET['acc_for']) && array_key_exists($_GET['acc_for'], $types_array))
                                                         <td colspan="2"></td>
                                                     </tr>
 
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        <?php } else {
-                                            echo '<div class="text-center">Contact details not found</div>';
-                                        } ?>
-                                    </div>
-                                    <div class="tab-pane fade" id="v-pills-company" role="tabpanel"
-                                         aria-labelledby="v-pills-company-tab" tabindex="0">
-                                        <?php $details_query = fetch('khaata_details', array('khaata_id' => $id, 'type' => 'company'));
-                                        if (mysqli_num_rows($details_query) > 0) { ?>
-                                            <div class="table-responsive">
-                                                <table class="table">
-                                                    <!--<thead>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    <?php } else {
+                                        echo '<div class="text-center">Contact details not found</div>';
+                                    } ?>
+                                </div>
+                                <div class="tab-pane fade" id="v-pills-company" role="tabpanel"
+                                    aria-labelledby="v-pills-company-tab" tabindex="0">
+                                    <?php $details_query = fetch('khaata_details', array('khaata_id' => $id, 'type' => 'company'));
+                                    if (mysqli_num_rows($details_query) > 0) { ?>
+                                        <div class="table-responsive">
+                                            <table class="table">
+                                                <!--<thead>
                                                     <tr>
                                                         <th>#</th>
                                                         <th>Owner Name</th>
@@ -393,7 +421,7 @@ if (isset($_GET['acc_for']) && array_key_exists($_GET['acc_for'], $types_array))
                                                         <th>Country</th>
                                                     </tr>
                                                     </thead>-->
-                                                    <tbody>
+                                                <tbody>
                                                     <?php $x = 1;
                                                     while ($row = mysqli_fetch_array($details_query)) {
                                                         $row_data = json_decode($row['json_data']);
@@ -430,28 +458,28 @@ if (isset($_GET['acc_for']) && array_key_exists($_GET['acc_for'], $types_array))
                                                         echo '</table></tr>';
                                                         $x++;
                                                     } ?>
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        <?php } else {
-                                            echo '<div class="text-center">Company details not found</div>';
-                                        } ?>
-                                    </div>
-                                    <div class="tab-pane fade" id="v-pills-warehouse" role="tabpanel"
-                                         aria-labelledby="v-pills-warehouse-tab" tabindex="0">
-                                        <?php $details_query2 = fetch('khaata_details', array('khaata_id' => $id, 'type' => 'warehouse'));
-                                        if (mysqli_num_rows($details_query2) > 0) { ?>
-                                            <div class="table-responsive">
-                                                <table class="table table-hover table-sm">
-                                                    <thead>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    <?php } else {
+                                        echo '<div class="text-center">Company details not found</div>';
+                                    } ?>
+                                </div>
+                                <div class="tab-pane fade" id="v-pills-warehouse" role="tabpanel"
+                                    aria-labelledby="v-pills-warehouse-tab" tabindex="0">
+                                    <?php $details_query2 = fetch('khaata_details', array('khaata_id' => $id, 'type' => 'warehouse'));
+                                    if (mysqli_num_rows($details_query2) > 0) { ?>
+                                        <div class="table-responsive">
+                                            <table class="table table-hover table-sm">
+                                                <thead>
                                                     <tr>
                                                         <th>#</th>
                                                         <th>Owner Name</th>
                                                         <th>Warehouse Name</th>
                                                         <th>Country</th>
                                                     </tr>
-                                                    </thead>
-                                                    <tbody>
+                                                </thead>
+                                                <tbody>
                                                     <?php $x = 1;
                                                     while ($row = mysqli_fetch_array($details_query2)) {
                                                         $row_data = json_decode($row['json_data']);
@@ -463,14 +491,15 @@ if (isset($_GET['acc_for']) && array_key_exists($_GET['acc_for'], $types_array))
                                                         echo '</tr>';
                                                         $x++;
                                                     } ?>
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        <?php } else {
-                                            echo '<div class="text-center">Warehouse details not found</div>';
-                                        } ?>
-                                    </div>
-                                <?php // } ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    <?php } else {
+                                        echo '<div class="text-center">Warehouse details not found</div>';
+                                    } ?>
+                                </div>
+                                <?php // } 
+                                ?>
                             </div>
                         </div>
                     </div>
@@ -480,16 +509,20 @@ if (isset($_GET['acc_for']) && array_key_exists($_GET['acc_for'], $types_array))
     </div>
 </div>
 <?php include("footer.php"); ?>
-<script>$("#entries").addClass('active');</script>
-<script>$("#khaata").addClass('active');</script>
+<script>
+    $("#entries").addClass('active');
+</script>
+<script>
+    $("#khaata").addClass('active');
+</script>
 <!--<script src="assets/js/input-repeater-contacts.js"></script>-->
 <script type="text/javascript">
-    $(document).ready(function () {
+    $(document).ready(function() {
         //var selectedBranchId = $('#branch_id').find(":selected").val();
         //populateCats(selectedBranchId);
 
 
-        $('.branch_id').on('change', function () {
+        $('.branch_id').on('change', function() {
             var branch_id = $(this).val();
             populateCats(branch_id);
         });
@@ -500,11 +533,13 @@ if (isset($_GET['acc_for']) && array_key_exists($_GET['acc_for'], $types_array))
             $.ajax({
                 type: 'POST',
                 url: 'ajax/fetch_branch_cats.php',
-                data: {branch_id: branch_id},
-                success: function (html) {
+                data: {
+                    branch_id: branch_id
+                },
+                success: function(html) {
                     $('.cat_id').html(html);
                 },
-                error: function (xhr, status, error) {
+                error: function(xhr, status, error) {
                     //console.error("AJAX call failed:", status, error); // Debugging line
                 }
             });
@@ -576,7 +611,7 @@ if (isset($_POST['recordSubmit'])) {
     }
 } ?>
 <div class="modal fade" id="contactDetails" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
-     aria-labelledby="contactDetailsLabel" aria-hidden="true">
+    aria-labelledby="contactDetailsLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl">
         <form method="post">
             <div class="modal-content">
@@ -590,14 +625,14 @@ if (isset($_POST['recordSubmit'])) {
                             <div class="input-group">
                                 <label for="full_name" class="form-label">Name</label>
                                 <input value="<?php echo $person_details['full_name']; ?>" id="full_name"
-                                       name="full_name" class="form-control" required>
+                                    name="full_name" class="form-control" required>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="input-group">
                                 <label for="father_name" class="form-label">Father Name</label>
                                 <input value="<?php echo $person_details['father_name']; ?>" id="father_name"
-                                       name="father_name" class="form-control" required>
+                                    name="father_name" class="form-control" required>
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -632,28 +667,35 @@ if (isset($_POST['recordSubmit'])) {
                                     <div class="input-group">
                                         <label for="idn_no" class="form-label">No</label>
                                         <input value="<?php echo $person_details['idn_no']; ?>" id="idn_no"
-                                               name="idn_no" class="form-control">
+                                            name="idn_no" class="form-control">
                                     </div>
                                 </div>
                                 <div class="col-md-3">
                                     <div class="input-group">
                                         <label for="idn_reg" class="form-label">Reg.</label>
                                         <input type="date" value="<?php echo $person_details['idn_reg']; ?>"
-                                               id="idn_reg" name="idn_reg" class="form-control">
+                                            id="idn_reg" name="idn_reg" class="form-control">
                                     </div>
                                 </div>
                                 <div class="col-md-3">
                                     <div class="input-group">
                                         <label for="idn_expiry" class="form-label">Expiry</label>
                                         <input type="date" value="<?php echo $person_details['idn_expiry']; ?>"
-                                               id="idn_expiry" name="idn_expiry" class="form-control">
+                                            id="idn_expiry" name="idn_expiry" class="form-control">
                                     </div>
                                 </div>
                                 <div class="col-md-3">
                                     <div class="input-group">
                                         <label for="idn_country" class="form-label">Country</label>
-                                        <input value="<?php echo $person_details['idn_country']; ?>"
-                                               id="idn_country" name="idn_country" class="form-control">
+                                        <!-- <input value="<?php echo $person_details['idn_country']; ?>"> -->
+                                        <select id="idn_country" name="idn_country" class="form-select">
+                                            <option value="" selected disabled>Choose</option>
+                                            <?php
+                                            foreach ($countries as $country) {
+                                                echo '<option value="' . $country['name'] . ' ' . ($country['name'] === $person_details['idn_country'] ? 'selected' : '') . '">' . $country['name'] . '</option>';
+                                            }
+                                            ?>
+                                        </select>
                                     </div>
                                 </div>
                             </div>
@@ -661,57 +703,65 @@ if (isset($_POST['recordSubmit'])) {
                         <div class="col-md-4">
                             <div class="input-group">
                                 <label for="country" class="form-label">Country</label>
-                                <input value="<?php echo $person_details['country']; ?>" id="country" name="country"
-                                       class="form-control">
+                                <!-- <input value="<?php echo $person_details['country']; ?>" id="country" name="country" 
+                                    class="form-control"> -->
+                                <select id="country" name="country" class="form-select">
+                                    <option value="" selected disabled>Choose</option>
+                                    <?php
+                                    foreach ($countries as $country) {
+                                        echo '<option value="' . $country['name'] . ' ' . ($country['name'] === $person_details['country'] ? 'selected' : '') . '">' . $country['name'] . '</option>';
+                                    }
+                                    ?>
+                                </select>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="input-group">
                                 <label for="state" class="form-label">State</label>
                                 <input value="<?php echo $person_details['state']; ?>" id="state" name="state"
-                                       class="form-control">
+                                    class="form-control">
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="input-group">
                                 <label for="city" class="form-label">City</label>
                                 <input value="<?php echo $person_details['city']; ?>" id="city" name="city"
-                                       class="form-control">
+                                    class="form-control">
                             </div>
                         </div>
                         <div class="col-md-12">
                             <div class="input-group">
                                 <label for="address" class="form-label">Address</label>
                                 <input value="<?php echo $person_details['address']; ?>" id="address" name="address"
-                                       class="form-control">
+                                    class="form-control">
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="input-group">
                                 <label for="postcode" class="form-label">Postcode</label>
                                 <input value="<?php echo $person_details['postcode']; ?>" id="postcode"
-                                       name="postcode" class="form-control">
+                                    name="postcode" class="form-control">
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="input-group">
                                 <label for="mobile" class="form-label">Mobile</label>
                                 <input value="<?php echo $person_details['mobile']; ?>" id="mobile" name="mobile"
-                                       class="form-control">
+                                    class="form-control">
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="input-group">
                                 <label for="phone" class="form-label">Phone</label>
                                 <input value="<?php echo $person_details['phone']; ?>" id="phone" name="phone"
-                                       class="form-control">
+                                    class="form-control">
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="input-group">
                                 <label for="whatsapp" class="form-label">WhatsApp</label>
                                 <input value="<?php echo $person_details['whatsapp']; ?>" id="whatsapp"
-                                       name="whatsapp" class="form-control">
+                                    name="whatsapp" class="form-control">
                             </div>
                         </div>
                     </div>
@@ -725,7 +775,7 @@ if (isset($_POST['recordSubmit'])) {
     </div>
 </div>
 <div class="modal fade" id="companyDetails" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
-     aria-labelledby="companyDetailsLabel" aria-hidden="true">
+    aria-labelledby="companyDetailsLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl">
         <form method="post">
             <div class="modal-content">
@@ -739,22 +789,22 @@ if (isset($_POST['recordSubmit'])) {
                             <div class="input-group">
                                 <label for="owner_name" class="form-label">Owner Name</label>
                                 <input value="<?php echo $company_details['owner_name'] ?>" id="owner_name"
-                                       name="owner_name" class="form-control" required>
+                                    name="owner_name" class="form-control" required>
                             </div>
                         </div>
                         <div class="col-md-5">
                             <div class="input-group">
                                 <label for="company_name" class="form-label">Company Name</label>
                                 <input value="<?php echo $company_details['company_name'] ?>" id="company_name"
-                                       name="company_name" class="form-control" required>
+                                    name="company_name" class="form-control" required>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="input-group">
                                 <label for="business_title" class="form-label">Business Title</label>
                                 <input value="<?php echo $company_details['business_title'] ?>" id="business_title"
-                                       name="business_title" class="form-control"
-                                       required>
+                                    name="business_title" class="form-control"
+                                    required>
                             </div>
                         </div>
                     </div>
@@ -762,35 +812,35 @@ if (isset($_POST['recordSubmit'])) {
                         <div class="col-md">
                             <table class="table table-borderless mb-0 contactsTable">
                                 <tbody class="row">
-                                <?php $arrayNumber = 0;
-                                foreach ($company_details['indexes1'] as $index => $value) { ?>
-                                    <tr class="col-md-6 contact_row_<?php echo $arrayNumber; ?>">
-                                        <td onclick="removeContactRow(this)">
-                                            <i class="fa fa-close fa-2xl- btn fs-5 text-danger ps-0 pe-1 pt-1"></i>
-                                        </td>
-                                        <td class="w-50">
-                                            <select name="indexes1[]" class="form-select contact_indexes">
-                                                <?php $static_types = fetch('static_types', array('type_for' => 'contacts2'));
-                                                while ($static_type = mysqli_fetch_assoc($static_types)) {
-                                                    $st_sel = $static_type['type_name'] == $value ? 'selected' : '';
-                                                    echo '<option ' . $st_sel . ' value="' . $static_type['type_name'] . '">' . $static_type['details'] . '</option>';
-                                                } ?>
-                                            </select>
-                                        </td>
-                                        <td class="w-50">
-                                            <input name="vals1[]" required placeholder="Value <?php echo $index + 1; ?>"
-                                                   class="form-control contact_vals"
-                                                   value="<?php echo $company_details['vals1'][$index] ?>">
-                                        </td>
-                                    </tr>
+                                    <?php $arrayNumber = 0;
+                                    foreach ($company_details['indexes1'] as $index => $value) { ?>
+                                        <tr class="col-md-6 contact_row_<?php echo $arrayNumber; ?>">
+                                            <td onclick="removeContactRow(this)">
+                                                <i class="fa fa-close fa-2xl- btn fs-5 text-danger ps-0 pe-1 pt-1"></i>
+                                            </td>
+                                            <td class="w-50">
+                                                <select name="indexes1[]" class="form-select contact_indexes">
+                                                    <?php $static_types = fetch('static_types', array('type_for' => 'contacts2'));
+                                                    while ($static_type = mysqli_fetch_assoc($static_types)) {
+                                                        $st_sel = $static_type['type_name'] == $value ? 'selected' : '';
+                                                        echo '<option ' . $st_sel . ' value="' . $static_type['type_name'] . '">' . $static_type['details'] . '</option>';
+                                                    } ?>
+                                                </select>
+                                            </td>
+                                            <td class="w-50">
+                                                <input name="vals1[]" required placeholder="Value <?php echo $index + 1; ?>"
+                                                    class="form-control contact_vals"
+                                                    value="<?php echo $company_details['vals1'][$index] ?>">
+                                            </td>
+                                        </tr>
                                     <?php $arrayNumber++;
-                                } ?>
+                                    } ?>
                                 </tbody>
                             </table>
                         </div>
                         <div class="col-md-auto">
                             <div class="btn btn-outline-secondary py-0 mt-1 -btn-sm addContactRow"
-                                 data-url="ajax/fetchStaticTypesForContacts2.php" data-loading-text="Loading...">
+                                data-url="ajax/fetchStaticTypesForContacts2.php" data-loading-text="Loading...">
                                 <i class="fa fa-plus-circle"></i> New
                             </div>
                         </div>
@@ -799,29 +849,38 @@ if (isset($_POST['recordSubmit'])) {
                         <div class="col-md-4">
                             <div class="input-group">
                                 <label for="company_country" class="form-label">Country</label>
-                                <input value="<?php echo $company_details['country'] ?>" id="company_country"
-                                       name="country" class="form-control">
+                                <!-- <input value="<?php echo $company_details['country'] ?>" id="company_country"
+                                    name="country" class="form-control"> -->
+                                <select id="company_country"
+                                    name="country" class="form-select">
+                                    <option value="" selected disabled>Choose</option>
+                                    <?php
+                                    foreach ($countries as $country) {
+                                        echo '<option value="' . $country['name'] . ' ' . ($country['name'] === $company_details['country'] ? 'selected' : '') . '">' . $country['name'] . '</option>';
+                                    }
+                                    ?>
+                                </select>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="input-group">
                                 <label for="company_state" class="form-label">State</label>
                                 <input value="<?php echo $company_details['state'] ?>" id="company_state" name="state"
-                                       class="form-control">
+                                    class="form-control">
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="input-group">
                                 <label for="company_city" class="form-label">City</label>
                                 <input value="<?php echo $company_details['city'] ?>" id="company_city" name="city"
-                                       class="form-control">
+                                    class="form-control">
                             </div>
                         </div>
                         <div class="col-md-12">
                             <div class="input-group">
                                 <label for="company_address" class="form-label">Address</label>
                                 <input value="<?php echo $company_details['address'] ?>" id="company_address"
-                                       name="address" class="form-control">
+                                    name="address" class="form-control">
                             </div>
                         </div>
                     </div>
@@ -829,35 +888,35 @@ if (isset($_POST['recordSubmit'])) {
                         <div class="col-md">
                             <table class="table table-borderless mb-0 contactsTable">
                                 <tbody class="row">
-                                <?php $arrayNumber = 0;
-                                foreach ($company_details['indexes2'] as $index => $value) { ?>
-                                    <tr class="col-md-6 contact_row_<?php echo $arrayNumber; ?>">
-                                        <td onclick="removeContactRow(this)">
-                                            <i class="fa fa-close fa-2xl- btn fs-5 text-danger ps-0 pe-1 pt-1"></i>
-                                        </td>
-                                        <td class="w-50">
-                                            <select name="indexes2[]" class="form-select contact_indexes">
-                                                <?php $static_types = fetch('static_types', array('type_for' => 'contacts'));
-                                                while ($static_type = mysqli_fetch_assoc($static_types)) {
-                                                    $st_sel2 = $static_type['type_name'] == $value ? 'selected' : '';
-                                                    echo '<option ' . $st_sel2 . ' value="' . $static_type['type_name'] . '">' . $static_type['details'] . '</option>';
-                                                } ?>
-                                            </select>
-                                        </td>
-                                        <td class="w-50">
-                                            <input name="vals2[]" required placeholder="Value <?php echo $index + 1; ?>"
-                                                   class="form-control contact_vals"
-                                                   value="<?php echo $company_details['vals2'][$index] ?>">
-                                        </td>
-                                    </tr>
+                                    <?php $arrayNumber = 0;
+                                    foreach ($company_details['indexes2'] as $index => $value) { ?>
+                                        <tr class="col-md-6 contact_row_<?php echo $arrayNumber; ?>">
+                                            <td onclick="removeContactRow(this)">
+                                                <i class="fa fa-close fa-2xl- btn fs-5 text-danger ps-0 pe-1 pt-1"></i>
+                                            </td>
+                                            <td class="w-50">
+                                                <select name="indexes2[]" class="form-select contact_indexes">
+                                                    <?php $static_types = fetch('static_types', array('type_for' => 'contacts'));
+                                                    while ($static_type = mysqli_fetch_assoc($static_types)) {
+                                                        $st_sel2 = $static_type['type_name'] == $value ? 'selected' : '';
+                                                        echo '<option ' . $st_sel2 . ' value="' . $static_type['type_name'] . '">' . $static_type['details'] . '</option>';
+                                                    } ?>
+                                                </select>
+                                            </td>
+                                            <td class="w-50">
+                                                <input name="vals2[]" required placeholder="Value <?php echo $index + 1; ?>"
+                                                    class="form-control contact_vals"
+                                                    value="<?php echo $company_details['vals2'][$index] ?>">
+                                            </td>
+                                        </tr>
                                     <?php $arrayNumber++;
-                                } ?>
+                                    } ?>
                                 </tbody>
                             </table>
                         </div>
                         <div class="col-md-auto">
                             <div class="btn btn-outline-secondary py-0 mt-1 -btn-sm addContactRow"
-                                 data-url="ajax/fetchStaticTypesForContacts.php" data-loading-text="Loading...">
+                                data-url="ajax/fetchStaticTypesForContacts.php" data-loading-text="Loading...">
                                 <i class="fa fa-plus-circle"></i> New
                             </div>
                         </div>
@@ -874,7 +933,7 @@ if (isset($_POST['recordSubmit'])) {
     </div>
 </div>
 <div class="modal fade" id="warehouseDetails" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
-     aria-labelledby="warehouseDetailsLabel" aria-hidden="true">
+    aria-labelledby="warehouseDetailsLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <form method="post">
             <div class="modal-content">
@@ -888,42 +947,51 @@ if (isset($_POST['recordSubmit'])) {
                             <div class="input-group">
                                 <label for="owner_name" class="form-label">Owner Name</label>
                                 <input value="<?php echo $warehouse_details['owner_name'] ?>" id="owner_name"
-                                       name="owner_name" class="form-control" required>
+                                    name="owner_name" class="form-control" required>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="input-group">
                                 <label for="warehouse_name" class="form-label">Warehouse Name</label>
                                 <input value="<?php echo $warehouse_details['warehouse_name'] ?>" id="warehouse_name"
-                                       name="warehouse_name" class="form-control" required>
+                                    name="warehouse_name" class="form-control" required>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="input-group">
                                 <label for="ware_country" class="form-label">Country</label>
-                                <input value="<?php echo $warehouse_details['country'] ?>" id="ware_country"
-                                       name="country" class="form-control">
+                                <!-- <input value="<?php echo $warehouse_details['country'] ?>" id="ware_country"
+                                    name="country" class="form-control"> -->
+                                <select d="ware_country"
+                                    name="country" class="form-select">
+                                    <option value="" selected disabled>Choose</option>
+                                    <?php
+                                    foreach ($countries as $country) {
+                                        echo '<option value="' . $country['name'] . ' ' . ($country['name'] === $warehouse_details['country'] ? 'selected' : '') . '">' . $country['name'] . '</option>';
+                                    }
+                                    ?>
+                                </select>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="input-group">
                                 <label for="ware_state" class="form-label">State</label>
                                 <input value="<?php echo $warehouse_details['state'] ?>" id="ware_state" name="state"
-                                       class="form-control">
+                                    class="form-control">
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="input-group">
                                 <label for="ware_city" class="form-label">City</label>
                                 <input value="<?php echo $warehouse_details['city'] ?>" id="ware_city" name="city"
-                                       class="form-control">
+                                    class="form-control">
                             </div>
                         </div>
                         <div class="col-md-12">
                             <div class="input-group">
                                 <label for="ware_address" class="form-label">Address</label>
                                 <input value="<?php echo $warehouse_details['address'] ?>" id="ware_address"
-                                       name="address" class="form-control">
+                                    name="address" class="form-control">
                             </div>
                         </div>
                     </div>
@@ -931,35 +999,35 @@ if (isset($_POST['recordSubmit'])) {
                         <div class="col-md">
                             <table class="table table-borderless mb-0 contactsTable">
                                 <tbody class="row">
-                                <?php $arrayNumber = 0;
-                                foreach ($warehouse_details['indexes3'] as $index => $value) { ?>
-                                    <tr class="col-md-6 contact_row_<?php echo $arrayNumber; ?>">
-                                        <td onclick="removeContactRow(this)">
-                                            <i class="fa fa-close fa-2xl- btn fs-5 text-danger ps-0 pe-1 pt-1"></i>
-                                        </td>
-                                        <td class="w-50">
-                                            <select name="indexes3[]" class="form-select contact_indexes">
-                                                <?php $static_types = fetch('static_types', array('type_for' => 'contacts'));
-                                                while ($static_type = mysqli_fetch_assoc($static_types)) {
-                                                    $st_sel3 = $static_type['type_name'] == $value ? 'selected' : '';
-                                                    echo '<option ' . $st_sel3 . ' value="' . $static_type['type_name'] . '">' . $static_type['details'] . '</option>';
-                                                } ?>
-                                            </select>
-                                        </td>
-                                        <td class="w-50">
-                                            <input name="vals3[]" required placeholder="Value <?php echo $index + 1; ?>"
-                                                   class="form-control contact_vals"
-                                                   value="<?php echo $warehouse_details['vals3'][$index] ?>">
-                                        </td>
-                                    </tr>
+                                    <?php $arrayNumber = 0;
+                                    foreach ($warehouse_details['indexes3'] as $index => $value) { ?>
+                                        <tr class="col-md-6 contact_row_<?php echo $arrayNumber; ?>">
+                                            <td onclick="removeContactRow(this)">
+                                                <i class="fa fa-close fa-2xl- btn fs-5 text-danger ps-0 pe-1 pt-1"></i>
+                                            </td>
+                                            <td class="w-50">
+                                                <select name="indexes3[]" class="form-select contact_indexes">
+                                                    <?php $static_types = fetch('static_types', array('type_for' => 'contacts'));
+                                                    while ($static_type = mysqli_fetch_assoc($static_types)) {
+                                                        $st_sel3 = $static_type['type_name'] == $value ? 'selected' : '';
+                                                        echo '<option ' . $st_sel3 . ' value="' . $static_type['type_name'] . '">' . $static_type['details'] . '</option>';
+                                                    } ?>
+                                                </select>
+                                            </td>
+                                            <td class="w-50">
+                                                <input name="vals3[]" required placeholder="Value <?php echo $index + 1; ?>"
+                                                    class="form-control contact_vals"
+                                                    value="<?php echo $warehouse_details['vals3'][$index] ?>">
+                                            </td>
+                                        </tr>
                                     <?php $arrayNumber++;
-                                } ?>
+                                    } ?>
                                 </tbody>
                             </table>
                         </div>
                         <div class="col-md-auto">
                             <div class="btn btn-outline-secondary py-0 mt-1 addContactRow"
-                                 data-url="ajax/fetchStaticTypesForContacts.php" data-loading-text="Loading...">
+                                data-url="ajax/fetchStaticTypesForContacts.php" data-loading-text="Loading...">
                                 <i class="fa fa-plus-circle"></i> New
                             </div>
                         </div>
@@ -976,7 +1044,7 @@ if (isset($_POST['recordSubmit'])) {
     </div>
 </div>
 <div class="modal fade" id="bankDetails" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
-     aria-labelledby="bankDetailsLabel" aria-hidden="true">
+    aria-labelledby="bankDetailsLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl">
         <form method="post">
             <div class="modal-content">
@@ -990,35 +1058,35 @@ if (isset($_POST['recordSubmit'])) {
                             <div class="input-group">
                                 <label for="acc_no" class="form-label">A/c No.</label>
                                 <input value="<?= isset($bank_details['acc_no']) ? $bank_details['acc_no'] : '' ?>" id="acc_no"
-                                       name="acc_no" class="form-control" required>
+                                    name="acc_no" class="form-control" required>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="input-group">
                                 <label for="acc_name" class="form-label">A/c Name</label>
                                 <input value="<?= isset($bank_details['acc_name']) ? $bank_details['acc_name'] : '' ?>" id="acc_name"
-                                       name="acc_name" class="form-control" required>
+                                    name="acc_name" class="form-control" required>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="input-group">
                                 <label for="b_company" class="form-label">Company</label>
                                 <input value="<?= isset($bank_details['company']) ? $bank_details['company'] : '' ?>" id="b_company"
-                                       name="company" class="form-control">
+                                    name="company" class="form-control">
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="input-group">
                                 <label for="iban" class="form-label">IBAN#</label>
                                 <input value="<?= isset($bank_details['iban']) ? $bank_details['iban'] : '' ?>" id="iban" name="iban"
-                                       class="form-control">
+                                    class="form-control">
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="input-group">
                                 <label for="branch_code" class="form-label">Branch Code</label>
                                 <input value="<?= isset($bank_details['branch_code']) ? $bank_details['city'] : '' ?>" id="branch_code"
-                                       name="branch_code" class="form-control">
+                                    name="branch_code" class="form-control">
                             </div>
                         </div>
                         <div class="col-md-3">
@@ -1036,29 +1104,38 @@ if (isset($_POST['recordSubmit'])) {
                         <div class="col-md-4">
                             <div class="input-group">
                                 <label for="bank_country" class="form-label">Country</label>
-                                <input value="<?= isset($bank_details['country']) ? $bank_details['country'] : '' ?>" id="bank_country"
-                                       name="country" class="form-control">
+                                <!-- <input value="<?= isset($bank_details['country']) ? $bank_details['country'] : '' ?>" id="bank_country"
+                                    name="country" class="form-control"> -->
+                                <select id="bank_country"
+                                    name="country" class="form-select">
+                                    <option value="" selected disabled>Choose</option>
+                                    <?php
+                                    foreach ($countries as $country) {
+                                        echo '<option value="' . $country['name'] . ' ' . ($country['name'] === $bank_details['country'] ? 'selected' : '') . '">' . $country['name'] . '</option>';
+                                    }
+                                    ?>
+                                </select>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="input-group">
                                 <label for="bank_state" class="form-label">State</label>
                                 <input value="<?= isset($bank_details['state']) ? $bank_details['state'] : '' ?>" id="bank_state" name="state"
-                                       class="form-control">
+                                    class="form-control">
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="input-group">
                                 <label for="bank_city" class="form-label">City</label>
                                 <input value="<?= isset($bank_details['city']) ? $bank_details['acc_no'] : '' ?>" id="bank_city" name="city"
-                                       class="form-control">
+                                    class="form-control">
                             </div>
                         </div>
                         <div class="col-md-12">
                             <div class="input-group">
                                 <label for="bank_address" class="form-label">Address</label>
                                 <input value="<?= isset($bank_details['address']) ? $bank_details['address'] : '' ?>" id="bank_address"
-                                       name="address" class="form-control">
+                                    name="address" class="form-control">
                             </div>
                         </div>
                     </div>
@@ -1066,36 +1143,37 @@ if (isset($_POST['recordSubmit'])) {
                         <div class="col-md">
                             <table class="table table-borderless mb-0 contactsTable">
                                 <tbody class="row">
-                                <?php $arrayNumber = 0;
-                                if(isset($bank_details['indexes4'])){
-                                foreach ($bank_details['indexes4'] as $index => $value) { ?>
-                                    <tr class="col-md-6 contact_row_<?php echo $arrayNumber; ?>">
-                                        <td onclick="removeContactRow(this)">
-                                            <i class="fa fa-close fa-2xl- btn fs-5 text-danger ps-0 pe-1 pt-1"></i>
-                                        </td>
-                                        <td class="w-50">
-                                            <select name="indexes4[]" class="form-select contact_indexes">
-                                                <?php $static_types = fetch('static_types', array('type_for' => 'contacts'));
-                                                while ($static_type = mysqli_fetch_assoc($static_types)) {
-                                                    $st_sel3 = $static_type['type_name'] == $value ? 'selected' : '';
-                                                    echo '<option ' . $st_sel3 . ' value="' . $static_type['type_name'] . '">' . $static_type['details'] . '</option>';
-                                                } ?>
-                                            </select>
-                                        </td>
-                                        <td class="w-50">
-                                            <input name="vals4[]" required placeholder="Value <?php echo $index + 1; ?>"
-                                                   class="form-control contact_vals"
-                                                   value="<?php echo $bank_details['vals4'][$index] ?>">
-                                        </td>
-                                    </tr>
+                                    <?php $arrayNumber = 0;
+                                    if (isset($bank_details['indexes4'])) {
+                                        foreach ($bank_details['indexes4'] as $index => $value) { ?>
+                                            <tr class="col-md-6 contact_row_<?php echo $arrayNumber; ?>">
+                                                <td onclick="removeContactRow(this)">
+                                                    <i class="fa fa-close fa-2xl- btn fs-5 text-danger ps-0 pe-1 pt-1"></i>
+                                                </td>
+                                                <td class="w-50">
+                                                    <select name="indexes4[]" class="form-select contact_indexes">
+                                                        <?php $static_types = fetch('static_types', array('type_for' => 'contacts'));
+                                                        while ($static_type = mysqli_fetch_assoc($static_types)) {
+                                                            $st_sel3 = $static_type['type_name'] == $value ? 'selected' : '';
+                                                            echo '<option ' . $st_sel3 . ' value="' . $static_type['type_name'] . '">' . $static_type['details'] . '</option>';
+                                                        } ?>
+                                                    </select>
+                                                </td>
+                                                <td class="w-50">
+                                                    <input name="vals4[]" required placeholder="Value <?php echo $index + 1; ?>"
+                                                        class="form-control contact_vals"
+                                                        value="<?php echo $bank_details['vals4'][$index] ?>">
+                                                </td>
+                                            </tr>
                                     <?php $arrayNumber++;
-                                } } ?>
+                                        }
+                                    } ?>
                                 </tbody>
                             </table>
                         </div>
                         <div class="col-md-auto">
                             <div class="btn btn-outline-secondary py-0 mt-1 addContactRow"
-                                 data-url="ajax/fetchStaticTypesForContacts.php" data-loading-text="Loading...">
+                                data-url="ajax/fetchStaticTypesForContacts.php" data-loading-text="Loading...">
                                 <i class="fa fa-plus-circle"></i> New
                             </div>
                         </div>
@@ -1120,7 +1198,6 @@ if (isset($_POST['recordSubmit'])) {
     } elseif ($typeee == 'bank') {
         echo "<script>jQuery(document).ready(function ($) {  $('#bankDetails').modal('show');});</script>";
     }
-
 } ?>
 <?php if (isset($_POST['contactDetailsSubmit'])) {
     $post = json_encode($_POST);
@@ -1190,7 +1267,7 @@ if (isset($_POST['recordSubmit'])) {
             $.ajax({
                 type: 'GET',
                 url: url,
-                success: function (response) {
+                success: function(response) {
                     staticOptionsCache[url] = response;
                     callback(response);
                 }
@@ -1212,7 +1289,7 @@ if (isset($_POST['recordSubmit'])) {
 
         addButton.button("reset");
 
-        loadStaticTypes(url, function (staticOptions) {
+        loadStaticTypes(url, function(staticOptions) {
             var tr = `
             <tr class="col-md-6 contact_row_${arrayNumber}">
                 <td onclick="removeContactRow(this)"><i class="fa fa-close btn fs-5 text-danger ps-0 pe-1 pt-1"></i></td>
@@ -1243,8 +1320,8 @@ if (isset($_POST['recordSubmit'])) {
         }
     }
 
-    $(document).ready(function () {
-        $('.addContactRow').on('click', function () {
+    $(document).ready(function() {
+        $('.addContactRow').on('click', function() {
             addContactRow(this);
         });
     });

@@ -8,7 +8,29 @@ $parentId = $parentRow['id'];
 $_fields = transactionSingle($parentRow['p_id']);
 $parentAgent = json_decode($parentRow['agent_details'], true);
 $parentGLoadingInfo = json_decode($parentRow['gloading_info'], true);
+
+$result = fetch('agent_payments', array('bl_no' => $parentRow['bl_no']));
+$editRow = $editId = null;
+if (isset($_POST['editId'])) {
+    $editId = $_POST['editId'];
+}
+$rows = [];
+while ($row = mysqli_fetch_assoc($result)) {
+    $rows[] = $row;
+    if ($row['id'] == $editId) {
+        $editRow = $row;
+    }
+}
+$rowCount = count($rows);
+$firstRow = $rowCount > 0 ? $rows[0] : null;
 ?>
+<div class="modal-header d-flex justify-content-between bg-white align-items-center">
+    <h5 class="modal-title" id="staticBackdropLabel">CARRY BILL</h5>
+    <div class="d-flex align-items-center gap-2">
+        <a href="print/index?secret=<?= base64_encode('agent-bill-print'); ?>&id=<?= $parentId; ?>&carry-print=true" target="_blank" id="printButton" class="btn btn-dark btn-sm me-2">PRINT</a>
+        <a href="carry-bill" class="btn-close ms-3" aria-label="Close"></a>
+    </div>
+</div>
 <div class="row">
     <div class="col-md-10 order-0 content-column">
         <div class="card my-2">
@@ -25,8 +47,11 @@ $parentGLoadingInfo = json_decode($parentRow['gloading_info'], true);
                 </div>
 
                 <div class="row gy-1 border-bottom py-1">
-                    <div class="col-md-12">
-                        <span class="fs-6 fw-bold">By <?= ucwords(json_decode($parentRow['shipping_details'], true)['transfer_by']); ?></span>
+                    <div class="col-md-12 row my-3">
+                        <div class="col-md-3">
+                            <b>Bill#:</b> <?= $firstRow['bill_no'] ?><br>
+                            <b>Date:</b> <?= $firstRow['date'] ?><br>
+                        </div>
                     </div>
                     <div class="col-md-3">
                         <div class="fs-6 fw-bold">Loading Details</div>
@@ -45,6 +70,7 @@ $parentGLoadingInfo = json_decode($parentRow['gloading_info'], true);
                                 echo '<b>B/L No: ' . $bl_no . '</b> - No containers found';
                             }
                             ?>
+                             <span class="fw-bold d-block">By <?= ucwords(json_decode($parentRow['shipping_details'], true)['transfer_by']); ?></span>
                         </div>
                     </div>
 
@@ -75,24 +101,11 @@ $parentGLoadingInfo = json_decode($parentRow['gloading_info'], true);
                                 ?>
                             </div>
                         </div>
-                    <?php
-                    endif;
-                    $result = fetch('agent_payments', array('bl_no' => $parentRow['bl_no']));
-                    $editRow = $editId = null;
-                    if (isset($_POST['editId'])) {
-                        $editId = $_POST['editId'];
-                    }
-                    $rows = [];
-                    while ($row = mysqli_fetch_assoc($result)) {
-                        $rows[] = $row;
-                        if ($row['id'] == $editId) {
-                            $editRow = $row;
-                        }
-                    }
-                    $rowCount = count($rows);
-                    $firstRow = $rowCount > 0 ? $rows[0] : null;
-                    ?>
+                    <?php endif; ?>
                 </div>
+            </div>
+            <div class="col-md-12 mx-3">
+                            <b>Bill Details</b> <?= $firstRow['bill_details'] ?>
             </div>
             <?php
             $TtoAccounts = !$firstRow || ($firstRow && json_decode($firstRow['transfer_details'], true)['transferred_to_accounts'] === false);
@@ -184,11 +197,13 @@ $parentGLoadingInfo = json_decode($parentRow['gloading_info'], true);
         <?php
         $agKhaataNo = $parentAgent['ag_acc_no'];
         $AgKhaata = mysqli_fetch_assoc(mysqli_query($connect, "SELECT id FROM khaata WHERE khaata_no='$agKhaataNo'"));
+        $transferDetails = json_decode($firstRow['transfer_details'], true);
+        $rozCondition = isset($transferDetails['transfer_info']) && $transferDetails['transfer_info'] != '';
         ?>
-        <div class="card d-none transfer-form">
+        <div class="card">
             <div class="card-body p-2">
                 <form method="post">
-                    <div class="row gx-1 gy-3 table-form mb-3">
+                    <div class="row gx-1 gy-3 table-form mb-3 <?= $rozCondition ? 'd-none transfer-form' : '' ?>">
                         <div class="col-2">
                             <div class="input-group">
                                 <label for="cr_acc" class="text-success">Ag.Acc</label>
@@ -293,8 +308,7 @@ $parentGLoadingInfo = json_decode($parentRow['gloading_info'], true);
                         </div>
                     </div>
                     <?php
-                    $transferDetails = json_decode($firstRow['transfer_details'], true);
-                    if (isset($transferDetails['transfer_info']) && $transferDetails['transfer_info'] != '') {
+                    if ($rozCondition) {
                         $rozQ = fetch('roznamchaas', array('r_type' => 'Agent Bill', 'transfered_from_id' => $firstRow['id'], 'transfered_from' => 'agent_payments'));
                         if (mysqli_num_rows($rozQ) > 0) { ?>
                             <table class="table table-sm table-bordered mb-0">
@@ -348,40 +362,38 @@ $parentGLoadingInfo = json_decode($parentRow['gloading_info'], true);
                     } ?>
                 </form>
             </div>
-        </div>
-        <div class="col-2 order-1 fixed-sidebar table-form" style="top: 60px !important;">
-        <div class="align-items-center justify-content-between flex-wrap pt-2">
-                    <div>
-                        <strong><?php echo strtoupper($_fields['p_s_name']) . ' #'; ?></strong>
-                        <?php echo $_fields['sr_no']; ?>
-                    </div>
-                    <div>
-                        <strong>User:</strong> <?php echo $_fields['username']; ?>
-                    </div>
-                    <div>
-                        <strong>Date:</strong> <?php echo my_date($_fields['_date']); ?>
-                    </div>
-                    <div>
-                        <strong>Type:</strong> <?php echo badge(strtoupper($_fields['type']), 'dark'); ?>
-                    </div>
-                    <div>
-                        <strong>Country:</strong> <?php echo $_fields['country']; ?>
-                    </div>
-                    <div>
-                        <strong>Branch:</strong> <?php echo branchName($_fields['branch_id']); ?>
-                    </div>
+        </div> </div>
+        <div class="col-2 order-1 table-form bg-white">
+            <div class="align-items-center justify-content-between flex-wrap pt-2">
+                <div>
+                    <strong><?php echo strtoupper($_fields['p_s_name']) . ' #'; ?></strong>
+                    <?php echo $_fields['sr_no']; ?>
                 </div>
+                <div>
+                    <strong>User:</strong> <?php echo $_fields['username']; ?>
+                </div>
+                <div>
+                    <strong>Date:</strong> <?php echo my_date($_fields['_date']); ?>
+                </div>
+                <div>
+                    <strong>Type:</strong> <?php echo badge(strtoupper($_fields['type']), 'dark'); ?>
+                </div>
+                <div>
+                    <strong>Country:</strong> <?php echo $_fields['country']; ?>
+                </div>
+                <div>
+                    <strong>Branch:</strong> <?php echo branchName($_fields['branch_id']); ?>
+                </div>
+            </div>
             <div class="my-3">
                 <!-- Total Details  -->
                 <b>T. AMOUNT: </b><span id="show_total_amount"><?= isset($total_amount) ? $total_amount : ''; ?></span><br>
                 <b>T. TAX: </b><span id="show_total_amount"><?= isset($total_tax) ? $total_tax : ''; ?></span><br>
                 <b>T.B. AMOUNT: </b><span id="show_total_amount"><?= isset($total_bill_amount) ? $total_bill_amount : ''; ?></span>
             </div>
-            <div class="d-flex mb-2" style="align-items: center;">
-                <a href="print/carry-bill?t_id=<?php echo $id; ?>&action=order&secret=<?php echo base64_encode('powered-by-upsol') . "&print_type=full"; ?>"
-                    target="_blank" class="btn btn-dark btn-sm me-2">PRINT</a>
-            </div>
-            <?php if (!empty($firstRow) && json_decode($firstRow['transfer_details'], true)['transferred_to_accounts'] === true) { echo '<b class="text-success mt-3"><i class="fa fa-check"></i> Transferred</b>'; } ?></button>
+            <?php if (!empty($firstRow) && json_decode($firstRow['transfer_details'], true)['transferred_to_accounts'] === true) {
+                echo '<b class="text-success mt-3"><i class="fa fa-check"></i> Transferred</b>';
+            } ?></button>
             <button class="btn btn-warning d-block btn-sm" onclick="document.querySelector('.transfer-form').classList.toggle('d-none');">Toggle Form</button>
         </div>
         <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>

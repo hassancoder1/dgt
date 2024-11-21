@@ -5,9 +5,14 @@ $purchase_pays_id = 0;
 if ($id > 0) {
     $records = fetch('transactions', array('id' => $id));
     $record = mysqli_fetch_assoc($records);
+    $sea_road = json_decode($record['sea_road'], true);
     $purchase_type = $record['type'];
     $_fields = transactionSingle($id);
+    $_fields['sea_road_array'] = array_merge($_fields['sea_road_array'], !empty($sea_road) ? $sea_road : []);
     $notify_party = isset($record['notify_party_details']) ? json_decode($record['notify_party_details'], true) : false;
+    if ($record['type'] === 'local') {
+        $notify_party = '';
+    }
     if (!empty($_fields)) { ?>
         <div class="row">
             <div class="col-10 order-0 content-column">
@@ -55,77 +60,93 @@ if ($id > 0) {
                                     echo '<div><b>Company Details </b>' . nl2br($_fields['cr_acc_details']) . '</div>';
                                 } ?>
                             </div>
-                            <div class="col-md-4">
-                                <strong>Notify Party Details</strong>
-                                <?php if ($notify_party) { ?>
-                                    <div><b>Acc No. </b><?= $notify_party['np_acc']; ?></div>
-                                    <div><b>Acc Name </b><?php echo $notify_party['np_acc_name']; ?></div>
-                                <?php
-                                    if (!empty($notify_party['np_acc_details'])) {
-                                        $details = $notify_party['np_acc_details'];
-                                        $countryPos = strpos($details, 'Country');
-                                        if ($countryPos !== false) {
-                                            $companyName = substr($details, 0, $countryPos);
-                                            $remainingDetails = substr($details, $countryPos);
-                                            echo '<div><b>Company Name: </b>' . trim($companyName) . '</div>';
-                                            echo '<div><b>Details: </b>' . nl2br($remainingDetails) . '</div>';
-                                        } else {
-                                            echo '<div><b>Company Details: </b>' . nl2br($details) . '</div>';
+                            <?php if ($notify_party !== ''): ?>
+                                <div class="col-md-4">
+                                    <strong>Notify Party Details</strong>
+                                    <?php if ($notify_party) { ?>
+                                        <div><b>Acc No. </b><?= $notify_party['np_acc']; ?></div>
+                                        <div><b>Acc Name </b><?php echo $notify_party['np_acc_name']; ?></div>
+                                    <?php
+                                        if (!empty($notify_party['np_acc_details'])) {
+                                            $details = $notify_party['np_acc_details'];
+                                            $countryPos = strpos($details, 'Country');
+                                            if ($countryPos !== false) {
+                                                $companyName = substr($details, 0, $countryPos);
+                                                $remainingDetails = substr($details, $countryPos);
+                                                echo '<div><b>Company Name: </b>' . trim($companyName) . '</div>';
+                                                echo '<div><b>Details: </b>' . nl2br($remainingDetails) . '</div>';
+                                            } else {
+                                                echo '<div><b>Company Details: </b>' . nl2br($details) . '</div>';
+                                            }
                                         }
+                                    } else {
+                                        echo "Notify Party Details Not Added!";
                                     }
-                                } else {
-                                    echo "Notify Party Details Not Added!";
-                                }
-                                ?>
+                                    ?>
 
-                            </div>
+                                </div>
+                            <?php endif; ?>
                         </div>
                         <?php if (!empty($_fields['sea_road_array'])): ?>
                             <div class="row gy-1 border-bottom py-1">
                                 <div class="col-md-12">
-                                    <span class="fs-6 fw-bold">By </span>
-                                    <?php echo $_fields['sea_road']; ?>
+                                    <span class="fs-6 fw-bold">
+                                        <?= $_fields['type'] === 'booking' ? 'By ' . $_fields['sea_road'] : (isset($_fields['sea_road_array']['truck_no']) ? 'Loading Transfer' : 'WareHouse Transfer'); ?> </span>
+
                                 </div>
-                                <div class="col-md-3">
-                                    <div class="fs-6 fw-bold">Loading Details</div>
-                                    <div>
-                                        <?php
-                                        $loadingDetails = [];
-                                        foreach ($_fields['sea_road_array'] as $key => $value) {
-                                            if (strpos($key, 'l_') === 0) {
-                                                if (is_array($value)) {
-                                                    echo '<b>' . $value[0] . ':</b> ' . $value[1] . '<br>';
-                                                    $loadingDetails[$value[0]] = $value[1];
-                                                } else {
-                                                    echo '<b>' . strtoupper($key) . ':</b> ' . $value . '<br>';
-                                                    $loadingDetails[strtoupper($key)] = $value;
+                                <?php if ($_fields['type'] === 'booking'):
+                                    $_fields['sea_road_array']['l_date_road'] = '';
+                                    $_fields['sea_road_array']['r_date_road'] = ''; ?>
+                                    <div class="col-md-3">
+                                        <div class="fs-6 fw-bold">Loading Details</div>
+                                        <div>
+                                            <?php
+                                            foreach ($_fields['sea_road_array'] as $key => $value) {
+                                                if (strpos($key, 'l_') === 0 && !empty($value)) {
+                                                    if (is_array($value)) {
+                                                        echo '<b>' . $value[0] . ':</b> ' . $value[1] . '<br>';
+                                                    } else {
+                                                        echo '<b>' . ucwords(str_replace('_', ' ', str_replace('l_', '', $key))) . ':</b> ' . $value . '<br>';
+                                                    }
                                                 }
                                             }
-                                        }
-                                        ?>
+                                            ?>
+                                        </div>
                                     </div>
-                                    <input type="hidden" id="loadingDetailsJSON" value='<?= json_encode($loadingDetails); ?>'>
-                                </div>
-
-
-                                <!-- Receiving Country Column -->
-                                <div class="col-md-3">
-                                    <div class="fs-6 fw-bold">Receiving Details</div>
-                                    <?php foreach ($_fields['sea_road_array'] as $key => $value): ?>
+                                    <!-- Receiving Country Column -->
+                                    <div class="col-md-3">
+                                        <div class="fs-6 fw-bold">Receiving Details</div>
+                                        <?php foreach ($_fields['sea_road_array'] as $key => $value): ?>
+                                            <?php
+                                            if (!empty($value) && strpos($key, 'r_') === 0):
+                                                if (is_array($value)) {
+                                                    $label = ($key === 'd_date_road') ? 'Arrival Date' : $value[0];
+                                                    echo '<b>' . $label . ':</b> ' . $value[1] . '<br>';
+                                                } else {
+                                                    echo '<b>' . ucwords(str_replace('_', ' ', str_replace('r_', '', $key))) . ':</b> ' . $value . '<br>';
+                                                }
+                                            endif;
+                                            ?>
+                                        <?php endforeach; ?>
+                                    </div>
+                                    <?php else: ?>
+                                    <div class="col-md-4">
                                         <?php
-                                        // Check if the key starts with 'r_' (receiving-related) or 'd_' (delivery-related)
-                                        if (strpos($key, 'r_') === 0 || strpos($key, 'd_') === 0):
-                                            if (is_array($value)) {
-                                                // For delivery dates, show the label as "Arrival Date" instead of just the key
-                                                $label =  $value[0];
-                                                echo '<b>' . $label . ':</b> ' . $value[1] . '<br>';
-                                            } else {
-                                                echo '<b>' . strtoupper($key) . ':</b> ' . $value . '<br>';
-                                            }
-                                        endif;
-                                        ?>
-                                    <?php endforeach; ?>
-                                </div>
+                                        if ($_fields['sea_road_array']['sea_road'] === 'sea'): ?>
+                                            <b>Truck No:</b> <?= $_fields['sea_road_array']['truck_no'] ?? 'N/A'; ?><br>
+                                            <b>Truck Name:</b> <?= $_fields['sea_road_array']['truck_name'] ?? 'N/A'; ?><br>
+                                            <b>Loading Company:</b> <?= $_fields['sea_road_array']['loading_company_name'] ?? 'N/A'; ?><br>
+                                            <b>Loading Date:</b> <?= $_fields['sea_road_array']['loading_date'] ?? 'N/A'; ?><br>
+                                            <b>Transfer Name:</b> <?= $_fields['sea_road_array']['transfer_name'] ?? 'N/A'; ?><br>
+                                        <?php endif; ?>
+                                        <?php if ($_fields['sea_road_array']['sea_road'] === 'road'): ?>
+                                            <b>Old Company Name:</b> <?= $_fields['sea_road_array']['old_company_name'] ?? 'N/A'; ?><br>
+                                            <b>Transfer Company Name:</b> <?= $_fields['sea_road_array']['transfer_company_name'] ?? 'N/A'; ?><br>
+                                            <b>Warehouse Date:</b> <?= $_fields['sea_road_array']['warehouse_date'] ?? 'N/A'; ?><br>
+                                        <?php endif; ?>
+                                        </ul>
+                                    </div>
+                                <?php endif; ?>
 
                                 <div class="col-md-6">
                                     <div class="fs-6 fw-bold">Payment Details</div>
@@ -137,42 +158,17 @@ if ($id > 0) {
                                         $remaining_percentage = 100 - $percentage;
                                         $partial_amount1 = ($percentage / 100) * $total_amount;
                                         $partial_amount2 = ($remaining_percentage / 100) * $total_amount;
-                                        $paymentDetails = [];
 
                                         if (isset($payments->full_advance) && $payments->full_advance === 'advance') {
                                             echo '<b>Type:</b> ' . ucfirst($payments->full_advance) . ' - ' . $percentage . '% (Remaining: ' . $remaining_percentage . '%)<br>';
                                             echo '<b>Partial Amount 1 (' . $percentage . '%):</b> ' . number_format($partial_amount1, 2) . '<br>';
-
                                             echo '<b>Partial Amount 2 (' . $remaining_percentage . '%):</b> ' . number_format($partial_amount2, 2) . '<br>';
-
-
-                                            $paymentDetails = [
-                                                'Type' => ucfirst($payments->full_advance) . ' - ' . $percentage . '% (Remaining: ' . $remaining_percentage . '%)',
-                                                'Partial Amount 1' => number_format($partial_amount1, 2),
-
-                                                'Partial Amount 2' => number_format($partial_amount2, 2),
-
-                                            ];
                                         } elseif (isset($payments->full_advance) && $payments->full_advance === 'full') {
                                             echo '<b>Type:</b> Full Payment<br>';
                                             echo '<b>Total Amount:</b> ' . number_format($total_amount, 2) . '<br>';
-
-
-                                            $paymentDetails = [
-                                                'Type' => 'Full Payment',
-                                                'Total Amount' => number_format($total_amount, 2),
-
-                                            ];
                                         } elseif (isset($payments->full_advance) && $payments->full_advance === 'credit') {
                                             echo '<b>Type:</b> Credit Payment<br>';
                                             echo '<b>Total Amount:</b> ' . number_format($total_amount, 2) . '<br>';
-
-
-                                            $paymentDetails = [
-                                                'Type' => 'Credit Payment',
-                                                'Total Amount' => number_format($total_amount, 2),
-
-                                            ];
                                         } else {
                                             echo "<b>No payment details available.</b>";
                                         }
@@ -311,7 +307,7 @@ if ($id > 0) {
                                 array('Total Amount', round($final_amount, 2)),
                             );
                         }
-                        $crdt_paid_final = purchaseSpecificData($record['id'], 'crdt_paid_total');
+                        $crdt_paid_final = purchaseSpecificData($record['id'], 'crdt_paid_total', 'amount');
                         $bal = $total_amount - $crdt_paid_final;
                     } else {
                         if ($record['khaata_tr1'] != '') {
@@ -343,9 +339,9 @@ if ($id > 0) {
                                 array('Remaining', round($partial_amount2, 2)),
                             );
                         }
-                        $adv_paid_final = purchaseSpecificData($record['id'], 'adv_paid_total');
+                        $adv_paid_final = purchaseSpecificData($record['id'], 'adv_paid_total', 'amount');
                         $balADV = $partial_amount1 - $adv_paid_final;
-                        $rem_paid_final = purchaseSpecificData($record['id'], 'rem_paid_total');
+                        $rem_paid_final = purchaseSpecificData($record['id'], 'rem_paid_total', 'amount');
                         $balREM = $partial_amount2 - $rem_paid_final;
                     }
                     ?>

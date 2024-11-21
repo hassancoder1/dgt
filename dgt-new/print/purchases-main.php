@@ -5,7 +5,7 @@ include("../connection.php");
 $remove = $goods_name = $start_print = $end_print = $type = $acc_no = $branch = $p_id = $payment_type = $sea_road = $country = $country_type = $date_type = $is_transferred = '';
 $is_search = false;
 global $connect;
-$results_per_page = 50;
+$results_per_page = 25;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $start_from = ($page - 1) * $results_per_page;
 $sql = "SELECT * FROM `transactions` WHERE p_s='p'";
@@ -109,6 +109,13 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
     include '../assets/css/custom.css';
     echo "</style>";
     ?>
+    <style>
+        @media print {
+            .hide-on-print{
+                display: none;
+            }
+        }
+    </style>
 </head>
 
 <body class="mx-2">
@@ -142,10 +149,10 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
         </h1>
         <div class="d-flex gap-2">
             <div>
-                <button class="btn btn-sm btn-dark" onclick="window.location.href = '/purchases'"><i class="fa fa-arrow-left"></i> Back</button>
+                <button class="btn btn-sm btn-dark hide-on-print" onclick="window.location.href = '/purchases'"><i class="fa fa-arrow-left"></i> Back</button>
             </div>
             <div class="dropdown">
-                <button class="btn btn-success btn-sm" onclick="window.print();">
+                <button class="btn btn-success btn-sm hide-on-print" onclick="window.print();">
                     <i class="fa fa-print"></i>
                 </button>
             </div>
@@ -172,6 +179,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     <th>AMOUNT</th>
                     <th>PAYMENT TYPE</th>
                     <th>COUNTRY</th>
+                    <th>Delivery Terms</th>
                     <th>ROAD</th>
                     <th>LOADING COUNTRY | DATE</th>
                     <th>RECEIVING COUNTRY | DATE</th>
@@ -198,11 +206,29 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     $_fields_sr = ['l_country' => '', 'l_date' => '', 'r_country' => '', 'r_date' => ''];
                     if (!empty($sea_road_array)) {
                         $sea_road = $sea_road_array->sea_road ?? '';
-                        if ($sea_road == 'sea') {
-                            $_fields_sr = ['l_country' => $sea_road_array->l_country, 'l_date' => $sea_road_array->l_date, 'r_country' => $sea_road_array->r_country, 'r_date' => $sea_road_array->r_date];
-                        }
-                        if ($sea_road == 'road') {
-                            $_fields_sr = ['l_country' => $sea_road_array->l_country_road, 'l_date' => $sea_road_array->l_date_road, 'r_country' => $sea_road_array->r_country_road, 'r_date' => $sea_road_array->r_date_road];
+                        $_fields_sr = [];
+                        if ($sea_road === 'sea') {
+                            $_fields_sr = [
+                                'l_country' => $sea_road_array->l_country ?? '',
+                                'l_date'    => $sea_road_array->l_date ?? '',
+                                'r_country' => $sea_road_array->r_country ?? '',
+                                'r_date'    => $sea_road_array->r_date ?? '',
+                                'truck_no' => $sea_road_array->truck_no ?? '',
+                                'truck_name' => $sea_road_array->truck_name ?? '',
+                                'loading_company_name' => $sea_road_array->loading_company_name ?? '',
+                                'loading_date' => $sea_road_array->loading_date ?? '',
+                                'transfer_name' => $sea_road_array->transfer_name ?? ''
+                            ];
+                        } elseif ($sea_road === 'road') {
+                            $_fields_sr = [
+                                'l_country' => $sea_road_array->l_country_road ?? '',
+                                'l_date'    => $sea_road_array->l_date_road ?? '',
+                                'r_country' => $sea_road_array->r_country_road ?? '',
+                                'r_date'    => $sea_road_array->r_date_road ?? '',
+                                'old_company_name' => $sea_road_array->old_company_name ?? '',
+                                'transfer_company_name' => $sea_road_array->transfer_company_name ?? '',
+                                'warehouse_date' => $sea_road_array->warehouse_date ?? '',
+                            ];
                         }
                     }
                     $p_qty_total += !empty($totals['Qty']) ? $totals['Qty'] : 0;
@@ -230,6 +256,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                         </td>
                         <td class="<?php echo $rowColor; ?> px-2"><?= isset($_fields_single['payment_details']->full_advance) ? ucwords($_fields_single['payment_details']->full_advance) : "No Payment Details Available"; ?></td>
                         <td class="<?php echo $rowColor; ?>"><span class="purchase_country"><?php echo $purchase['country']; ?></span></td>
+                        <td class="<?php echo $rowColor; ?>"><?php echo $purchase['delivery_terms']; ?></td>
                         <?php
                         if ($sea_road == '') {
                             echo '<td class="<?php echo $rowColor; ?>" colspan="3"></td>';

@@ -1,4 +1,4 @@
-<?php session_start();
+<?php @session_start();
 // For Local Use
 $localhost = "localhost";
 $username = "root";
@@ -10,6 +10,10 @@ $password = "";
 // $username = "3742499_dgtllc";
 // $dbname = "3742499_dgtllc";
 // $password = "3@.S9wreHaLchnB";
+
+// $username = "u152432976_dgt_new";
+// $dbname = "u152432976_dgt_new";
+// $password = "3x7ACu&J@up";
 /*accounts2.dgt.llc*/
 $connect = new mysqli($localhost, $username, $password, $dbname);
 

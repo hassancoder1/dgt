@@ -160,9 +160,8 @@
     }
 
     function getFileThrough(fileType, url) {
-        $('#processingScreen').toggleClass('d-none d-flex');
         $.ajax({
-            url: 'ajax/generateFile.php',
+            url: `${window.location.protocol}//${window.location.host}/ajax/generateFile.php`,
             type: 'post',
             data: {
                 filetype: fileType,
