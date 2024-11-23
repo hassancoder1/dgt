@@ -117,7 +117,6 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
         $sea_road = ['sea_road' => 'sea', 'l_country_road' => '', 'l_border_road' => '', 'l_date_road' => date('Y-m-d'), 'truck_container' => '', 'r_country_road' => '', 'r_border_road' => '', 'r_date_road' => date('Y-m-d'), 'd_date_road' => date('Y-m-d'), 'is_loading' => 0, 'l_country' => '', 'l_port' => '', 'l_date' => date('Y-m-d'), 'ctr_name' => '', 'is_receiving' => 0, 'r_country' => '', 'r_port' => '', 'r_date' => date('Y-m-d'), 'arrival_date' => date('Y-m-d'), 'report' => '', 'old_company_name' => '', 'transfer_company_name' => '', 'warehouse_date' => date('Y-m-d'), 'truck_no' => '', 'truck_name' => '', 'loading_company_name' => '', 'loading_date' => date('Y-m-d'), 'transfer_name' => ''];
     }
 
-
     if (isset($_GET['item_id']) && $_GET['item_id'] > 0) {
         $item_id = mysqli_real_escape_string($connect, $_GET['item_id']);
         $records2 = fetch('transaction_items', array('id' => $item_id));
@@ -339,10 +338,14 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                                 <?php
                                 // Determine the route type based on purchase type
                                 $routeText = '';
-                                if ($_GET['type'] === 'booking') {
-                                    $routeText = $_fields['sea_road'] === 'sea' ? 'Sea' : 'Road';
-                                } elseif ($_GET['type'] === 'local') {
-                                    $routeText = $sea_road['sea_road'] == 'sea' ? 'Local' : 'Warehouse';
+                                if (!empty($_fields['sea_road'])) {
+                                    if ($_GET['type'] === 'booking') {
+                                        $routeText = $_fields['sea_road'] === 'sea' ? 'Sea' : 'Road';
+                                    } elseif ($_GET['type'] === 'local') {
+                                        $routeText = $_fields['sea_road'] == 'sea' ? 'Local' : 'Warehouse';
+                                    }
+                                } else {
+                                    $routeText = '';
                                 }
                                 ?>
 
@@ -1889,12 +1892,12 @@ if (isset($_GET['deletePurchaseReport'])) {
                             <div class="bg-light border pt-1 ps-2">
                                 <!-- For Local Payments I'm not building a different functionality for it rather I'm assuming sea as type = Loading and road as type = warehouse. -->
                                 <div class="form-check form-check-inline form-switch mb-0 h-auto">
-                                    <input class="form-check-input" type="radio" name="loading_warehouse" id="sea"
+                                    <input class="form-check-input" type="radio" name="local_warehouse" id="sea"
                                         value="sea" <?php echo $sea_road['sea_road'] == 'sea' ? 'checked' : ''; ?>>
                                     <label class="form-check-label" for="sea">Loading Transfer</label>
                                 </div>
                                 <div class="form-check form-check-inline form-switch mb-0 h-auto">
-                                    <input class="form-check-input" type="radio" name="loading_warehouse" id="road" value="road"
+                                    <input class="form-check-input" type="radio" name="local_warehouse" id="road" value="road"
                                         <?php echo $sea_road['sea_road'] == 'road' ? 'checked' : ''; ?>>
                                     <label class="form-check-label" for="road">WareHouse Transfer</label>
                                 </div>
@@ -1989,7 +1992,7 @@ if (isset($_GET['deletePurchaseReport'])) {
         $_POST['is_loading'] = isset($_POST['is_loading']) ? 1 : 0;
         $_POST['is_receiving'] = isset($_POST['is_receiving']) ? 1 : 0;
         if ($_POST['purchaseLocal'] == 'true') {
-            $_POST['sea_road'] = $_POST['loading_warehouse'];
+            $_POST['sea_road'] = $_POST['local_warehouse'];
             $_POST['route'] = $_POST['sea_road'] === 'sea' ? 'local' : 'warehouse';
         } else {
             $_POST['sea_road'] = $_POST['sea_road'];
@@ -2426,7 +2429,7 @@ if (isset($_POST['thirdPartyBankSubmit'])) {
     $('input[name="sea_road"]').change(function() {
         toggleSeaRoadDivs();
     });
-    $('input[name="loading_warehouse"]').change(function() {
+    $('input[name="local_warehouse"]').change(function() {
         toggleLoadingWareHouseDivs();
     });
     $("#is_loading").change(toggleLoadingAndRequired);
@@ -2446,7 +2449,7 @@ if (isset($_POST['thirdPartyBankSubmit'])) {
     }
 
     function toggleLoadingWareHouseDivs() {
-        var isLoadingWareHouseSelected = $('input[name="loading_warehouse"]:checked').val().trim();
+        var isLoadingWareHouseSelected = $('input[name="local_warehouse"]:checked').val().trim();
         if (isLoadingWareHouseSelected === "sea") {
             $('.toggleBySea').show();
             $('.toggleByRoad').hide();

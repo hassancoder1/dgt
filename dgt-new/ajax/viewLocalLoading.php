@@ -5,39 +5,38 @@ if ($id > 0) {
     $record = mysqli_fetch_assoc($records);
     $sea_road = json_decode($record['sea_road'], true);
     $_fields = transactionSingle($id);
-    $_fields['sea_road_array'] = array_merge($_fields['sea_road_array'], !empty($sea_road) ? $sea_road : []);
+    $route = $_fields['sea_road_array'] = array_merge($_fields['sea_road_array'], !empty($sea_road) ? $sea_road : []);
     if (!empty($_fields)) {
         $result = mysqli_query($connect, "SELECT * FROM local_loading where p_id=$id");
         $firstRow = null;
-        $uniqueTruckNOs = [];
+        $uniqueUIDNOs = [];
         $rows = [];
-        $max_sr_no = $total_loaded_quantity_no = $total_loaded_gross_weight = $total_loaded_net_weight = $next_truck_entry_no = 0;
+        $max_sr_no = $total_loaded_quantity_no = $total_loaded_gross_weight = $total_loaded_net_weight = $next_uid_entry_no = 0;
         $child_ids = "";
-        $ActiveTruckRow = null;
+        $ActiveUIDRow = null;
         if ($result && mysqli_num_rows($result) > 0) {
             while ($row = mysqli_fetch_assoc($result)) {
-                if (!in_array($row['truck_no'], $uniqueTruckNOs)) {
-                    $uniqueTruckNOs[] = $row['truck_no'];
+                if (!in_array($row['uid'], $uniqueUIDNOs)) {
+                    $uniqueUIDNOs[] = $row['uid'];
                 }
                 $rows[] = $row;
                 if ($firstRow === null) {
                     $firstRow = $row;
-                    $current_truck_no = $firstRow['truck_no'];
-                    $truck_no_query = mysqli_query($connect, "
-                        SELECT COUNT(*) AS truck_count, GROUP_CONCAT(id) AS child_ids 
-                        FROM general_loading 
-                        WHERE bl_no = '$current_truck_no'
+                    $current_uid = $firstRow['uid'];
+                    $uid_no_query = mysqli_query($connect, "
+                        SELECT COUNT(*) AS uid_count, GROUP_CONCAT(id) AS child_ids 
+                        FROM local_loading 
+                        WHERE uid = '$current_uid'
                     ");
-                    $truck_no_result = mysqli_fetch_assoc($truck_no_query);
+                    $uid_no_result = mysqli_fetch_assoc($uid_no_query);
 
-                    $next_truck_entry_no = $truck_no_result['truck_count'] + 1;
-                    $child_ids = implode(',', array_filter(explode(',', $truck_no_result['child_ids']), fn($id) => $id != $firstRow['id']));
+                    $next_uid_entry_no = $uid_no_result['uid_count'] + 1;
+                    $child_ids = implode(',', array_filter(explode(',', $uid_no_result['child_ids']), fn($id) => $id != $firstRow['id']));
                 }
-                $ActiveTruckNo = isset($firstRow) ? json_decode($firstRow['lloading_info'], true)['active_truck_no'] : '';
-                // Check if this row's bl_no matches ActiveBlNo and is the oldest entry
-                if (isset($ActiveTruckNo) && $row['truck_no'] === $ActiveTruckNo) {
-                    if ($ActiveTruckRow === null || $row['created_at'] < $ActiveTruckRow['created_at']) {
-                        $ActiveTruckRow = $row;
+                $ActiveUIDNo = isset($firstRow) ? json_decode($firstRow['lloading_info'], true)['active_uid'] : '';
+                if (isset($ActiveUIDNo) && $row['uid'] === $ActiveUIDNo) {
+                    if ($ActiveUIDRow === null || $row['created_at'] < $ActiveUIDRow['created_at']) {
+                        $ActiveUIDRow = $row;
                     }
                 }
                 if ($row['sr_no'] > $max_sr_no) {
@@ -67,11 +66,11 @@ if ($id > 0) {
             <div class="d-flex align-items-center gap-2">
                 <?php if ($firstRow): ?>
                     <div class="d-flex gap-2 align-items-center">
-                        <label for="truckNoSearch" style="text-wrap:nowrap;">Truck No Print </label>
+                        <label for="truckNoSearch" style="text-wrap:nowrap;">UID Print </label>
                         <select name="truckNoSearch" id="truckNoSearch" class="form-select form-select-sm">
-                            <option value="">Select Truck No</option>
-                            <?php foreach ($uniqueTruckNOs as $oneTruckNo): ?>
-                                <option value="<?= $oneTruckNo; ?>"><?= $oneTruckNo; ?></option>
+                            <option value="">Select UID</option>
+                            <?php foreach ($uniqueUIDNOs as $oneUID): ?>
+                                <option value="<?= $oneUID; ?>"><?= $oneUID; ?></option>
                             <?php endforeach; ?>
                         </select>
                         <a href="#" target="_blank" id="printButton" class="btn btn-dark btn-sm me-2 disabled">PRINT</a>
@@ -91,11 +90,11 @@ if ($id > 0) {
             <div class="col-md-10">
                 <div class="card my-2">
                     <div class="card-body">
-                        <?php if (!empty($_fields['sea_road_array'])): ?>
+                        <?php if (!empty($route)): ?>
                             <div class="row gy-1 border-bottom py-1">
                                 <div class="col-md-4">
                                     <span class="fs-6 fw-bold">
-                                        <?= isset($_fields['sea_road_array']['truck_no']) ? 'Loading Local Transfer' : 'WareHouse Transfer'; ?> </span>
+                                        Loading <span class="text-success">"<?= ucwords($route['route']); ?></span>" Transfer </span>
 
                                 </div>
                                 <div class="col-md-8">
@@ -103,18 +102,19 @@ if ($id > 0) {
                                 </div>
                                 <div class="col-md-4">
                                     <?php
-                                    if ($_fields['sea_road_array']['sea_road'] === 'sea'): ?>
-                                        <b>Truck No:</b> <?= $_fields['sea_road_array']['truck_no'] ?? 'N/A'; ?><br>
-                                        <b>Truck Name:</b> <?= $_fields['sea_road_array']['truck_name'] ?? 'N/A'; ?><br>
-                                        <b>Loading Company:</b> <?= $_fields['sea_road_array']['loading_company_name'] ?? 'N/A'; ?><br>
-                                        <b>Loading Date:</b> <?= $_fields['sea_road_array']['loading_date'] ?? 'N/A'; ?><br>
-                                        <b>Transfer Name:</b> <?= $_fields['sea_road_array']['transfer_name'] ?? 'N/A'; ?><br>
+                                    if ($route['route'] === 'local'): ?>
+                                        <b>Truck No:</b> <?= $route['truck_no'] ?? 'N/A'; ?><br>
+                                        <b>Truck Name:</b> <?= $route['truck_name'] ?? 'N/A'; ?><br>
+                                        <b>Loading Warehouse:</b> <?= $route['loading_warehouse'] ?? 'N/A'; ?><br>
+                                        <b>Receiving Warehouse:</b> <?= $route['loading_warehouse'] ?? 'N/A'; ?><br>
                                     <?php endif; ?>
-                                    <?php if ($_fields['sea_road_array']['sea_road'] === 'road'): ?>
-                                        <b>Old Company Name:</b> <?= $_fields['sea_road_array']['old_company_name'] ?? 'N/A'; ?><br>
-                                        <b>Transfer Company Name:</b> <?= $_fields['sea_road_array']['transfer_company_name'] ?? 'N/A'; ?><br>
-                                        <b>Warehouse Date:</b> <?= $_fields['sea_road_array']['warehouse_date'] ?? 'N/A'; ?><br>
+                                    <?php if ($route['route'] === 'warehouse'): ?>
+                                        <b>WareHouse:</b> <?= $route['warehouse_transfer'] ?? 'N/A'; ?><br>
                                     <?php endif; ?>
+                                    <b>Loading Company:</b> <?= $route['loading_company_name'] ?? 'N/A'; ?><br>
+                                        <b>Receiving Company:</b> <?= $route['loading_company_name'] ?? 'N/A'; ?><br>
+                                        <b>Loading Date:</b> <?= $route['loading_date'] ?? 'N/A'; ?><br>
+                                        <b>Loading Date:</b> <?= $route['receiving_date'] ?? 'N/A'; ?><br>
                                     </ul>
                                 </div>
                                 <div class="col-md-8">
@@ -214,22 +214,24 @@ if ($id > 0) {
                             <thead>
                                 <tr>
                                     <th class="bg-dark text-white">Sr#</th>
-                                    <th class="bg-dark text-white">Truck No.</th>
-                                    <th class="bg-dark text-white">Truck Name</th>
+                                    <th class="bg-dark text-white">UID</th>
                                     <th class="bg-dark text-white">Goods Name</th>
                                     <th class="bg-dark text-white">Qty Name</th>
                                     <th class="bg-dark text-white">Qty No</th>
                                     <th class="bg-dark text-white">G.W.KGS</th>
                                     <th class="bg-dark text-white">N.W.KGS</th>
-                                    <?php if ($_fields['sea_road_array']['sea_road'] === 'sea'): ?>
-                                        <th class="bg-dark text-white">L Company</th>
-                                        <th class="bg-dark text-white">Date</th>
-                                        <th class="bg-dark text-white">Trans Nme</th>
-                                    <?php elseif ($_fields['sea_road_array']['sea_road'] === 'road'): ?>
-                                        <th class="bg-dark text-white">Old Company Name</th>
-                                        <th class="bg-dark text-white">Trans Company</th>
-                                        <th class="bg-dark text-white">Date</th>
+                                    <?php if ($route['sea_road'] === 'sea'): ?>
+                                        <th class="bg-dark text-white">Truck No.</th>
+                                        <th class="bg-dark text-white">Truck Name</th>
+                                        <th class="bg-dark text-white">L WareHouse</th>
+                                        <th class="bg-dark text-white">R WareHouse</th>
+                                    <?php elseif ($route['sea_road'] === 'road'): ?>
+                                        <th class="bg-dark text-white">WareHouse</th>
                                     <?php endif; ?>
+                                    <th class="bg-dark text-white">L Company</th>
+                                    <th class="bg-dark text-white">L Date</th>
+                                    <th class="bg-dark text-white">R Company</th>
+                                    <th class="bg-dark text-white">R Date</th>
                                     <th class="bg-dark text-white">FILE</th>
                                 </tr>
                             </thead>
@@ -239,22 +241,24 @@ if ($id > 0) {
                                 foreach ($rows as $row): ?>
                                     <tr class="LoadingRow">
                                         <td class="border sr_no border-dark"><a href="local-loading?p_id=<?= $id; ?>&view=1&lp_id=<?= $row['id']; ?>&action=update&sr_no=<?= $row['sr_no']; ?>">#<?= $row['sr_no']; ?></a></td>
-                                        <td class="border border-dark"><?= $row['truck_no']; ?></td>
-                                        <td class="border border-dark"><?= $row['truck_name']; ?></td>
+                                        <td class="border border-dark"><?= $row['uid']; ?></td>
                                         <td class="border border-dark"><?= goodsName(json_decode($row['goods_details'], true)['goods_id']); ?></td>
                                         <td class="border border-dark"><?= json_decode($row['goods_details'], true)['quantity_name']; ?></td>
                                         <td class="border quantity_no border-dark"><?= json_decode($row['goods_details'], true)['quantity_no']; ?></td>
                                         <td class="border border-dark"><?= json_decode($row['goods_details'], true)['gross_weight']; ?></td>
                                         <td class="border border-dark"><?= json_decode($row['goods_details'], true)['net_weight']; ?></td>
-                                        <?php if ($_fields['sea_road_array']['sea_road'] === 'sea'): ?>
-                                            <td class="border border-dark"><?= json_decode($row['transfer_details'], true)['loading_company_name']; ?></td>
-                                            <td class="border border-dark"><?= json_decode($row['transfer_details'], true)['loading_date']; ?></td>
-                                            <td class="border border-dark"><?= json_decode($row['transfer_details'], true)['transfer_name']; ?></td>
-                                        <?php elseif ($_fields['sea_road_array']['sea_road'] === 'road'): ?>
-                                            <td class="border border-dark"><?= json_decode($row['transfer_details'], true)['old_company_name']; ?></td>
-                                            <td class="border border-dark"><?= json_decode($row['transfer_details'], true)['transfer_company_name']; ?></td>
-                                            <td class="border border-dark"><?= json_decode($row['transfer_details'], true)['warehouse_date']; ?></td>
+                                        <?php if ($route['sea_road'] === 'sea'): ?>
+                                            <td class="border border-dark"><?= json_decode($row['transfer_details'], true)['truck_no']; ?></td>
+                                            <td class="border border-dark"><?= json_decode($row['transfer_details'], true)['truck_name']; ?></td>
+                                            <td class="border border-dark"><?= json_decode($row['transfer_details'], true)['loading_warehouse']; ?></td>
+                                            <td class="border border-dark"><?= json_decode($row['transfer_details'], true)['receiving_warehouse']; ?></td>
+                                        <?php elseif ($route['sea_road'] === 'road'): ?>
+                                            <td class="border border-dark"><?= json_decode($row['transfer_details'], true)['warehouse_transfer']; ?></td>
                                         <?php endif; ?>
+                                        <td class="border border-dark"><?= json_decode($row['transfer_details'], true)['loading_company_name']; ?></td>
+                                        <td class="border border-dark"><?= json_decode($row['transfer_details'], true)['receiving_company_name']; ?></td>
+                                        <td class="border border-dark"><?= json_decode($row['transfer_details'], true)['loading_date']; ?></td>
+                                        <td class="border border-dark"><?= json_decode($row['transfer_details'], true)['receiving_date']; ?></td>
                                         <td class="border border-dark text-success" style="position: relative;">
                                             <?php
                                             $attachments = json_decode($row['attachments'], true) ?? [];
@@ -283,11 +287,11 @@ if ($id > 0) {
                                     ?>
                                 <?php endforeach; ?>
                                 <tr>
-                                    <th colspan="5"></th>
+                                    <th colspan="4"></th>
                                     <th class="fw-bold" id="total_loaded_quantity_no"><?= $quantity_no; ?></th>
                                     <th class="fw-bold" id="total_loaded_gross_weight"><?= $gross_weight; ?></th>
                                     <th class="fw-bold" id="total_loaded_net_weight"><?= $net_weight; ?></th>
-                                    <!-- <th colspan="7"></th> -->
+                                    <th colspan="12"></th>
                                 </tr>
                             </tbody>
                         </table>
@@ -298,14 +302,16 @@ if ($id > 0) {
                             <form method="post" class="table-form <?= (isset($_POST['action']) ? $_POST['action'] : '') === 'update' ? 'border border-danger p-2' : ''; ?>" onsubmit="return compareValues()" enctype="multipart/form-data">
                                 <?php
                                 $routeDetails = [
+                                    'uid' => $sea_road['uid'] ?? '',
                                     'truck_no' => $sea_road['truck_no'] ?? '',
                                     'truck_name' => $sea_road['truck_name'] ?? '',
                                     'loading_company_name' => $sea_road['loading_company_name'] ?? '',
+                                    'receiving_company_name' => $sea_road['receiving_company_name'] ?? '',
                                     'loading_date' => $sea_road['loading_date'] ?? '',
-                                    'transfer_name' => $sea_road['transfer_name'] ?? '',
-                                    'old_company_name' => $sea_road['old_company_name'] ?? '',
-                                    'transfer_company_name' => $sea_road['transfer_company_name'] ?? '',
-                                    'warehouse_date' => $sea_road['warehouse_date'] ?? '',
+                                    'receiving_date' => $sea_road['receiving_date'] ?? '',
+                                    'loading_warehouse' => $sea_road['loading_warehouse'] ?? '',
+                                    'receiving_warehouse' => $sea_road['receiving_warehouse'] ?? '',
+                                    'warehouse_transfer' => $sea_road['warehouse_transfer'] ?? '',
                                     'route' => $sea_road['route'] ?? '',
                                 ];
                                 $routeDetails = array_merge($sea_road, $routeDetails);
@@ -315,34 +321,36 @@ if ($id > 0) {
                                     $updateQ = mysqli_query($connect, "SELECT * FROM local_loading WHERE id = '$rowId'");
                                     $updateRow = mysqli_fetch_assoc($updateQ);
                                     $next_sr_no = $updateRow['sr_no'];
-                                    $last_record['truck_no'] = $updateRow['truck_no'];
+                                    $last_record['uid'] = $updateRow['uid'];
                                     $last_record['report'] = $updateRow['report'];
                                     $Goods = isset($updateRow['goods_details']) ? json_decode($updateRow['goods_details'], true) : [];
                                     $Transfer = isset($updateRow['transfer_details']) ? json_decode($updateRow['transfer_details'], true) : [];
                                     echo '<input type="hidden" name="action" value="update">';
                                     echo '<input type="hidden" name="id" value="' . $updateRow['id'] . '">';
                                     $action = isset($_POST['action']) ? $_POST['action'] : '';
-                                } elseif ($ActiveTruckRow) {
+                                } elseif ($ActiveUIDRow) {
                                     $action = 'new';
-                                    $last_record['truck_no'] = $ActiveTruckRow['truck_no'];
-                                    $last_record['report'] = $ActiveTruckRow['report'];
+                                    $last_record['uid'] = $ActiveUIDRow['uid'];
+                                    $last_record['report'] = $ActiveUIDRow['report'];
                                     $Goods = ['goods_id' => '', 'quantity_no' => '', 'quantity_name' => '', 'size' => '', 'brand' => '', 'origin' => '', 'net_weight' => '', 'gross_weight' => ''];
-                                    $Transfer = isset($ActiveTruckRow['transfer_details']) ? json_decode($ActiveTruckRow['transfer_details'], true) : [];
-                                    echo '<input type="hidden" name="active_truck_no" value="' . $ActiveTruckRow['truck_no'] . '">';
+                                    $Transfer = isset($ActiveUIDRow['transfer_details']) ? json_decode($ActiveUIDRow['transfer_details'], true) : [];
+                                    echo '<input type="hidden" name="active_uid" value="' . $ActiveUIDRow['uid'] . '">';
                                 } else {
                                     $action = 'new';
                                     $last_record = [];
-                                    $last_record['truck_no'] = '';
-                                    $Goods = ['goods_id' => '', 'quantity_no' => '', 'quantity_name' => '', 'size' => '', 'brand' => '', 'origin' => '', 'net_weight' => '', 'gross_weight' => '', 'container_no' => '', 'container_name' => ''];
+                                    $last_record['uid'] = '';
+                                    $Goods = ['goods_id' => '', 'quantity_no' => '', 'quantity_name' => '', 'size' => '', 'brand' => '', 'origin' => '', 'net_weight' => '', 'gross_weight' => ''];
                                     $Transfer = [
+                                        'uid' => '',
                                         'truck_no' => '',
                                         'truck_name' => '',
                                         'loading_company_name' => '',
+                                        'receiving_company_name' => '',
                                         'loading_date' => '',
-                                        'transfer_name' => '',
-                                        'old_company_name' => '',
-                                        'transfer_company_name' => '',
-                                        'warehouse_date' => '',
+                                        'receiving_date' => '',
+                                        'loading_warehouse' => '',
+                                        'receiving_warehouse' => '',
+                                        'warehouse_transfer' => '',
                                         'route' => $routeDetails['route']
                                     ];
                                     $last_record['report'] = '';
@@ -355,9 +363,9 @@ if ($id > 0) {
                                             <a href="local-loading?deleteLoadingEntry=true&lp_id=<?= $updateRow['id']; ?>&p_id=<?= $id ?>" class="btn btn-danger btn-sm">Delete This Entry</a>
                                         <?php }
                                     } else { ?>
-                                        <h5 class="fw-bold">General Loading <span class="text-success">"<?= ucwords($sea_road['route']); ?>"</span> Transfer</h5>
+                                        <h5 class="fw-bold">Loading <span class="text-success">"<?= ucwords($sea_road['route']); ?>"</span> Transfer</h5>
                                         <?php };
-                                    if (!$ActiveTruckRow): if ($firstRow): ?>
+                                    if (!$ActiveUIDRow): if ($firstRow): ?>
                                             <span class="btn btn-warning btn-sm mr-2 pointer"
                                                 onclick="populateInputs()">
                                                 Get Purchase Truck Details
@@ -366,14 +374,16 @@ if ($id > 0) {
                                                 function populateInputs() {
                                                     let values = JSON.parse('<?= json_encode($routeDetails); ?>');
                                                     let inputIDs = {
+                                                        uid: '#uid',
                                                         truck_no: '#truck_no',
                                                         truck_name: '#truck_name',
                                                         loading_company_name: '#loading_company_name',
+                                                        receiving_company_name: '#receiving_company_name',
                                                         loading_date: '#loading_date',
-                                                        transfer_name: '#transfer_name',
-                                                        old_company_name: '#old_company_name',
-                                                        transfer_company_name: '#transfer_company_name',
-                                                        warehouse_date: '#warehouse_date',
+                                                        receiving_date: '#receiving_date',
+                                                        loading_warehouse: '#loading_warehouse',
+                                                        receiving_warehouse: '#receiving_warehouse',
+                                                        warehouse_transfer: '#warehouse_transfer',
                                                         route: '#route'
                                                     };
                                                     Object.keys(inputIDs).forEach(key => {
@@ -394,7 +404,7 @@ if ($id > 0) {
                                 <!-- General Information -->
                                 <hr>
                                 <?php if ($firstRow) { ?>
-                                    <input type="hidden" name="truck_entry_no" value="<?= $next_truck_entry_no; ?>">
+                                    <input type="hidden" name="uid_entry_no" value="<?= $next_uid_entry_no; ?>">
                                     <input type="hidden" name="child_ids" value="<?= $child_ids; ?>">
                                 <?php } ?>
                                 <input type="hidden" name="total_quantity_no" value="<?= $total_quantity_no; ?>">
@@ -404,7 +414,6 @@ if ($id > 0) {
                                 <input type="hidden" name="route" value='<?= $Transfer['route']; ?>'>
 
                                 <input type="hidden" name="p_id" id="p_id" value="<?= $id; ?>">
-                                <input type="hidden" name="transfer_by" id="transfer_by" value="<?= isset($_fields['sea_road_array']['truck_no']) ? 'Loading Local Transfer' : 'WareHouse Transfer';; ?>">
                                 <input type="hidden" name="p_branch" id="p_branch" value="<?= branchName($_fields['branch_id']); ?>">
                                 <input type="hidden" name="p_date" id="p_date" value="<?= $_fields['_date']; ?>">
                                 <input type="hidden" name="p_cr_acc" id="p_cr_acc" value="<?= $_fields['cr_acc']; ?>">
@@ -432,59 +441,97 @@ if ($id > 0) {
                                         <label for="sr_no" class="form-label" class="form-label">Sr#</label>
                                         <input type="number" name="sr_no" id="sr_no" required readonly class="form-control form-control-sm" value="<?php echo $next_sr_no; ?>">
                                     </div>
-                                    <div class="col-md-3">
-                                        <label for="truck_no" class="form-label">Truck Number</label>
-                                        <input id="truck_no" name="truck_no"
-                                            value="<?php echo $Transfer['truck_no']; ?>" type="text"
-                                            class="form-control form-control-sm">
-                                    </div>
-
-                                    <div class="col-md-3">
-                                        <label for="truck_name" class="form-label">Truck Name</label>
-                                        <input id="truck_name" name="truck_name"
-                                            value="<?php echo $Transfer['truck_name']; ?>" type="text"
-                                            class="form-control form-control-sm">
+                                    <div class="col-md-1">
+                                        <label for="uid" class="form-label" class="form-label">UID</label>
+                                        <input type="number" name="uid" id="uid" required class="form-control form-control-sm" value="<?php echo $Transfer['uid']; ?>">
                                     </div>
                                     <?php if ($Transfer['route'] === 'local') { ?>
-                                        <div class="col-md-4">
+                                        <div class="col-md-2">
+                                            <label for="truck_no" class="form-label">Truck Number</label>
+                                            <input id="truck_no" name="truck_no"
+                                                value="<?php echo $Transfer['truck_no']; ?>" type="text"
+                                                class="form-control form-control-sm">
+                                        </div>
+
+                                        <div class="col-md-2">
+                                            <label for="truck_name" class="form-label">Truck Name</label>
+                                            <input id="truck_name" name="truck_name"
+                                                value="<?php echo $Transfer['truck_name']; ?>" type="text"
+                                                class="form-control form-control-sm">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label for="loading_warehouse" class="form-label">Loading Warehouse</label>
+                                            <input id="loading_warehouse" name="loading_warehouse"
+                                                value="<?php echo $Transfer['loading_warehouse']; ?>" type="text"
+                                                class="form-control form-control-sm">
+                                        </div>
+                                        <div class="col-md-3">
                                             <label for="loading_company_name" class="form-label">Loading Company</label>
                                             <input id="loading_company_name" name="loading_company_name"
                                                 value="<?php echo $Transfer['loading_company_name']; ?>" type="text"
                                                 class="form-control form-control-sm">
                                         </div>
                                         <div class="col-md-2">
-                                            <label for="loading_date" class="form-label">Date</label>
+                                            <label for="loading_date" class="form-label">Loading Date</label>
                                             <input id="loading_date" name="loading_date"
                                                 value="<?php echo $Transfer['loading_date']; ?>" type="date"
                                                 class="form-control form-control-sm">
                                         </div>
-
-                                        <div class="col-md-4">
-                                            <label for="transfer_name" class="form-label">Transfer Name</label>
-                                            <input id="transfer_name" name="transfer_name"
-                                                value="<?php echo $Transfer['transfer_name']; ?>" type="text"
+                                        <div class="col-md-3">
+                                            <label for="receiving_warehouse" class="form-label">Receiving Warehouse</label>
+                                            <input id="receiving_warehouse" name="receiving_warehouse"
+                                                value="<?php echo $Transfer['receiving_warehouse']; ?>" type="text"
+                                                class="form-control form-control-sm">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label for="receiving_company_name" class="form-label">Receiving Company</label>
+                                            <input id="receiving_company_name" name="receiving_company_name"
+                                                value="<?php echo $Transfer['receiving_company_name']; ?>" type="text"
+                                                class="form-control form-control-sm">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label for="receiving_date" class="form-label">Receiving Date</label>
+                                            <input id="receiving_date" name="receiving_date"
+                                                value="<?php echo $Transfer['receiving_date']; ?>" type="date"
                                                 class="form-control form-control-sm">
                                         </div>
                                     <?php } elseif ($Transfer['route'] === 'warehouse') { ?>
                                         <div class="col-md-3">
-                                            <label for="old_company_name" class="form-label">Old Company Name</label>
-                                            <input id="old_company_name" name="old_company_name"
-                                                value="<?php echo $Transfer['old_company_name']; ?>" type="text"
-                                                class="form-control form-control-sm">
-                                        </div>
-
-                                        <div class="col-md-3">
-                                            <label for="transfer_company_name" class="form-label">Transfer Company Name</label>
-                                            <input id="transfer_company_name" name="transfer_company_name"
-                                                value="<?php echo $Transfer['transfer_company_name']; ?>" type="text"
+                                            <label for="loading_company_name" class="form-label">Loading Company</label>
+                                            <input id="loading_company_name" name="loading_company_name"
+                                                value="<?php echo $Transfer['loading_company_name']; ?>" type="text"
                                                 class="form-control form-control-sm">
                                         </div>
 
                                         <div class="col-md-2">
-                                            <label for="warehouse_date" class="form-label">Date</label>
-                                            <input type="date" class="form-control form-control-sm" id="warehouse_date" name="warehouse_date"
-                                                value="<?php echo $Transfer['warehouse_date']; ?>">
+                                            <label for="loading_date" class="form-label">Loading Date</label>
+                                            <input type="date" class="form-control form-control-sm" id="loading_date" name="loading_date"
+                                                value="<?php echo $Transfer['loading_date']; ?>">
                                         </div>
+
+                                        <div class="col-md-3">
+                                            <label for="receiving_company_name" class="form-label">Receiving Company Name</label>
+                                            <input id="receiving_company_name" name="receiving_company_name"
+                                                value="<?php echo $Transfer['receiving_company_name']; ?>" type="text"
+                                                class="form-control form-control-sm">
+                                        </div>
+
+                                        <div class="col-md-2">
+                                            <label for="receiving_date" class="form-label">Receiving Date</label>
+                                            <input type="date" class="form-control form-control-sm" id="receiving_date" name="receiving_date"
+                                                value="<?php echo $Transfer['receiving_date']; ?>">
+                                        </div>
+
+                                        <div class="col-md-3">
+                                            <label for="warehouse_transfer" class="form-label">Cargo Transfer</label>
+                                            <select id="warehouse_transfer" name="warehouse_transfer" class="form-select form-control-sm" required>
+                                                <option disabled <?= empty($Transfer['warehouse_transfer']) ? 'selected' : '' ?>>Select One</option>
+                                                <option value="Free Zone" <?= isset($Transfer['warehouse_transfer']) && $Transfer['warehouse_transfer'] === 'Free Zone' ? 'selected' : '' ?>>Freezone Warehouse</option>
+                                                <option value="OFF Site" <?= isset($Transfer['warehouse_transfer']) && $Transfer['warehouse_transfer'] === 'OFF Site' ? 'selected' : '' ?>>Offsite Warehouse</option>
+                                                <option value="Transit" <?= isset($Transfer['warehouse_transfer']) && $Transfer['warehouse_transfer'] === 'Transit' ? 'selected' : '' ?>>Transit Warehouse</option>
+                                            </select>
+                                        </div>
+
                                     <?php } ?>
                                     <div class="col-md-5">
                                         <label for="report" class="form-label">Report</label>
@@ -609,7 +656,6 @@ if ($id > 0) {
                                     <div class="col-md-12 text-end">
                                         <input type="reset"
                                             class="btn btn-warning btn-sm rounded-0" value="Clear Form">
-
                                         <button name="LLoadingSubmit" id="LLoadingSubmit" type="submit"
                                             class="btn btn-<?= $action === 'update' ? 'warning' : 'primary'; ?> btn-sm rounded-0">
                                             <i class="fa fa-paper-plane"></i> <?= $action === 'update' ? 'Update' : 'Submit'; ?>
@@ -669,7 +715,7 @@ if ($id > 0) {
                     </div>
                 </div>
                 <?php if ($firstRow) {
-                    echo '<a href="?updateActiveTruckNo=&parent_id=' . $firstRow['id'] . '&p_id=' . $firstRow['p_id'] . '" class="btn btn-success btn-sm mt-2">Close Truck No</a>';
+                    echo '<a href="?updateActiveUIDNo=&parent_id=' . $firstRow['id'] . '&p_id=' . $firstRow['p_id'] . '" class="btn btn-success btn-sm mt-2">Close UID</a>';
                 } ?>
             </div>
         </div>

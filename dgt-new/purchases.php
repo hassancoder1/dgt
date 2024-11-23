@@ -516,7 +516,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                 data: {
                     id: id,
                     level: 1,
-                    page: "purchases"
+                    page: "purchase"
                 },
                 success: function(response) {
                     $('#viewDetails').html(response);

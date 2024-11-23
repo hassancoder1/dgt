@@ -45,14 +45,14 @@ if ($id > 0) {
                             <div class="col-md-4">
                                 <!-- Because Client said that Dr. Account should be Cr. and Cr. should be Dr.
                                     So it is much difficult to edit it from backend so what i'm doing i'm just labelling Dr. Acc from frontend as Cr. Acc. -->
-                                <div><b>Cr. A/c # </b><?php echo $_fields['dr_acc']; ?></div>
+                                <div><b>Cr. A/c # </b><?php echo $_fields['dr_acc']; ?> <sup class="fw-bold text-danger"> (Purchase)</sup></div>
                                 <div><b>Cr. A/c Name </b><?php echo $_fields['dr_acc_name']; ?></div>
                                 <?php if (!empty($_fields['dr_acc_details'])) {
                                     echo '<div><b>Company Details </b>' . nl2br($_fields['dr_acc_details']) . '</div>';
                                 } ?>
                             </div>
                             <div class="col-md-4 border-end border-start">
-                                <div><b>Dr. A/c # </b><?php echo $_fields['cr_acc']; ?></div>
+                                <div><b>Dr. A/c # </b><?php echo $_fields['cr_acc']; ?> <sup class="fw-bold text-success"> (Sale)</sup></div>
                                 <div><b>Dr. A/c Name </b><?php echo $_fields['cr_acc_name']; ?></div>
                                 <?php if (!empty($_fields['cr_acc_details'])) {
                                     echo '<div><b>Company Details </b>' . nl2br($_fields['cr_acc_details']) . '</div>';
@@ -89,7 +89,7 @@ if ($id > 0) {
                             <div class="row gy-1 border-bottom py-1">
                                 <div class="col-md-12">
                                     <span class="fs-6 fw-bold">
-                                        <?= $_fields['type'] === 'booking' ? 'By ' . $_fields['sea_road'] : (isset($_fields['sea_road_array']['truck_no']) ? 'Loading Transfer' : 'WareHouse Transfer'); ?> </span>
+                                        <?= $_fields['type'] === 'booking' ? 'By ' . $_fields['sea_road'] : ucwords($_fields['sea_road_array']['route'])." Transfer"; ?> </span>
 
                                 </div>
                                 <?php if ($_fields['type'] === 'booking'):
@@ -129,20 +129,21 @@ if ($id > 0) {
                                     </div>
                                 <?php else: ?>
                                     <div class="col-md-4">
-                                        <?php
-                                        if ($_fields['sea_road_array']['sea_road'] === 'sea'): ?>
-                                            <b>Truck No:</b> <?= $_fields['sea_road_array']['truck_no'] ?? 'N/A'; ?><br>
-                                            <b>Truck Name:</b> <?= $_fields['sea_road_array']['truck_name'] ?? 'N/A'; ?><br>
-                                            <b>Loading Company:</b> <?= $_fields['sea_road_array']['loading_company_name'] ?? 'N/A'; ?><br>
-                                            <b>Loading Date:</b> <?= $_fields['sea_road_array']['loading_date'] ?? 'N/A'; ?><br>
-                                            <b>Transfer Name:</b> <?= $_fields['sea_road_array']['transfer_name'] ?? 'N/A'; ?><br>
-                                        <?php endif; ?>
-                                        <?php if ($_fields['sea_road_array']['sea_road'] === 'road'): ?>
-                                            <b>Old Company Name:</b> <?= $_fields['sea_road_array']['old_company_name'] ?? 'N/A'; ?><br>
-                                            <b>Transfer Company Name:</b> <?= $_fields['sea_road_array']['transfer_company_name'] ?? 'N/A'; ?><br>
-                                            <b>Warehouse Date:</b> <?= $_fields['sea_road_array']['warehouse_date'] ?? 'N/A'; ?><br>
-                                        <?php endif; ?>
-                                        </ul>
+                                    <?php
+                                    if ($_fields['sea_road_array']['route'] === 'local'): ?>
+                                        <b>Truck No:</b> <?= $_fields['sea_road_array']['truck_no'] ?? 'N/A'; ?><br>
+                                        <b>Truck Name:</b> <?= $_fields['sea_road_array']['truck_name'] ?? 'N/A'; ?><br>
+                                        <b>Loading Warehouse:</b> <?= $_fields['sea_road_array']['loading_warehouse'] ?? 'N/A'; ?><br>
+                                        <b>Receiving Warehouse:</b> <?= $_fields['sea_road_array']['loading_warehouse'] ?? 'N/A'; ?><br>
+                                    <?php endif; ?>
+                                    <?php if ($_fields['sea_road_array']['route'] === 'warehouse'): ?>
+                                        <b>WareHouse:</b> <?= $_fields['sea_road_array']['warehouse_transfer'] ?? 'N/A'; ?><br>
+                                    <?php endif; ?>
+                                    <b>Loading Company:</b> <?= $_fields['sea_road_array']['loading_company_name'] ?? 'N/A'; ?><br>
+                                        <b>Receiving Company:</b> <?= $_fields['sea_road_array']['loading_company_name'] ?? 'N/A'; ?><br>
+                                        <b>Loading Date:</b> <?= $_fields['sea_road_array']['loading_date'] ?? 'N/A'; ?><br>
+                                        <b>Loading Date:</b> <?= $_fields['sea_road_array']['receiving_date'] ?? 'N/A'; ?><br>
+                                    </ul>
                                     </div>
                                 <?php endif; ?>
 
@@ -436,7 +437,7 @@ if ($id > 0) {
                                     <input type="hidden" name="type" value="<?php echo $record['type']; ?>">
                                 </div>
                                 <?php if ($record['khaata_tr1'] != '') {
-                                    $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'transfered_from_id' => $record['id'], 'transfered_from' => 'purchase_' . $record['type']));
+                                    $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'transfered_from_id' => $record['id'], 'transfered_from' => $_POST['type'].'_' . $record['type']));
                                     if (mysqli_num_rows($rozQ) > 0) { ?>
                                         <table class="table table-sm table-bordered mb-0">
                                             <thead>
@@ -562,12 +563,12 @@ if ($id > 0) {
                 </div> -->
                 <div class="bottom-buttons">
                     <div class="px-2">
-                        <?php $update_url = $_fields['type'] == 'booking' ? 'purchase-add' : ($_fields['type'] == 'market' ? 'purchase-market-add' : 'purchase-local-add');
+                        <?php $update_url = $_fields['type'] == 'booking' ? $_POST['page'].'-add' : ($_fields['type'] == 'market' ? $_POST['page'].'-market-add' : $_POST['page'].'-local-add');
                         if ($_POST['page'] !== "bill-transfer" && $_POST['page'] !== 'general-stock-form') {
                         ?>
-                            <a href="<?php echo 'purchase-add?id=' . $id . '&type=' . $_fields['type']; ?>" class="btn btn-dark btn-sm w-100 mt-2">UPDATE</a>
+                            <a href="<?php echo $_POST['page'].'-add?id=' . $id . '&type=' . $_fields['type']; ?>" class="btn btn-dark btn-sm w-100 mt-2">UPDATE</a>
                         <?php } ?>
-                        <a href="print/purchase-single?t_id=<?php echo $id; ?>&action=order&secret=<?php echo base64_encode('powered-by-upsol') . "&print_type=full"; ?>"
+                        <a href="print/<?= $_POST['page']; ?>-single?t_id=<?php echo $id; ?>&action=order&secret=<?php echo base64_encode('powered-by-upsol') . "&print_type=full"; ?>"
                             target="_blank" class="btn btn-dark btn-sm w-100 mt-2">PRINT</a>
                         <?php if ($_fields['locked'] == 0 && $_POST['page'] !== 'general-stock-form') { ?>
                             <form method="post" onsubmit="return confirm('Are you sure to delete?');">

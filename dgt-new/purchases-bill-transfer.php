@@ -358,7 +358,7 @@ $mypageURL = $pageURL;
             $.ajax({
                 url: 'ajax/viewSingleTransaction.php',
                 type: 'post',
-                data: {id: id, level: 1, page: "bill-transfer"},
+                data: {id: id, level: 1, page: "bill-transfer", type: 'purchase'},
                 success: function (response) {
                     $('#viewDetails').html(response);
                 }
@@ -543,15 +543,6 @@ if (isset($_POST['transferPurchase'])) {
     echo "<script>jQuery(document).ready(function ($) {  $('#KhaataDetails').modal('show');});</script>";
     echo "<script>jQuery(document).ready(function ($) {  viewPurchase($t_id); });</script>";
 } 
-
-if (isset($_POST['purchaseReports'])) {
-    $type = 'danger';
-    $msg = 'DB Failed';
-    $p_id_hidden = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
-    $reportType = mysqli_real_escape_string($connect, $_POST['reportType']);
-    $report = mysqli_real_escape_string($connect, $_POST['reportBox']);
-    purchaseReports($p_id_hidden, $reportType, $report);
-}
 ?>
 
 <script>

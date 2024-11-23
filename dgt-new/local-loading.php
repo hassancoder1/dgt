@@ -8,7 +8,7 @@ global $connect;
 $results_per_page = 25;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $start_from = ($page - 1) * $results_per_page;
-$sql = "SELECT * FROM `transactions` WHERE p_s='p' AND type='local'";
+$sql = "SELECT * FROM `transactions` WHERE p_s='p' AND type='local' AND sea_road IS NOT NULL";
 $conditions = [];
 $print_filters = [];
 if ($_GET) {
@@ -249,22 +249,22 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     <th>Goods Name</th>
                     <th>Qty</th>
                     <th>KGs</th>
-                    <th>SEA/ROAD</th>
+                    <th>Route</th>
                     <th>L. DATE</th>
                     <th>R. DATE</th>
                 </tr>
             </thead>
             <tbody>
                 <?php
-                $generalLoadingQuery = "SELECT * FROM general_loading";
-                $generalLoadingResult = mysqli_query($connect, $generalLoadingQuery);
-                $generalLoadingData = [];
-                while ($loading = mysqli_fetch_assoc($generalLoadingResult)) {
+                $LocalLoadingQuery = "SELECT * FROM local_loading";
+                $LocalLoadingResult = mysqli_query($connect, $LocalLoadingQuery);
+                $LocalLoadingData = [];
+                while ($loading = mysqli_fetch_assoc($LocalLoadingResult)) {
                     $p_id = $loading['p_id'];
-                    if (!isset($generalLoadingData[$p_id])) {
-                        $generalLoadingData[$p_id] = [];
+                    if (!isset($LocalLoadingData[$p_id])) {
+                        $LocalLoadingData[$p_id] = [];
                     }
-                    $generalLoadingData[$p_id][] = $loading;
+                    $LocalLoadingData[$p_id][] = $loading;
                 }
 
                 // Process each purchase record
@@ -292,6 +292,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                         $_fields_sr = [];
                         if ($sea_road === 'local') {
                             $_fields_sr = [
+                                'uid' => $sea_road_array->l_country ?? '',
                                 'l_country' => $sea_road_array->l_country ?? '',
                                 'l_date'    => $sea_road_array->l_date ?? '',
                                 'r_country' => $sea_road_array->r_country ?? '',
@@ -304,6 +305,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                             ];
                         } elseif ($sea_road === 'warehouse') {
                             $_fields_sr = [
+                                'uid' => $sea_road_array->l_country ?? '',
                                 'l_country' => $sea_road_array->l_country_road ?? '',
                                 'l_date'    => $sea_road_array->l_date_road ?? '',
                                 'r_country' => $sea_road_array->r_country_road ?? '',
@@ -317,11 +319,11 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     $sr1_totals = $all_totals = ['quantity' => 0];
                     $matches_found = false;
 
-                    if (isset($generalLoadingData[$id])) {
+                    if (isset($LocalLoadingData[$id])) {
                         $matches_found = true;
-                        foreach ($generalLoadingData[$id] as $loading) {
+                        foreach ($LocalLoadingData[$id] as $loading) {
                             if ($loading['sr_no'] == 1) {
-                                $sr1_info = json_decode($loading['gloading_info'], true);
+                                $sr1_info = json_decode($loading['lloading_info'], true);
                                 $sr1_totals['quantity'] = $sr1_info['total_quanity_no'] ?? 0;
                             }
                             $goods_details = json_decode($loading['goods_details'], true);
@@ -429,8 +431,7 @@ if (isset($_POST['LLoadingSubmit'])) {
     $p_date = mysqli_real_escape_string($connect, $_POST['p_date']);
     $p_cr_acc = mysqli_real_escape_string($connect, $_POST['p_cr_acc']);
     $p_cr_acc_name = mysqli_real_escape_string($connect, $_POST['p_cr_acc_name']);
-    $truck_no = mysqli_real_escape_string($connect, $_POST['truck_no']);
-    $truck_name = mysqli_real_escape_string($connect, $_POST['truck_name']);
+    $uid = mysqli_real_escape_string($connect, $_POST['uid']);
     $route = mysqli_real_escape_string($connect, $_POST['route']);
     $report = mysqli_real_escape_string($connect, $_POST['report']);
     $uploadedFiles = [];
@@ -447,27 +448,27 @@ if (isset($_POST['LLoadingSubmit'])) {
         $uploadedFiles = [];
     }
 
-    $ActiveTruckNoQ = fetch('local_loading', ['p_id' => $p_id, 'sr_no' => '1']);
-    if (mysqli_num_rows($ActiveTruckNoQ) > 0) {
-        $active_truckNo = mysqli_fetch_assoc($ActiveTruckNoQ);
-        $active_lLoading = json_decode($active_truckNo['lloading_info'], true);
-        $trans_truckNo = array_merge((isset($active_lLoading['transferred_truck_no']) ? $active_lLoading['transferred_truck_no'] : []), [$truck_no]);
-        $active_lLoading = array_merge($active_lLoading, ['active_truck_no' => $truck_no, 'transferred_truck_no' => $trans_truckNo]);
-        update('local_loading', ['lloading_info' => json_encode($active_lLoading)], ['id' => $active_truckNo['id']]);
+    $ActiveUIDQ = fetch('local_loading', ['p_id' => $p_id, 'sr_no' => '1']);
+    if (mysqli_num_rows($ActiveUIDQ) > 0) {
+        $active_UID = mysqli_fetch_assoc($ActiveUIDQ);
+        $active_lLoading = json_decode($active_UID['lloading_info'], true);
+        $trans_UID = array_merge((isset($active_lLoading['transferred_uid']) ? $active_lLoading['transferred_uid'] : []), [$uid]);
+        $active_lLoading = array_merge($active_lLoading, ['active_uid' => $uid, 'transferred_uid' => $trans_UID]);
+        update('local_loading', ['lloading_info' => json_encode($active_lLoading)], ['id' => $active_UID['id']]);
     }
 
     $autoIncrementResult = mysqli_fetch_assoc(mysqli_query($connect, "SHOW TABLE STATUS LIKE 'local_loading'"));
     $nextId = $autoIncrementResult['Auto_increment'];
-    $parent_truck_data = mysqli_fetch_assoc(mysqli_query($connect, "
+    $parent_uid_data = mysqli_fetch_assoc(mysqli_query($connect, "
     SELECT id, lloading_info, 
            LENGTH(JSON_EXTRACT(lloading_info, '$.child_ids')) 
            - LENGTH(REPLACE(JSON_EXTRACT(lloading_info, '$.child_ids'), ',', '')) + 1 AS child_ids_count
     FROM local_loading 
-    WHERE truck_no = '$truck_no' 
+    WHERE uid = '$uid' 
     AND JSON_EXTRACT(lloading_info, '$.child_ids') IS NOT NULL
 "));
-    if ($parent_truck_data && $parent_truck_data['id'] !== $_POST['id']) {
-        $data = json_decode($parent_truck_data['lloading_info'], true);
+    if ($parent_uid_data && $parent_uid_data['id'] !== $_POST['id']) {
+        $data = json_decode($parent_uid_data['lloading_info'], true);
         $existing_child_ids = isset($data['child_ids']) ? $data['child_ids'] : '';
         $existing_child_ids_count = isset($data['child_ids_count']) ? $data['child_ids_count'] : 0;
         if ($_GET['action'] === 'update') {
@@ -478,20 +479,20 @@ if (isset($_POST['LLoadingSubmit'])) {
             $child_ids_count = $existing_child_ids === '' ? 1 : substr_count($child_ids, ',') + 1;
         }
         $my = [
-            'parent_id' => $parent_truck_data['id'],
-            'truck_entry_no' => $child_ids_count + 1
+            'parent_id' => $parent_uid_data['id'],
+            'uid_entry_no' => $child_ids_count + 1
         ];
         $data = array_merge($data, [
             'child_ids' => $child_ids,
             'child_ids_count' => $child_ids_count
         ]);
         $updateData = ['lloading_info' => json_encode($data)];
-        update('local_loading', $updateData, ['id' => $parent_truck_data['id']]);
+        update('local_loading', $updateData, ['id' => $parent_uid_data['id']]);
     } else {
         $my = [
             'child_ids' => '',
             'child_ids_count' => 0,
-            'truck_entry_no' => 1,
+            'uid_entry_no' => 1,
         ];
     }
 
@@ -502,31 +503,32 @@ if (isset($_POST['LLoadingSubmit'])) {
             'total_quanity_no' => $_POST['total_quantity_no'],
             'total_gross_weight' => $_POST['total_gross_weight'],
             'total_net_weight' => $_POST['total_net_weight'],
-            'active_truck_no' => $truck_no
+            'active_uid' => $uid
         ]);
     }
-    $mustUpdateRoute = !(mysqli_num_rows($ActiveTruckNoQ) > 0) || isset($_POST['updateRoutes']);
+    $mustUpdateRoute = !(mysqli_num_rows($ActiveUIDQ) > 0) || isset($_POST['updateRoutes']);
 
     if ($route === 'local') {
         $transfer_details = [
-            'route' => $route,
-            'truck_no' => $truck_no,
-            'truck_name' => $truck_name,
-            'loading_company_name' => mysqli_real_escape_string($connect, $_POST['loading_company_name']) ?? '',
-            'loading_date' => mysqli_real_escape_string($connect, $_POST['loading_date']) ?? '',
-            'transfer_name' => mysqli_real_escape_string($connect, $_POST['transfer_name']) ?? '',
+            'truck_no' => mysqli_real_escape_string($connect, $_POST['truck_no']) ?? '',
+            'truck_name' => mysqli_real_escape_string($connect, $_POST['truck_name']) ?? '',
+            'loading_warehouse' => mysqli_real_escape_string($connect, $_POST['loading_warehouse']) ?? '',
+            'receiving_warehouse' => mysqli_real_escape_string($connect, $_POST['receiving_warehouse']) ?? '',
         ];
     } else {
         $transfer_details = [
-            'route' => $route,
-            'truck_no' => $truck_no,
-            'truck_name' => $truck_name,
-            'old_company_name' => mysqli_real_escape_string($connect, $_POST['old_company_name']) ?? '',
-            'transfer_company_name' => mysqli_real_escape_string($connect, $_POST['transfer_company_name']) ?? '',
-            'warehouse_date' => mysqli_real_escape_string($connect, $_POST['warehouse_date']) ?? '',
+            'warehouse_transfer' => mysqli_real_escape_string($connect, $_POST['warehouse_transfer']) ?? '',
         ];
     }
-
+    $transfer_details = array_merge($transfer_details, 
+    [
+        'route' => $route,
+        'uid' => $uid,
+        'loading_company_name' => mysqli_real_escape_string($connect, $_POST['loading_company_name']) ?? '',
+        'receiving_company_name' => mysqli_real_escape_string($connect, $_POST['receiving_company_name']) ?? '',
+        'loading_date' => mysqli_real_escape_string($connect, $_POST['loading_date']) ?? '',
+        'receiving_date' => mysqli_real_escape_string($connect, $_POST['receiving_date']) ?? '',
+    ]);
     if ($mustUpdateRoute) {
         $existingRouteData = json_decode($_POST['existingRouteData'], true);
         $routeDetails = array_merge($existingRouteData, $transfer_details);
@@ -553,8 +555,7 @@ if (isset($_POST['LLoadingSubmit'])) {
         'p_cr_acc' => $p_cr_acc,
         'p_cr_acc_name' => $p_cr_acc_name,
         'transfer_details' => json_encode($transfer_details),
-        'truck_no' => $truck_no,
-        'truck_name' => $truck_name,
+        'uid' => $uid,
         'lloading_info' => json_encode($my),
         'report' => $report,
         'goods_details' => json_encode($goods_details),
@@ -566,7 +567,7 @@ if (isset($_POST['LLoadingSubmit'])) {
         if ($data['attachments'] == '[]') {
             unset($data['attachments']);
         }
-        if ($parent_truck_data['id'] == $_POST['id']) {
+        if ($parent_uid_data['id'] == $_POST['id']) {
             unset($data['lloading_info']);
         }
         $done = update('local_loading', $data, array('id' => $_POST['id']));
@@ -599,14 +600,14 @@ if (isset($_GET['deleteLoadingEntry']) && isset($_GET['lp_id']) && !empty($_GET[
         message('danger', $url_, $msg);
         exit;
     }
-    $parentBlDataQuery = "SELECT id, lloading_info FROM local_loading WHERE id = '$parentId'";
-    $parentBlData = mysqli_fetch_assoc(mysqli_query($connect, $parentBlDataQuery));
-    if (!$parentBlData) {
+    $parentUIDDataQuery = "SELECT id, lloading_info FROM local_loading WHERE id = '$parentId'";
+    $parentUIDData = mysqli_fetch_assoc(mysqli_query($connect, $parentUIDDataQuery));
+    if (!$parentUIDData) {
         $msg = "Parent record not found.";
         message('danger', $url_, $msg);
         exit;
     }
-    $data = json_decode($parentBlData['lloading_info'], true);
+    $data = json_decode($parentUIDData['lloading_info'], true);
     if (isset($data['child_ids']) && isset($data['child_ids_count'])) {
         $childIdsArray = explode(', ', $data['child_ids']);
         $childIdsArray = array_filter($childIdsArray, function ($childId) use ($childEntryId) {
@@ -615,7 +616,7 @@ if (isset($_GET['deleteLoadingEntry']) && isset($_GET['lp_id']) && !empty($_GET[
         $data['child_ids'] = implode(', ', $childIdsArray);
         $data['child_ids_count'] = count($childIdsArray);
         $updateData = ['lloading_info' => json_encode($data)];
-        update('local_loading', $updateData, ['id' => $parentBlData['id']]);
+        update('local_loading', $updateData, ['id' => $parentUIDData['id']]);
         $deleteQuery = "DELETE FROM `local_loading` WHERE id='$childEntryId'";
         $done = mysqli_query($connect, $deleteQuery);
         if ($done) {
@@ -627,12 +628,12 @@ if (isset($_GET['deleteLoadingEntry']) && isset($_GET['lp_id']) && !empty($_GET[
         message($type, $url_, $msg);
     }
 }
-if (isset($_GET['updateActiveTruckNo'])) {
+if (isset($_GET['updateActiveUIDNo'])) {
     $parent_id = mysqli_real_escape_string($connect, $_GET['parent_id']);
     $lloading = json_decode(mysqli_fetch_assoc(fetch('local_loading', ['id' => $parent_id]))['lloading_info'], true);
-    $lloading['active_truck_no'] = '';
+    $lloading['active_uid'] = '';
     $done = update('local_loading', ['lloading_info' => json_encode($lloading)], ['id' => $parent_id]);
-    $done ? messageNew('success', $pageURL . "?view=1&p_id=" . $_GET['p_id'], "Truck Entry Closed/Transferred") :  messageNew('danger', $pageURL . "?view=1&p_id=" . $p_id, "ERROR! While Closing Truck Entries");
+    $done ? messageNew('success', $pageURL . "?view=1&p_id=" . $_GET['p_id'], "UID Entry Closed/Transferred") :  messageNew('danger', $pageURL . "?view=1&p_id=" . $p_id, "ERROR! While Closing UID Entries");
 }
 
 if (isset($_GET['p_id']) && is_numeric($_GET['p_id']) && isset($_GET['view']) && $_GET['view'] == 1) {

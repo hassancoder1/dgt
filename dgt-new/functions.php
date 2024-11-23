@@ -251,9 +251,10 @@ function transactionSingle($transaction_id)
     if (is_numeric($transaction_id) && recordExists('transactions', ['id' => $id])) {
         $records = fetch('transactions', array('id' => $id));
         $record = mysqli_fetch_assoc($records);
-        $dr_record = getTransactionAccounts($id, 'purchase', 'dr');
-        $cr_record = getTransactionAccounts($id, 'purchase', 'cr');
-        $p_s_name = $record['p_s'] == 'p' ? 'purchase' : 'sale';
+        $Type = $record['p_s'] == 'p' ? 'purchase' : 'sale';
+        $dr_record = getTransactionAccounts($id, $Type, 'dr');
+        $cr_record = getTransactionAccounts($id, $Type, 'cr');
+        $p_s_name = $Type;
         $_fields = [
             'sr_no' => $id,
             'username' => userName($record['created_by']),
