@@ -170,9 +170,11 @@ if ($id > 0) {
                                             </thead>
                                             <tbody>
                                                 <?php
+                                                $ifAllTransferred = false;
                                                 if (!empty($childRecords)) {
                                                     foreach ($childRecords as $record) {
                                                         $Agent = isset($record['agent_details']) ? json_decode($record['agent_details'], true) : [];
+                                                        $ifAllTransferred = (isset($Agent['ag_acc_no']) && !empty($Agent['ag_acc_no'])) ? true : false;
                                                 ?>
                                                         <tr>
                                                             <td class="border border-dark text-center">
@@ -215,7 +217,8 @@ if ($id > 0) {
                                             </tbody>
                                         </table>
                                     </div>
-                                    <div class="card mt-3">
+                                    <strong class="text-success <?= !$ifAllTransferred ? 'd-none' : '' ?>" id="transferredText">All enteries are Transferred!</strong>
+                                    <div class="card mt-3 <?= $ifAllTransferred ? 'd-none transfer-form' : '' ?>">
                                         <div class="card-body">
                                             <span class="fw-bold text-danger tex-sm my-2" id="transfer-alert"></span>
                                             <form method="post" class="table-form">
@@ -280,9 +283,6 @@ if ($id > 0) {
                     <div class="d-flex justify-content-center align-items-center vh-100">
 
                         <div>
-                            <button class="btn btn-warning btn-sm mt-2" onclick="document.querySelector('.transfer-form').classList.toggle('d-none');">
-                                Toggle Transfer Form
-                            </button>
                             <form action="" method="POST" class="mt-4">
                                 <label for="update_permission_ids">Update Edit Permission</label>
                                 <input type="text" name="update_permission_ids" class="form-control form-control-sm" id="update_permission_ids" />
@@ -292,6 +292,9 @@ if ($id > 0) {
                                 </select>
                                 <input type="submit" name="UpdatePermission" value="Update Permission" class="btn btn-sm btn-primary mt-2">
                             </form>
+                            <button class="btn btn-warning btn-sm mt-2 <?= !$ifAllTransferred ? 'd-none' : '' ?>" onclick="document.querySelector('.transfer-form').classList.toggle('d-none');">
+                                Toggle Transfer Form
+                            </button>
                         </div>
                     </div>
                 </div>

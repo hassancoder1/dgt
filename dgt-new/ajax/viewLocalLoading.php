@@ -66,8 +66,8 @@ if ($id > 0) {
             <div class="d-flex align-items-center gap-2">
                 <?php if ($firstRow): ?>
                     <div class="d-flex gap-2 align-items-center">
-                        <label for="truckNoSearch" style="text-wrap:nowrap;">UID Print </label>
-                        <select name="truckNoSearch" id="truckNoSearch" class="form-select form-select-sm">
+                        <label for="UIDSearch" style="text-wrap:nowrap;">UID Print </label>
+                        <select name="UIDSearch" id="UIDSearch" class="form-select form-select-sm">
                             <option value="">Select UID</option>
                             <?php foreach ($uniqueUIDNOs as $oneUID): ?>
                                 <option value="<?= $oneUID; ?>"><?= $oneUID; ?></option>
@@ -108,13 +108,11 @@ if ($id > 0) {
                                         <b>Loading Warehouse:</b> <?= $route['loading_warehouse'] ?? 'N/A'; ?><br>
                                         <b>Receiving Warehouse:</b> <?= $route['loading_warehouse'] ?? 'N/A'; ?><br>
                                     <?php endif; ?>
-                                    <?php if ($route['route'] === 'warehouse'): ?>
-                                        <b>WareHouse:</b> <?= $route['warehouse_transfer'] ?? 'N/A'; ?><br>
-                                    <?php endif; ?>
+                                    <b>WareHouse:</b> <?= $route['warehouse_transfer'] ?? 'N/A'; ?><br>
                                     <b>Loading Company:</b> <?= $route['loading_company_name'] ?? 'N/A'; ?><br>
-                                        <b>Receiving Company:</b> <?= $route['loading_company_name'] ?? 'N/A'; ?><br>
-                                        <b>Loading Date:</b> <?= $route['loading_date'] ?? 'N/A'; ?><br>
-                                        <b>Loading Date:</b> <?= $route['receiving_date'] ?? 'N/A'; ?><br>
+                                    <b>Receiving Company:</b> <?= $route['loading_company_name'] ?? 'N/A'; ?><br>
+                                    <b>Loading Date:</b> <?= $route['loading_date'] ?? 'N/A'; ?><br>
+                                    <b>Receiving Date:</b> <?= $route['receiving_date'] ?? 'N/A'; ?><br>
                                     </ul>
                                 </div>
                                 <div class="col-md-8">
@@ -176,7 +174,7 @@ if ($id > 0) {
                                         echo '<td>' . round($details['total_kgs'], 2) . '</td>';
                                         echo '<td>' . round($details['net_kgs'], 2) . '<sub>' . $details['divide'] . '</sub></td>';
                                         echo '<td>' . str_replace('%', '', $details['tax_percent']) . '%</td>';
-                                        echo '<td>' . round($details['tax_amount'], 2) . '</td>';
+                                        echo '<td>' . round((float)$details['tax_amount'], 2) . '</td>';
                                         echo '<td>' . round($details['total_with_tax'], 2) . '</td>';
                                         echo '</tr>';
                                         $qty_no += $details['qty_no'];
@@ -225,9 +223,8 @@ if ($id > 0) {
                                         <th class="bg-dark text-white">Truck Name</th>
                                         <th class="bg-dark text-white">L WareHouse</th>
                                         <th class="bg-dark text-white">R WareHouse</th>
-                                    <?php elseif ($route['sea_road'] === 'road'): ?>
-                                        <th class="bg-dark text-white">WareHouse</th>
                                     <?php endif; ?>
+                                    <th class="bg-dark text-white">WareHouse</th>
                                     <th class="bg-dark text-white">L Company</th>
                                     <th class="bg-dark text-white">L Date</th>
                                     <th class="bg-dark text-white">R Company</th>
@@ -252,9 +249,8 @@ if ($id > 0) {
                                             <td class="border border-dark"><?= json_decode($row['transfer_details'], true)['truck_name']; ?></td>
                                             <td class="border border-dark"><?= json_decode($row['transfer_details'], true)['loading_warehouse']; ?></td>
                                             <td class="border border-dark"><?= json_decode($row['transfer_details'], true)['receiving_warehouse']; ?></td>
-                                        <?php elseif ($route['sea_road'] === 'road'): ?>
-                                            <td class="border border-dark"><?= json_decode($row['transfer_details'], true)['warehouse_transfer']; ?></td>
                                         <?php endif; ?>
+                                        <td class="border border-dark"><?= json_decode($row['transfer_details'], true)['warehouse_transfer']; ?></td>
                                         <td class="border border-dark"><?= json_decode($row['transfer_details'], true)['loading_company_name']; ?></td>
                                         <td class="border border-dark"><?= json_decode($row['transfer_details'], true)['receiving_company_name']; ?></td>
                                         <td class="border border-dark"><?= json_decode($row['transfer_details'], true)['loading_date']; ?></td>
@@ -412,6 +408,7 @@ if ($id > 0) {
                                 <input type="hidden" name="total_net_weight" value="<?= $total_net_weight; ?>">
                                 <input type="hidden" name="existingRouteData" value='<?= json_encode($routeDetails); ?>'>
                                 <input type="hidden" name="route" value='<?= $Transfer['route']; ?>'>
+                                <input type="hidden" name="type" value="<?= $record['p_s']; ?>">
 
                                 <input type="hidden" name="p_id" id="p_id" value="<?= $id; ?>">
                                 <input type="hidden" name="p_branch" id="p_branch" value="<?= branchName($_fields['branch_id']); ?>">
@@ -443,7 +440,7 @@ if ($id > 0) {
                                     </div>
                                     <div class="col-md-1">
                                         <label for="uid" class="form-label" class="form-label">UID</label>
-                                        <input type="number" name="uid" id="uid" required class="form-control form-control-sm" value="<?php echo $Transfer['uid']; ?>">
+                                        <input type="text" name="uid" id="uid" required class="form-control form-control-sm" value="<?php echo $Transfer['uid']; ?>">
                                     </div>
                                     <?php if ($Transfer['route'] === 'local') { ?>
                                         <div class="col-md-2">
@@ -466,73 +463,47 @@ if ($id > 0) {
                                                 class="form-control form-control-sm">
                                         </div>
                                         <div class="col-md-3">
-                                            <label for="loading_company_name" class="form-label">Loading Company</label>
-                                            <input id="loading_company_name" name="loading_company_name"
-                                                value="<?php echo $Transfer['loading_company_name']; ?>" type="text"
-                                                class="form-control form-control-sm">
-                                        </div>
-                                        <div class="col-md-2">
-                                            <label for="loading_date" class="form-label">Loading Date</label>
-                                            <input id="loading_date" name="loading_date"
-                                                value="<?php echo $Transfer['loading_date']; ?>" type="date"
-                                                class="form-control form-control-sm">
-                                        </div>
-                                        <div class="col-md-3">
                                             <label for="receiving_warehouse" class="form-label">Receiving Warehouse</label>
                                             <input id="receiving_warehouse" name="receiving_warehouse"
                                                 value="<?php echo $Transfer['receiving_warehouse']; ?>" type="text"
                                                 class="form-control form-control-sm">
                                         </div>
-                                        <div class="col-md-3">
-                                            <label for="receiving_company_name" class="form-label">Receiving Company</label>
-                                            <input id="receiving_company_name" name="receiving_company_name"
-                                                value="<?php echo $Transfer['receiving_company_name']; ?>" type="text"
-                                                class="form-control form-control-sm">
-                                        </div>
-                                        <div class="col-md-2">
-                                            <label for="receiving_date" class="form-label">Receiving Date</label>
-                                            <input id="receiving_date" name="receiving_date"
-                                                value="<?php echo $Transfer['receiving_date']; ?>" type="date"
-                                                class="form-control form-control-sm">
-                                        </div>
-                                    <?php } elseif ($Transfer['route'] === 'warehouse') { ?>
-                                        <div class="col-md-3">
-                                            <label for="loading_company_name" class="form-label">Loading Company</label>
-                                            <input id="loading_company_name" name="loading_company_name"
-                                                value="<?php echo $Transfer['loading_company_name']; ?>" type="text"
-                                                class="form-control form-control-sm">
-                                        </div>
-
-                                        <div class="col-md-2">
-                                            <label for="loading_date" class="form-label">Loading Date</label>
-                                            <input type="date" class="form-control form-control-sm" id="loading_date" name="loading_date"
-                                                value="<?php echo $Transfer['loading_date']; ?>">
-                                        </div>
-
-                                        <div class="col-md-3">
-                                            <label for="receiving_company_name" class="form-label">Receiving Company Name</label>
-                                            <input id="receiving_company_name" name="receiving_company_name"
-                                                value="<?php echo $Transfer['receiving_company_name']; ?>" type="text"
-                                                class="form-control form-control-sm">
-                                        </div>
-
-                                        <div class="col-md-2">
-                                            <label for="receiving_date" class="form-label">Receiving Date</label>
-                                            <input type="date" class="form-control form-control-sm" id="receiving_date" name="receiving_date"
-                                                value="<?php echo $Transfer['receiving_date']; ?>">
-                                        </div>
-
-                                        <div class="col-md-3">
-                                            <label for="warehouse_transfer" class="form-label">Cargo Transfer</label>
-                                            <select id="warehouse_transfer" name="warehouse_transfer" class="form-select form-control-sm" required>
-                                                <option disabled <?= empty($Transfer['warehouse_transfer']) ? 'selected' : '' ?>>Select One</option>
-                                                <option value="Free Zone" <?= isset($Transfer['warehouse_transfer']) && $Transfer['warehouse_transfer'] === 'Free Zone' ? 'selected' : '' ?>>Freezone Warehouse</option>
-                                                <option value="OFF Site" <?= isset($Transfer['warehouse_transfer']) && $Transfer['warehouse_transfer'] === 'OFF Site' ? 'selected' : '' ?>>Offsite Warehouse</option>
-                                                <option value="Transit" <?= isset($Transfer['warehouse_transfer']) && $Transfer['warehouse_transfer'] === 'Transit' ? 'selected' : '' ?>>Transit Warehouse</option>
-                                            </select>
-                                        </div>
-
                                     <?php } ?>
+                                    <div class="col-md-3">
+                                        <label for="loading_company_name" class="form-label">Loading Company</label>
+                                        <input id="loading_company_name" name="loading_company_name"
+                                            value="<?php echo $Transfer['loading_company_name']; ?>" type="text"
+                                            class="form-control form-control-sm">
+                                    </div>
+
+                                    <div class="col-md-2">
+                                        <label for="loading_date" class="form-label">Loading Date</label>
+                                        <input type="date" class="form-control form-control-sm" id="loading_date" name="loading_date"
+                                            value="<?php echo $Transfer['loading_date']; ?>">
+                                    </div>
+
+                                    <div class="col-md-3">
+                                        <label for="receiving_company_name" class="form-label">Receiving Company Name</label>
+                                        <input id="receiving_company_name" name="receiving_company_name"
+                                            value="<?php echo $Transfer['receiving_company_name']; ?>" type="text"
+                                            class="form-control form-control-sm">
+                                    </div>
+
+                                    <div class="col-md-2">
+                                        <label for="receiving_date" class="form-label">Receiving Date</label>
+                                        <input type="date" class="form-control form-control-sm" id="receiving_date" name="receiving_date"
+                                            value="<?php echo $Transfer['receiving_date']; ?>">
+                                    </div>
+
+                                    <div class="col-md-3">
+                                        <label for="warehouse_transfer" class="form-label">Cargo Transfer</label>
+                                        <select id="warehouse_transfer" name="warehouse_transfer" class="form-select form-control-sm" required>
+                                            <option disabled <?= empty($Transfer['warehouse_transfer']) ? 'selected' : '' ?>>Select One</option>
+                                            <option value="Free Zone" <?= isset($Transfer['warehouse_transfer']) && $Transfer['warehouse_transfer'] === 'Free Zone' ? 'selected' : '' ?>>Freezone Warehouse</option>
+                                            <option value="OFF Site" <?= isset($Transfer['warehouse_transfer']) && $Transfer['warehouse_transfer'] === 'OFF Site' ? 'selected' : '' ?>>Offsite Warehouse</option>
+                                            <option value="Transit" <?= isset($Transfer['warehouse_transfer']) && $Transfer['warehouse_transfer'] === 'Transit' ? 'selected' : '' ?>>Transit Warehouse</option>
+                                        </select>
+                                    </div>
                                     <div class="col-md-5">
                                         <label for="report" class="form-label">Report</label>
                                         <input type="text" name="report" id="report" required value="<?= $last_record['report']; ?>" class="form-control form-control-sm">
@@ -750,13 +721,13 @@ if ($id > 0) {
             disableButton('LLoadingSubmit');
             $('.show_complete_msg').removeClass('d-none');
         }
-        $('#truckNoSearch').on('change', function() {
+        $('#UIDSearch').on('change', function() {
             const selectedValue = $(this).val();
             const printButton = $('#printButton');
             if (selectedValue) {
                 printButton
                     .removeClass('disabled')
-                    .attr('href', `print/index?secret=<?= base64_encode("truck-no-print"); ?>&truckNoSearch=${selectedValue}`);
+                    .attr('href', `print/index?secret=<?= base64_encode("uid-print"); ?>&UIDSearch=${selectedValue}`);
             } else {
                 printButton
                     .addClass('disabled')

@@ -1063,6 +1063,19 @@ function purchaseSpecificData($purchaseId, $type, $GetValue = 'final_amount')
     return $data;
 }
 
+function getCompanyName($kd_id)
+{
+    global $connect;
+    $kd_id = mysqli_real_escape_string($connect, $kd_id);
+    $query = "SELECT JSON_EXTRACT(json_data, '$.company_name') as c_name FROM khaata_details WHERE id='$kd_id'";
+    $result = mysqli_query($connect, $query);
+    if ($result && mysqli_num_rows($result) > 0) {
+        $c_name = mysqli_fetch_assoc($result);
+        return $c_name['c_name'] !== null ? str_replace('"', '', $c_name['c_name']) : null;
+    }
+    return null;
+}
+
 function purchasePaysArray($purchaseId, $type, $final_amount = false, $GetValue = 'final_amount')
 {
     $purchase_pays = fetch('purchase_pays', array('purchase_id' => $purchaseId, 'type' => $type));

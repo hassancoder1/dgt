@@ -334,7 +334,7 @@ $mypageURL = $pageURL;
             $.ajax({
                 url: 'ajax/viewSingleTransaction.php',
                 type: 'post',
-                data: {id: id, level: 1},
+                data: {id: id, level: 1, page: 'purchases', type: 'purchase'},
                 success: function (response) {
                     $('#viewDetails').html(response);
                 }

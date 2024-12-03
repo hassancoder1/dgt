@@ -499,16 +499,13 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
     role="dialog" aria-labelledby="staticBackdropLabel" aria-hidden="true">
     <div class="modal-dialog modal-fullscreen -modal-xl -modal-dialog-centered" role="document">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="staticBackdropLabel">PURCHASE DETAILS</h5>
-                <a href="<?php echo $pageURL; ?>" class="btn-close" aria-label="Close"></a>
-            </div>
             <div class="modal-body bg-light pt-0" id="viewDetails"></div>
         </div>
     </div>
 </div>
 <script>
     function viewPurchase(id = null) {
+        let printType = '<?= isset($_GET['print_type']) ? $_GET['print_type'] : 'contract'; ?>';
         if (id) {
             $.ajax({
                 url: 'ajax/viewSingleTransaction.php',
@@ -516,7 +513,11 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                 data: {
                     id: id,
                     level: 1,
-                    page: "purchase"
+                    page: "purchases",
+                    type: 'purchase',
+                    print_type: printType,
+                    timestamp: currentFormattedDateTime()
+
                 },
                 success: function(response) {
                     $('#viewDetails').html(response);

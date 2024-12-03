@@ -8,7 +8,7 @@ global $connect;
 $results_per_page = 25;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $start_from = ($page - 1) * $results_per_page;
-$sql = "SELECT * FROM `general_loading` WHERE p_type='booking'";
+$sql = "SELECT * FROM `general_loading`";
 $conditions = [];
 $print_filters = [];
 if ($_GET) {
@@ -61,7 +61,7 @@ if ($_GET) {
     }
 }
 if (count($conditions) > 0) {
-    $sql .= " AND " . implode(' AND ', $conditions);
+    $sql .= " WHERE " . implode(' AND ', $conditions);
 }
 $sql .= " ORDER BY id ASC LIMIT $start_from, $results_per_page";
 $query_string = implode('&', $print_filters);
@@ -85,9 +85,9 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     unset($query_params['page']);
                     $base_url = $url_parts['path'] . '?' . http_build_query($query_params);
 
-                    $count_sql = "SELECT COUNT(id) AS total FROM `general_loading` WHERE p_type='booking'";
+                    $count_sql = "SELECT COUNT(id) AS total FROM `general_loading`";
                     if (count($conditions) > 0) {
-                        $count_sql .= " AND " . implode(' AND ', $conditions);
+                        $count_sql .= " WHERE " . implode(' AND ', $conditions);
                     }
                     $count_result = mysqli_query($connect, $count_sql);
                     $row = mysqli_fetch_assoc($count_result);
@@ -180,7 +180,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
     <form name="datesSubmit" class="mt-2" method="get">
         <div class="input-group input-group-sm">
             <div class="form-group">
-                <label for="p_id" class="form-label">P#</label>
+                <label for="p_id" class="form-label">P/S#</label>
                 <input type="number" name="p_id" value="<?php echo $p_id; ?>" id="p_id" class="form-control form-control-sm mx-1" style="max-width:80px;" placeholder="e.g. 33">
             </div>
             <div class="form-group">
@@ -234,7 +234,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
         <table class="table table-bordered">
             <thead>
                 <tr class="text-nowrap">
-                    <th>P#</th>
+                    <th>P/S#</th>
                     <th>WareHouse</th>
                     <th>AG ID</th>
                     <th>AG NAME</th>
@@ -295,8 +295,8 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     $pIdDisplayCount = $pIdCounts[$pId];
                 ?>
                     <tr class="text-nowrap">
-                        <td class="pointer <?= $rowColor; ?>" onclick="window.location.href= '?view=1&id=<?= $SingleLoading['id']; ?>';">
-                            <?php echo '<b>P#', $pId . "</b> (" . $pIdDisplayCount . ")"; ?>
+                        <td class="pointer text-uppercase <?= $rowColor; ?>" onclick="window.location.href= '?view=1&id=<?= $SingleLoading['id']; ?>';">
+                            <?php echo '<b>'.$SingleLoading['type'].'#', $pId . "</b> (" . $pIdDisplayCount . ")"; ?>
                             <?php echo $locked ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
                         </td>
                         <td class="<?php echo $rowColor; ?>"><?= isset(json_decode($SingleLoading['agent_details'], true)['cargo_transfer_warehouse']) ? json_decode($SingleLoading['agent_details'], true)['cargo_transfer_warehouse'] : ''; ?></td>

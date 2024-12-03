@@ -205,7 +205,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
     <form name="datesSubmit" class="mt-2" method="get">
         <div class="input-group input-group-sm">
             <div class="form-group">
-                <label for="p_id" class="form-label">P#</label>
+                <label for="p_id" class="form-label">P/S#</label>
                 <input type="number" name="p_id" value="<?php echo $p_id; ?>" id="p_id" class="form-control form-control-sm mx-1" style="max-width:80px;" placeholder="e.g. 33">
             </div>
             <div class="form-group">
@@ -230,10 +230,10 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                 <select class="form-select form-select-sm" name="p_type" style="max-width:130px;" id="p_type">
                     <option value="" selected>All</option>
                     <?php
-                    $static_types = fetch('static_types', ['type_for' => 'ps_types']);
-                    while ($static_type = mysqli_fetch_assoc($static_types)) {
-                        $sel_tran = $type == $static_type['type_name'] ? 'selected' : '';
-                        echo '<option ' . $sel_tran . '  value="' . $static_type['type_name'] . '">' . strtoupper(htmlspecialchars($static_type['details'])) . '</option>';
+                    $textQ = mysqli_query($connect, "SELECT * FROM static_types WHERE type_for IN ('ps_types', 's_types')");
+                    while ($test = mysqli_fetch_assoc($textQ)) {
+                        $sel_tran = $type == $test['type_name'] ? 'selected' : '';
+                        echo '<option ' . $sel_tran . '  value="' . $test['type_name'] . '">' . strtoupper(htmlspecialchars($test['details'])) . '</option>';
                     }
                     ?>
                 </select>
@@ -277,7 +277,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
             <thead>
                 <tr class="text-nowrap">
                     <?php if (SuperAdmin()): ?>
-                        <th>P#+Bill#</th>
+                        <th>P/S#+Bill#</th>
                         <th>AGENT ACC</th>
                         <th>AGENT ID</th>
                         <th>AGENT NAME</th>
@@ -326,7 +326,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                         <?php if (!SuperAdmin()): ?>
                             <td class="<?= $rowColor; ?>"><?= $row_count + 1; ?></td>
                         <?php endif; ?>
-                        <td class="<?= $SuperCode; ?>"><b><?= SuperAdmin() ? "P#" . $SingleLoading['p_id'] . " ($currentBillNumber)" : $SingleLoading['bl_no']; ?></b></td>
+                        <td class="text-uppercase <?= $SuperCode; ?>"><b><?= SuperAdmin() ? $SingleLoading['type']."#" . $SingleLoading['p_id'] . " ($currentBillNumber)" : $SingleLoading['bl_no']; ?></b></td>
                         <td class="<?= $rowColor; ?>"><?= $agentDetails['ag_acc_no']; ?></td>
                         <td class="<?= $rowColor; ?>"><?= $agentDetails['ag_id']; ?></td>
                         <td class="<?= $rowColor; ?>"><?= $agentDetails['ag_name']; ?></td>

@@ -8,7 +8,7 @@ global $connect;
 $results_per_page = 50;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $start_from = ($page - 1) * $results_per_page;
-$sql = "SELECT * FROM `transactions` WHERE p_s='p' AND type='booking'";
+$sql = "SELECT * FROM `transactions` WHERE type='booking'";
 $conditions = [];
 $print_filters = [];
 if ($_GET) {
@@ -118,7 +118,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
             </h1>
             <div class="d-flex gap-2">
                 <div>
-                    <button class="btn btn-sm btn-dark hide-on-print" onclick="window.location.href = '/purchases'"><i class="fa fa-arrow-left"></i> Back</button>
+                    <button class="btn btn-sm btn-dark hide-on-print" onclick="window.location.href = '/'"><i class="fa fa-arrow-left"></i> Back</button>
                 </div>
                 <div class="dropdown">
                     <button class="btn btn-success btn-sm hide-on-print" onclick="window.print();">

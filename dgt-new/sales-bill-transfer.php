@@ -5,7 +5,7 @@ include("header.php");
 $remove = $size = $brand = $goods_name = $start_print = $end_print = $is_transferred = $s_khaata_id = '';
 $is_search = false;
 global $connect;
-$sql = "SELECT * FROM `transactions` WHERE p_s='s'";
+$sql = "SELECT * FROM `transactions` WHERE p_s = 's'";
 $conditions = []; // Store all conditions here
 $print_filters = [];
 if ($_GET) {
@@ -56,7 +56,7 @@ if ($_GET) {
 if (count($conditions) > 0) {
     $sql .= ' AND ' . implode(' AND ', $conditions);
 }else{
-    $sql .= " AND locked = '1'";
+    $sql .= " AND (type != 'commission' OR locked = '2') AND locked IN ('1','2')";
 }
 
 $sql .= " ORDER BY id DESC"; 
@@ -288,7 +288,7 @@ $mypageURL = $pageURL;
                             <tr class="text-nowrap">
                                 <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $id; ?>)"
                                     data-bs-toggle="modal" data-bs-target="#KhaataDetails">
-                                    <?php echo '<b>'.ucfirst($_fields_single['p_s']).'#</b>'.$id; echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?></td>
+                                    <?php echo '<b>'.ucfirst($_fields_single['p_s']).'#</b>'.$id; echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : '';echo $locked == 2 ? '<i class="fa fa-lock text-success"></i><i class="fa fa-lock text-success" style="margin-left:-6px;"></i>' : ''; ?></td>
                                 <td class="<?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['type']); //badge(strtoupper($_fields_single['type']), $purchase['type'] == 'booking' ? 'dark' : 'danger'); ?></td>
                                 <td class="<?php echo $rowColor; ?>"><?php echo branchName($_fields_single['branch_id']); ?></td>
                                 <td class="<?php echo $rowColor; ?>"><?php echo my_date($_fields_single['_date']);; ?></td>
@@ -344,10 +344,6 @@ $mypageURL = $pageURL;
      role="dialog" aria-labelledby="staticBackdropLabel" aria-hidden="true">
     <div class="modal-dialog modal-fullscreen -modal-xl -modal-dialog-centered" role="document">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="staticBackdropLabel">SALE BILL</h5>
-                <a href="<?php echo $mypageURL; ?>" class="btn-close" aria-label="Close"></a>
-            </div>
             <div class="modal-body bg-light pt-0" id="viewDetails"></div>
         </div>
     </div>

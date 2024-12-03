@@ -4,6 +4,9 @@ $title = $backURL = '';
 if ($page === 'bl-no-print') {
     $title = "B/L";
     $backURL = "general-loading";
+}else if ($page === 'uid-print') {
+    $title = "UID";
+    $backURL = "local-loading";
 }
 $queryStringParts = [];
 foreach ($_GET as $key => $value) {

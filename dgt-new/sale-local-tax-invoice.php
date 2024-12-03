@@ -1,6 +1,6 @@
 <?php
 $page_title = 'LOCAL TAX INVOICE';
-$pageURL = 'local-tax-invoice';
+$pageURL = 'purchase-local-tax-invoice';
 include("header.php");
 $remove = $goods_name = $start_print = $end_print = $acc_no = $branch = $p_id = $payment_type = $sea_road = $country = $country_type = $date_type = $is_transferred = '';
 $is_search = false;
@@ -8,11 +8,11 @@ global $connect;
 $results_per_page = 50;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $start_from = ($page - 1) * $results_per_page;
-$sql = "SELECT * FROM `transactions` WHERE p_s='p' AND type='local'";
+$sql = "SELECT * FROM `transactions` WHERE p_s='s' AND type='local'";
 $conditions = [];
 $print_filters = [];
 if ($_GET) {
-    $remove = removeFilter('local-tax-invoice');
+    $remove = removeFilter('purchase-local-tax-invoice');
     $is_search = true;
 
     if (isset($_GET['p_id']) && !empty($_GET['p_id'])) {
@@ -328,11 +328,29 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     $_fields_sr = ['l_country' => '', 'l_date' => '', 'r_country' => '', 'r_date' => ''];
                     if (!empty($sea_road_array)) {
                         $sea_road = $sea_road_array->sea_road ?? '';
-                        if ($sea_road == 'sea') {
-                            $_fields_sr = ['l_country' => $sea_road_array->l_country, 'l_date' => $sea_road_array->l_date, 'r_country' => $sea_road_array->r_country, 'r_date' => $sea_road_array->r_date];
-                        }
-                        if ($sea_road == 'road') {
-                            $_fields_sr = ['l_country' => $sea_road_array->l_country_road, 'l_date' => $sea_road_array->l_date_road, 'r_country' => $sea_road_array->r_country_road, 'r_date' => $sea_road_array->r_date_road];
+                        $_fields_sr = [];
+                        if ($sea_road === 'sea') {
+                            $_fields_sr = [
+                                'l_country' => $sea_road_array->l_country ?? '',
+                                'l_date'    => $sea_road_array->l_date ?? '',
+                                'r_country' => $sea_road_array->r_country ?? '',
+                                'r_date'    => $sea_road_array->r_date ?? '',
+                                'truck_no' => $sea_road_array->truck_no ?? '',
+                                'truck_name' => $sea_road_array->truck_name ?? '',
+                                'loading_company_name' => $sea_road_array->loading_company_name ?? '',
+                                'loading_date' => $sea_road_array->loading_date ?? '',
+                                'transfer_name' => $sea_road_array->transfer_name ?? ''
+                            ];
+                        } elseif ($sea_road === 'road') {
+                            $_fields_sr = [
+                                'l_country' => $sea_road_array->l_country_road ?? '',
+                                'l_date'    => $sea_road_array->l_date_road ?? '',
+                                'r_country' => $sea_road_array->r_country_road ?? '',
+                                'r_date'    => $sea_road_array->r_date_road ?? '',
+                                'old_company_name' => $sea_road_array->old_company_name ?? '',
+                                'transfer_company_name' => $sea_road_array->transfer_company_name ?? '',
+                                'warehouse_date' => $sea_road_array->warehouse_date ?? '',
+                            ];
                         }
                     }
                     if ($is_search) {
@@ -432,7 +450,8 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                 data: {
                     id: id,
                     level: 1,
-                    page: "purchases"
+                    page: "sales",
+                    type: "sale"
                 },
                 success: function(response) {
                     $('#viewDetails').html(response);
@@ -480,7 +499,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     hideRow = true;
                 }
             }
-            if(branch !== '' && branch !== rowBranch){
+            if (branch !== '' && branch !== rowBranch) {
                 hideRow = true;
             }
             if (hideRow) {

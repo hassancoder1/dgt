@@ -858,11 +858,11 @@ if ($id > 0) {
                         //     disableButton('recordSubmit');
                         // }
                         if (balance >= 1) {
-                            if (final_amount <= balance+0.5) {
-                                enableButton('recordSubmit');
-                            } else {
-                                disableButton('recordSubmit');
-                            }
+                            // if (final_amount <= balance+0.5) {
+                            //     enableButton('recordSubmit');
+                            // } else {
+                            //     disableButton('recordSubmit');
+                            // }
                         } else {
                             disableButton('recordSubmit');
                         }

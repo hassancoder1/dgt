@@ -147,7 +147,13 @@
         const urlParams = new URLSearchParams(window.location.search);
         return urlParams.get(name);
     }
-
+    function currentFormattedDateTime() {
+        const now = new Date();
+        const formattedDateTime = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()} ${
+            String(now.getHours() % 12 || 12).padStart(2, '0')
+        }:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')} ${now.getHours() >= 12 ? 'PM' : 'AM'}`;
+        return formattedDateTime;
+    }
     function openAndPrint(url) {
         const newWindow = window.open(
             url,
@@ -160,6 +166,18 @@
     }
 
     function getFileThrough(fileType, url) {
+        $('#processingScreen').toggleClass('d-none d-flex');
+        let formattedFileName = url
+            .split('?')[0] // Remove query parameters and their values
+            .replace(/^print\//, '')
+            .replace(/-main|-print$/, '')
+            .trim();
+        let formattedName = formattedFileName
+            .replace(/-/g, ' ')
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+
         $.ajax({
             url: `${window.location.protocol}//${window.location.host}/ajax/generateFile.php`,
             type: 'post',
@@ -169,32 +187,58 @@
             },
             success: function(response) {
                 $('#processingScreen').toggleClass('d-none d-flex');
-                const result = JSON.parse(response);
+                try {
+                    const result = JSON.parse(response);
+                    if (result.fileURL) {
+                        const fileURL = result.fileURL;
+                        if (fileType === 'pdf' || fileType === 'word') {
+                            fetch(fileURL)
+                                .then(response => {
+                                    if (!response.ok) {
+                                        throw new Error(`HTTP error! Status: ${response.status}`);
+                                    }
+                                    return response.blob();
+                                })
+                                .then(blob => {
+                                    const currentTime = Date.now();
+                                    const fileExtension = fileType === 'pdf' ? 'pdf' : 'docx';
+                                    const fileName = `Print-${formattedFileName}${currentTime}.${fileExtension}`;
+                                    const downloadLink = document.createElement('a');
+                                    const objectURL = URL.createObjectURL(blob);
+                                    downloadLink.href = objectURL;
+                                    downloadLink.download = fileName;
+                                    document.body.appendChild(downloadLink);
+                                    downloadLink.click();
+                                    URL.revokeObjectURL(objectURL);
+                                    document.body.removeChild(downloadLink);
+                                })
+                                .catch(error => {
+                                    console.error('Error downloading file:', error);
+                                    alert('Failed to download the file.');
+                                });
+                        } else if (fileType === 'whatsapp') {
+                            const whatsappURL = `https://wa.me/?text=Your+file+${encodeURIComponent(formattedName)}+is+ready!+Download+it+here:+${encodeURIComponent(fileURL)}`;
+                            window.open(whatsappURL, '_blank');
+                        } else if (fileType === 'email') {
+                            const emailURL = `mailto:?subject=Your+Requested+File+-+${encodeURIComponent(formattedName)}&body=Hello,%0A%0AYour+file+${encodeURIComponent(formattedName)}+is+ready+for+download!%0A%0AAccess+it+here:+${encodeURIComponent(fileURL)}`;
+                            window.open(emailURL, '_blank');
+                        }
 
-                if (result.fileURL) {
-                    const fileURL = result.fileURL;
-
-                    if (fileType === 'pdf' || fileType === 'word') {
-                        const downloadLink = document.createElement('a');
-                        downloadLink.href = fileURL;
-                        downloadLink.download = fileURL.split('/').pop(); 
-                        document.body.appendChild(downloadLink);
-                        downloadLink.click();
-                        document.body.removeChild(downloadLink);
-                    } else if (fileType === 'whatsapp') {
-                        const whatsappURL = `https://wa.me/?text=Here+is+your+file: ${encodeURIComponent(fileURL)}`;
-                        window.open(whatsappURL, '_blank');
-                    } else if (fileType === 'email') {
-                        const emailURL = `mailto:?subject=Requested%20File&body=Here%20is%20your%20file:%20${encodeURIComponent(fileURL)}`;
-                        window.open(emailURL, '_blank');
+                    } else {
+                        alert('Failed to retrieve the file URL.');
+                        console.log(result.error);
                     }
-                } else {
-                    alert('Failed to retrieve file URL.');
+                } catch (e) {
+                    console.error('Error parsing response:', e);
+                    alert('Invalid response format received from the server.');
                 }
             },
             error: function(jqXHR, textStatus, errorThrown) {
+                // Hide the processing screen
+                $('#processingScreen').toggleClass('d-none d-flex');
+
                 console.error("AJAX Error: ", textStatus, errorThrown);
-                alert('An error occurred while processing your request. Please Refresh & try again.');
+                alert('An error occurred while processing your request. Please refresh and try again.');
             }
         });
     }

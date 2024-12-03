@@ -401,6 +401,7 @@ if ($id > 0) {
                                     <input type="hidden" name="child_ids" value="<?= $child_ids; ?>">
                                 <?php } ?>
                                 <input type="hidden" name="total_quantity_no" value="<?= $total_quantity_no; ?>">
+                                <input type="hidden" name="type" value="<?= $record['p_s']; ?>">
                                 <input type="hidden" name="total_gross_weight" value="<?= $total_gross_weight; ?>">
                                 <input type="hidden" name="total_net_weight" value="<?= $total_net_weight; ?>">
 

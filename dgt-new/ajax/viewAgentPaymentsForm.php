@@ -12,7 +12,7 @@ $parentGLoadingInfo = json_decode($parentRow['gloading_info'], true);
     <h5 class="modal-title" id="staticBackdropLabel">AGENT BILL</h5>
     <div class="d-flex align-items-center gap-2">
         <a href="print/index?secret=<?= base64_encode('agent-bill-print'); ?>&id=<?= $parentId; ?>" target="_blank" id="printButton" class="btn btn-dark btn-sm me-2">PRINT</a>
-        <a href="carry-bill" class="btn-close ms-3" aria-label="Close"></a>
+        <a href="agent-payments-form" class="btn-close ms-3" aria-label="Close"></a>
     </div>
 </div>
 <div class="row">

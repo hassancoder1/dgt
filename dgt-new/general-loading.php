@@ -8,7 +8,7 @@ global $connect;
 $results_per_page = 25;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $start_from = ($page - 1) * $results_per_page;
-$sql = "SELECT * FROM `transactions` WHERE p_s='p' AND type='booking'";
+$sql = "SELECT * FROM `transactions` WHERE type IN ('booking','commission')";
 $conditions = [];
 $print_filters = [];
 if ($_GET) {
@@ -59,7 +59,7 @@ if ($_GET) {
 if (count($conditions) > 0) {
     $sql .= ' AND ' . implode(' AND ', $conditions);
 }
-$sql .= " AND locked = '1' AND transfer_level >= '2' ORDER BY id DESC LIMIT $start_from, $results_per_page";
+$sql .= " AND locked IN ('1', '2') AND (CASE WHEN type='commission' THEN transfer_level >= '1' ELSE transfer_level >= '2' END) ORDER BY id DESC LIMIT $start_from, $results_per_page";
 $purchases = mysqli_query($connect, $sql);
 $query_string = implode('&', $print_filters);
 $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
@@ -185,7 +185,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
     <form name="datesSubmit" class="mt-2" method="get">
         <div class="input-group input-group-sm">
             <div class="form-group">
-                <label for="p_id" class="form-label">P#</label>
+                <label for="p_id" class="form-label">P/S#</label>
                 <input type="number" name="p_id" value="<?php echo $p_id; ?>" id="p_id" class="form-control form-control-sm mx-1" style="max-width:80px;" placeholder="e.g. 33">
             </div>
             <div class="form-group">
@@ -244,7 +244,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
         <table class="table table-bordered">
             <thead>
                 <tr class="text-nowrap">
-                    <th>Bill#</th>
+                    <th>P/S#</th>
                     <th>Type</th>
                     <th>BR.</th>
                     <th>Date</th>
@@ -479,7 +479,6 @@ if (isset($_POST['GLoadingSubmit'])) {
             'child_ids_count' => $child_ids_count
         ]);
         $updateData = ['gloading_info' => json_encode($data)];
-        print_r($updateData);
         update('general_loading', $updateData, ['id' => $parent_bl_data['id']]);
     } else {
         $my = [
@@ -553,6 +552,7 @@ if (isset($_POST['GLoadingSubmit'])) {
     $data = [
         'sr_no' => $sr_no,
         'p_id' => $p_id,
+        'type' => $_POST['type'],
         'p_type' => $p_type,
         'p_branch' => $p_branch,
         'p_date' => $p_date,

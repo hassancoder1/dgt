@@ -129,7 +129,7 @@ if ($id > 0) {
                                             ?>
                                         <?php endforeach; ?>
                                     </div>
-                                    <?php else: ?>
+                                <?php else: ?>
                                     <div class="col-md-4">
                                         <?php
                                         if ($_fields['sea_road_array']['sea_road'] === 'sea'): ?>
@@ -187,7 +187,6 @@ if ($id > 0) {
                                         } elseif (isset($payments->full_advance) && $payments->full_advance === 'credit') {
                                             echo '<b>Type:</b> Credit Payment<br>';
                                             echo '<b>Total Amount:</b> ' . number_format($total_amount, 2) . '<br>';
-
 
                                             $paymentDetails = [
                                                 'Type' => 'Credit Payment',
@@ -296,7 +295,7 @@ if ($id > 0) {
                                             echo '<th class="fw-bold text-end">' . round($final_amount, 2) . '</th>';
                                         }
                                         echo '<th></th>';
-                                        echo '</tr>';   
+                                        echo '</tr>';
                                     }
                                     ?>
                                 </tbody>
@@ -304,16 +303,16 @@ if ($id > 0) {
                         <?php } ?>
                     </div>
                     <?php if ($record['khaata_tr1'] != '') {
-                        $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $record['id'], 'transfered_from' => 'purchase_' . $record['type']));
+                        $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $record['id'], 'transfered_from' => 'sale_' . $record['type']));
                         $roz = mysqli_fetch_assoc($rozQ);
                         $roz_arr1 = array(
                             array('Sr#', SuperAdmin() ? $roz['r_id'] . '-' . $roz['branch_serial'] : $roz['branch_serial']),
                             array('Date', $roz['r_date']),
-                            // array('ID', $roz['username']),
-                            // array('Branch', branchName($roz['branch_id'])),
+                            array('ID', $roz['username']),
+                            array('Branch', branchName($roz['branch_id'])),
                         );
                         $roz_arr2 = array(
-                            // array('Roz.#', $roz['roznamcha_no']),
+                            array('Roz.#', $roz['roznamcha_no']),
                             array('Name', $roz['r_name']),
                             array('No', $roz['r_no']),
                         );
@@ -323,39 +322,24 @@ if ($id > 0) {
                         );
                         $roz_arr4 = array(
                             array('Total Amount', round($final_amount, 2)),
-                            array('Percent', $percentage . '%'),
-                            array('Advance', round($partial_amount1, 2)),
-                        );
-                        $roz_arr5 = array(
-                            array('Total Amount', round($final_amount, 2)),
-                            array('Percent', $percentage . '%'),
-                            array('Remaining', round($partial_amount2, 2)),
                         );
                     }
-                    $adv_paid_final = purchaseSpecificData($record['id'], 'adv_paid_total', 'amount');
-                    $balADV = $partial_amount1 - $adv_paid_final;
-                    $rem_paid_final = purchaseSpecificData($record['id'], 'rem_paid_total', 'amount');
-                    $balREM = $partial_amount2 - $rem_paid_final;
+                    $crdt_paid_final = purchaseSpecificData($record['id'], 'crdt_paid_total', 'amount');
+                    $bal = $total_amount - $crdt_paid_final;
                     ?>
                     <hr class="my-0">
                     <div class="m-3">
-                        <b>Details</b>
+                        <b>Credit Details</b>
                         <table class="table mb-2 table-hover table-sm">
                             <thead>
                                 <tr>
                                     <th class="border bg-warning border-dark">Sr#</th>
                                     <th class="border bg-warning border-dark">Date</th>
-                                    <!-- <th class="border bg-warning border-dark">ID</th> -->
-                                    <!-- <th class="border bg-warning border-dark">Branch</th> -->
-                                    <!-- <th class="border bg-warning border-dark">Roz#</th> -->
-                                    <th class="border bg-warning border-dark">No</th>
+                                    <th class="border bg-warning border-dark">ID</th>
+                                    <th class="border bg-warning border-dark">Branch</th>
+                                    <th class="border bg-warning border-dark">Roz#</th>
+                                    <th class="border bg-warning border-dark">Name</th>
                                     <th class="border bg-warning border-dark">Total Amount</th>
-                                    <th class="border bg-warning border-dark">Adv Percent</th>
-                                    <th class="border bg-warning border-dark">Advance</th>
-                                    <th class="border bg-warning border-dark text-success">Total</th>
-                                    <th class="border bg-warning border-dark text-danger">BALANCE</th>
-                                    <th class="border bg-warning border-dark">Transferred</th>
-                                    <th class="border bg-warning border-dark">Remaining</th>
                                     <th class="border bg-warning border-dark text-success">Total</th>
                                     <th class="border bg-warning border-dark text-danger">BALANCE</th>
                                     <th class="border bg-warning border-dark">Transferred</th>
@@ -365,59 +349,26 @@ if ($id > 0) {
                                 <tr>
                                     <td class="border border-dark"><?php echo $roz_arr1[0][1]; ?></td> <!-- Sr# -->
                                     <td class="border border-dark"><?php echo $roz_arr1[1][1]; ?></td> <!-- Date -->
-                                    <!-- <td class="border border-dark"><?php echo $roz_arr1[2][1]; ?></td> ID -->
-                                    <!-- <td class="border border-dark"><?php echo $roz_arr1[3][1]; ?></td> Branch -->
-                                    <!-- <td class="border border-dark"><?php echo $roz_arr2[0][1]; ?></td> Roz# -->
+                                    <td class="border border-dark"><?php echo $roz_arr1[2][1]; ?></td> <!-- ID -->
+                                    <td class="border border-dark"><?php echo $roz_arr1[3][1]; ?></td> <!-- Branch -->
+                                    <td class="border border-dark"><?php echo $roz_arr2[0][1]; ?></td> <!-- Roz# -->
                                     <td class="border border-dark"><?php echo $roz_arr2[1][1]; ?></td> <!-- Name -->
                                     <td class="border border-dark"><?php echo $roz_arr4[0][1]; ?></td> <!-- Total Amount -->
-                                    <td class="border border-dark"><?php echo $roz_arr4[1][1]; ?></td> <!-- Percent -->
-                                    <td class="border border-dark"><?php echo $roz_arr4[2][1]; ?></td> <!-- Advance -->
-                                    <td class="border border-dark text-success"><?php echo round($adv_paid_final); ?></td> <!-- Total -->
-                                    <td class="border border-dark text-danger"><?php echo round($balADV); ?></td> <!-- BALANCE -->
+                                    <td class="border border-dark text-success"><?php echo round($crdt_paid_final); ?></td> <!-- Total -->
+                                    <td class="border border-dark text-danger"><?php echo round($bal); ?></td> <!-- BALANCE -->
                                     <td class="border border-dark">
                                         <?php
-                                        if ($balADV <= 10 && $record['transfer_level'] < 3) {
+                                        if ($bal <= 10 && $record['transfer_level'] < 3) {
                                             update('transactions', array('transfer_level' => 3), array('id' => $record['id']));
-
                                         ?><script>
-                                                window.location.href = '<?= "purchase-remaining?view=1&p_id=" . $id ?>';
+                                                window.location.href = '<?= "purchase-credit?view=1&p_id=" . $id ?>';
                                             </script><?php
                                                     }
-
-                                                    if ($balADV <= 10) {
+                                                    if ($bal <= 10) {
                                                         if ($record['transfer_level'] > 2 && $record['transfer_level'] < 4) { ?>
-                                                <form method="post" onsubmit="return confirm('Transfer to Remaining 80% Form.\n Press OK to transfer')">
+                                                <form method="post" onsubmit="return confirm('Transfer to Final.\n Press OK to transfer')">
                                                     <input type="hidden" name="p_id_hidden" value="<?php echo $record['id']; ?>">
-                                                    <button name="transferAdvanceToRem" type="submit" class="btn btn-dark btn-sm">
-                                                        TRANSFER
-                                                    </button>
-                                                </form>
-                                        <?php } else {
-                                                            echo '<i class="fa fa-check-double text-success"></i> Yes';
-                                                        }
-                                                    } else {
-                                                        echo '<i class="fa fa-times text-danger"></i> No';
-                                                    }
-                                        ?>
-                                    </td>
-                                    <td class="border border-dark"><?php echo $partial_amount2; ?></td> <!-- Remaining -->
-                                    <td class="border border-dark text-success"><?php echo round($rem_paid_final); ?></td> <!-- RemTotal -->
-                                    <td class="border border-dark text-danger"><?php echo round($balREM); ?></td> <!-- RemBALANCE -->
-
-                                    <td class="border border-dark">
-                                        <?php
-                                        if ($balREM <= 10 && $record['transfer_level'] < 5) {
-                                            update('transactions', array('transfer_level' => 5), array('id' => $record['id']));
-                                        ?><script>
-                                                window.location.href = '<?= "purchase-remaining?view=1&p_id=" . $id ?>';
-                                            </script><?php
-                                                    }
-
-                                                    if ($balREM <= 10) {
-                                                        if ($record['transfer_level'] > 4 && $record['transfer_level'] < 6) { ?>
-                                                <form method="post" onsubmit="return confirm('Transfer to Remaining.\n Press OK to transfer')">
-                                                    <input type="hidden" name="p_id_hidden" value="<?php echo $record['id']; ?>">
-                                                    <button name="transferRemToFull" type="submit" class="btn btn-dark btn-sm">
+                                                    <button name="transferCreditToFinal" type="submit" class="btn btn-dark btn-sm">
                                                         TRANSFER
                                                     </button>
                                                 </form>
@@ -433,7 +384,7 @@ if ($id > 0) {
                         </table>
                     </div>
                     <div class="mx-3">
-                        <b class="mt-2">Advance Transactions Details</b>
+                        <b class="mt-2">Transactions Details</b>
                         <table class="table mb-2 table-hover table-sm">
                             <thead>
                                 <tr>
@@ -448,7 +399,7 @@ if ($id > 0) {
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php $adv_paid = purchaseSpecificData($record['id'], 'adv');
+                                <?php $adv_paid = purchaseSpecificData($record['id'], 'crdt');
                                 $i = 1;
                                 foreach ($adv_paid as $item) {
                                     // $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $purchase_id, 'transfered_from' => 'purchase_' . $record['type']));
@@ -457,7 +408,7 @@ if ($id > 0) {
                                     echo '<td class="border border-dark">' . $i++ . '</td>';
                                     echo '<td class="border border-dark">' . my_date($item['created_at']) . '</td>';
 
-                                    echo '<td class="border border-dark"><a href="purchase-remaining?view=1&p_id=' . $record['id'] . '&purchase_pays_id=' . $item['id'] . '">' . $item['dr_khaata_no'] . '</a></td>';
+                                    echo '<td class="border border-dark"><a href="purchase-credit?view=1&p_id=' . $record['id'] . '&purchase_pays_id=' . $item['id'] . '">' . $item['dr_khaata_no'] . '</a></td>';
                                     echo '<td class="border border-dark">' . $item['cr_khaata_no'] . '</td>';
                                     echo '<td class="border border-dark">' . $item['report'] . '</td>';
                                     echo '<td class="border border-dark">' . round($item['amount']) . '<sub>' . $item['currency1'] . '</sub></td>';
@@ -468,327 +419,263 @@ if ($id > 0) {
                             </tbody>
                         </table>
                     </div>
-                    <!-- Remaining Entries -->
-                    <?php if ($record['khaata_tr1'] != '') {
-                        $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $purchase_id, 'transfered_from' => 'purchase_' . $record['type']));
-                        $roz = mysqli_fetch_assoc($rozQ);
-
-                        // Arrays to hold row data
-                        $roz_arr1 = array(
-                            array('Sr#', SuperAdmin() ? $roz['r_id'] . '-' . $roz['branch_serial'] : $roz['branch_serial']),
-                            array('Date', $roz['r_date']),
-                            array('ID', $roz['username']),
-                            array('Branch', branchName($roz['branch_id'])),
+                    <div class="collapse show" id="collapseExample">
+                        <input type="hidden" id="balance" value="<?php echo $bal; ?>">
+                        <?php
+                        $p_khaata_id = json_decode($record['khaata_tr1'], true)['dr_khaata_no'];
+                        $s_khaata_id = json_decode($record['khaata_tr1'], true)['cr_khaata_no'];
+                        $adv_arr = array(
+                            'finish' => array('div_class' => '', 'btn_text' => 'Transfer', 'btn_class' => 'btn-primary', 'back' => '', 'purchase_pays_id' => $purchase_pays_id, 'action' => 'insert'),
+                            'dr_khaata_no' => $p_khaata_id,
+                            'cr_khaata_no' => $s_khaata_id,
+                            'currency1' => '',
+                            'amount' => '',
+                            'currency2' => '',
+                            'rate' => '',
+                            'opr' => '*',
+                            'final_amount' => '',
+                            'transfer_date' => date('Y-m-d'),
+                            'report' => ''
+                            //'report' => 'ENTRY:' . $rows . ' GOODS:' . $goods . ' COUNTRY:' . $record['country'] . ' ALLOT:' . $record['allot'] . ' T.Qty:' . $qtys . ' T.KGs:' . $totals . ' RATE:' . $rate . ' T.AMNT:' . $amounts . $curr . ' EXCH.:' . $curr2
                         );
-                        $roz_arr2 = array(
-                            array('Roz.#', $roz['roznamcha_no']),
-                            array('Name', $roz['r_name']),
-                            array('No', $roz['r_no']),
-                        );
-                        $roz_arr3 = array(
-                            array('Dr.', $roz['amount']),
-                        );
-                        $roz_arr4 = array(
-                            array('Total Amt', round($final_amount)),
-                            array('Advance', round($partial_amount1) . '<sub>' . $percentage . '%</sub>'),
-                        );
-                    }
-                    ?>
-
-                    <!-- <hr class="my-0 mb-2"> -->
-
-                    <div class="m-3">
-                        <b>Remaining Transactions Details</b>
-                        <table class="table mb-2 table-hover table-sm">
-                            <thead>
-                                <tr>
-                                    <th class="border border-dark">#</th>
-                                    <th class="border border-dark">Date</th>
-                                    <th class="border border-dark">Dr. A/c</th>
-                                    <th class="border border-dark">Cr. A/c</th>
-                                    <th class="border border-dark">Report</th>
-                                    <th class="border border-dark">Amount</th>
-                                    <th class="border border-dark">Rate</th>
-                                    <th class="border border-dark">Final</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php
-                                $rem_paid = purchaseSpecificData($purchase_id, 'rem');
-                                $i = 1; // Initialize the counter
-                                foreach ($rem_paid as $item) {
-                                    echo '<tr>';
-                                    echo '<td class="border border-dark">' . $i++ . '</td>'; // Row number
-                                    echo '<td class="border border-dark">' . my_date($item['created_at']) . '</td>'; // Date
-
-                                    // Dr. A/c with link
-                                    echo '<td class="border border-dark"><a href="purchase-remaining?view=1&p_id=' . $purchase_id . '&purchase_pays_id=' . $item['id'] . '">' . $item['dr_khaata_no'] . '</a></td>';
-                                    echo '<td class="border border-dark">' . $item['cr_khaata_no'] . '</td>'; // Cr. A/c
-                                    echo '<td class="border border-dark">' . $item['report'] . '</td>'; // Report
-                                    echo '<td class="border border-dark">' . round($item['amount']) . '<sub>' . $item['currency1'] . '</sub></td>'; // Amount
-
-                                    echo '<td class="border border-dark">' . $item['rate'] . ' [' . $item['opr'] . ']</td>'; // Rate
-                                    echo '<td class="border border-dark">' . round($item['final_amount']) . '<sub>' . $item['currency2'] . '</sub></td>'; // Final Amount
-                                    echo '</tr>';
-                                } ?>
-                            </tbody>
-                        </table>
-                    </div>
-                
-
-                <div class="collapse show" id="collapseExample">
-                    <input type="hidden" id="balance" value="<?php echo $balREM; ?>">
-                    <?php
-                    $p_khaata_id = json_decode($record['khaata_tr1'], true)['dr_khaata_no'];
-                    $s_khaata_id = json_decode($record['khaata_tr1'], true)['cr_khaata_no'];
-                    $adv_arr = array(
-                        'finish' => array('div_class' => '', 'btn_text' => 'Transfer', 'btn_class' => 'btn-primary', 'back' => '', 'purchase_pays_id' => $purchase_pays_id, 'action' => 'insert'),
-                        'dr_khaata_no' => $p_khaata_id,
-                        'cr_khaata_no' => $s_khaata_id,
-                        'currency1' => '',
-                        'amount' => '',
-                        'currency2' => '',
-                        'rate' => '',
-                        'opr' => '*',
-                        'final_amount' => '',
-                        'transfer_date' => date('Y-m-d'),
-                        'report' => ''
-                        //'report' => 'ENTRY:' . $rows . ' GOODS:' . $goods . ' COUNTRY:' . $record['country'] . ' ALLOT:' . $record['allot'] . ' T.Qty:' . $qtys . ' T.KGs:' . $totals . ' RATE:' . $rate . ' T.AMNT:' . $amounts . $curr . ' EXCH.:' . $curr2
-                    );
-                    if ($purchase_pays_id > 0) {
-                        $purchase_paysQ = fetch('purchase_pays', array('id' => $purchase_pays_id));
-                        if (mysqli_num_rows($purchase_paysQ) > 0) {
-                            $pps = mysqli_fetch_assoc($purchase_paysQ);
-                            $adv_arr = array(
-                                'finish' => array('div_class' => 'border border-danger', 'btn_text' => 'Update', 'btn_class' => 'btn-warning', 'back' => '<a href="purchase-rem?view=1&p_id=' . $purchase_id . '">Back</a>', 'purchase_pays_id' => $purchase_pays_id, 'action' => 'update'),
-                                'dr_khaata_no' => $pps['dr_khaata_no'],
-                                'cr_khaata_no' => $pps['cr_khaata_no'],
-                                'currency1' => $pps['currency1'],
-                                'amount' => $pps['amount'],
-                                'currency2' => $pps['currency2'],
-                                'rate' => $pps['rate'],
-                                'opr' => $pps['opr'],
-                                'final_amount' => $pps['final_amount'],
-                                'transfer_date' => $pps['transfer_date'],
-                                'report' => $pps['report']
-                            );
-                        }
-                    }
-                    $rid_delete_array = array(); ?>
-                    <div class="card mt-3">
-                        <div class="card-body p-2">
-                            <form method="post" onsubmit="return confirm('Are you sure?');" class="table-form <?php echo $adv_arr['finish']['div_class'] ?>">
-                                <?php echo $adv_arr['finish']['back']; ?>
-                                <div class="row gx-0">
-                                    <div class="col-md-2">
-                                        <div class="input-group position-relative">
-                                            <label for="khaata_no1" class="text-success">Dr. A/c</label>
-                                            <input name="dr_khaata_no" id="khaata_no1" required class="form-control bg-transparent"
-                                                value="<?php echo $adv_arr['dr_khaata_no']; ?>">
-                                            <small class="error-response top-0" id="p_response"></small>
-                                        </div>
-                                        <input type="hidden" name="dr_khaata_id" id="p_khaata_id">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <div class="input-group position-relative">
-                                            <label for="khaata_no2" class="text-danger">Cr. A/c</label>
-                                            <input name="cr_khaata_no" id="khaata_no2" required class="form-control bg-transparent"
-                                                value="<?php echo $adv_arr['cr_khaata_no']; ?>">
-                                            <small class="error-response top-0" id="s_response"></small>
-                                        </div>
-                                        <input type="hidden" name="cr_khaata_id" id="s_khaata_id">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <div class="input-group">
-                                            <label for="currency1">Currency</label>
-                                            <select id="currency1" name="currency1" class="form-select bg-transparent" required>
-                                                <option value="" hidden="">Select</option>
-                                                <?php $currencies = fetch('currencies');
-                                                while ($crr = mysqli_fetch_assoc($currencies)) {
-                                                    $sel_curr = $adv_arr['currency1'] == $crr['name'] ? 'selected' : '';
-                                                    echo '<option ' . $sel_curr . ' value="' . $crr['name'] . '">' . $crr['name'] . ' - ' . $crr['symbol'] . '</option>';
-                                                } ?>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-2">
-                                        <div class="input-group">
-                                            <label for="amount">Amount</label>
-                                            <input type="text" id="amount" name="amount" class="form-control currency"
-                                                onkeyup="lastAmount()" required value="<?php echo $adv_arr['amount']; ?>">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <div class="input-group">
-                                            <label for="currency2">Currency</label>
-                                            <select id="currency2" name="currency2" class="form-select bg-transparent" required>
-                                                <option value="" hidden="">Select</option>
-                                                <?php $currencies = fetch('currencies');
-                                                while ($crr = mysqli_fetch_assoc($currencies)) {
-                                                    $sel_curr2 = $adv_arr['currency2'] == $crr['name'] ? 'selected' : '';
-                                                    echo '<option ' . $sel_curr2 . ' value="' . $crr['name'] . '">' . $crr['name'] . ' - ' . $crr['symbol'] . '</option>';
-                                                } ?>
-                                            </select>
-                                            <label for="rate">Rate</label>
-                                            <input type="text" name="rate" class="form-control currency" id="rate" required
-                                                onkeyup="lastAmount()" value="<?php echo $adv_arr['rate']; ?>">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-1">
-                                        <div class="input-group">
-                                            <label for="opr">Op.</label>
-                                            <select name="opr" class="form-select" id="opr" required onchange="lastAmount()">
-                                                <?php $ops = array('[*]' => '*', '[/]' => '/');
-                                                foreach ($ops as $opName => $op) {
-                                                    $sel_op = $adv_arr['opr'] == $op ? 'selected' : '';
-                                                    echo '<option ' . $sel_op . ' value="' . $op . '">' . $opName . '</option>';
-                                                } ?>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3 mt-3">
-                                        <div class="input-group">
-                                            <label for="final_amount">F.Amt.</label>
-                                            <input type="text" name="final_amount" class="form-control" id="final_amount" required
-                                                readonly tabindex="-1" value="<?php echo $adv_arr['final_amount']; ?>">
-
-                                            <label for="transfer_date">Date</label>
-                                            <input type="date" class="form-control" id="transfer_date" name="transfer_date" required
-                                                value="<?php echo $adv_arr['transfer_date']; ?>">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-7 mt-3">
-                                        <div class="input-group">
-                                            <label for="report">Report</label>
-                                            <input placeholder="Report" class="form-control" id="report" name="report" required
-                                                value="<?php echo $adv_arr['report']; ?>">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-2 mt-3 text-end">
-                                        <button name="tRemSubmit" id="recordSubmit" type="submit"
-                                            class="btn <?php echo $adv_arr['finish']['btn_class']; ?> btn-sm  rounded-0"><i
-                                                class="fa fa-paper-plane"></i> <?php echo $adv_arr['finish']['btn_text']; ?>
-                                        </button>
-                                    </div>
-                                </div>
-                                <input type="hidden" name="p_id_hidden" value="<?php echo $record['id']; ?>">
-                                <input type="hidden" name="p_type_hidden" value="<?php echo $purchase_type; ?>">
-                                <input type="hidden" name="purchase_pays_id_hidden" value="<?php echo $adv_arr['finish']['purchase_pays_id']; ?>">
-                                <input type="hidden" name="action" value="<?php echo $adv_arr['finish']['action']; ?>">
-                                <?php if ($purchase_pays_id > 0) {
-                                    $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'transfered_from_id' => $purchase_pays_id, 'transfered_from' => 'purchase_rem'));
-                                    if (mysqli_num_rows($rozQ) > 0) { ?>
-                                        <table class="table table-sm table-bordered">
-                                            <thead>
-                                                <tr>
-                                                    <th>Sr#</th>
-                                                    <th>Date</th>
-                                                    <th>A/c#</th>
-                                                    <th>Roz.#</th>
-                                                    <th>Name</th>
-                                                    <th>No</th>
-                                                    <th>Details</th>
-                                                    <th>Dr.</th>
-                                                    <th>Cr.</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php while ($roz = mysqli_fetch_assoc($rozQ)) {
-                                                    $rid_delete_array[] = $roz['r_id'];
-                                                    $dr = $cr = 0; ?>
-                                                    <input type="hidden" value="<?php echo $roz['r_id']; ?>" name="r_id[]">
-                                                    <tr>
-                                                        <td>
-                                                            <?php echo SuperAdmin() ? $roz['r_id'] . '-' . $roz['branch_serial'] : $roz['branch_serial']; ?>
-                                                        </td>
-                                                        <td><?php echo $roz['r_date']; ?></td>
-                                                        <td>
-                                                            <a href="ledger?back-khaata-no=<?php echo $roz['khaata_no']; ?>"
-                                                                target="_blank"><?php echo $roz['khaata_no']; ?></a>
-                                                        </td>
-                                                        <td><?php echo $roz['roznamcha_no']; ?></td>
-                                                        <td class="small"><?php echo $roz['r_name']; ?></td>
-                                                        <td><?php echo $roz['r_no']; ?></td>
-                                                        <td class="small"><?php echo $roz['details']; ?></td>
-                                                        <?php if ($roz['dr_cr'] == "dr") {
-                                                            $dr = $roz['amount'];
-                                                        } else {
-                                                            $cr = $roz['amount'];
-                                                        } ?>
-                                                        <td class="text-success"><?php echo $dr; ?></td>
-                                                        <td class="text-danger"><?php echo $cr; ?></td>
-                                                    </tr>
-                                                <?php } ?>
-                                            </tbody>
-                                        </table>
-                                <?php }
-                                } ?>
-                            </form>
-                            <?php if ($purchase_pays_id > 0) { ?>
-                                <form method="post"
-                                    onsubmit="return confirm('Are you sure to delete Payment?\nThe record will be delete from Roznamcha too.\nPress OK to Delete');">
-                                    <input type="hidden" name="r_id_hidden" value="<?php echo htmlspecialchars(json_encode($rid_delete_array)); ?>">
-                                    <input type="hidden" name="p_id_hidden" value="<?php echo $purchase_id; ?>">
-                                    <input type="hidden" name="p_type_hidden" value="<?php echo $purchase_type; ?>">
-                                    <input type="hidden" name="purchase_pays_id_hidden" value="<?php echo $purchase_pays_id; ?>">
-                                    <button name="deleteRemPaymentAndRozSubmit" type="submit" class="btn btn-danger btn-sm">Delete This Payment</button>
-                                </form>
-                            <?php } ?>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-2 order-1 fixed-sidebar table-form">
-                    <div class="mt-3">
-                        <form id="attachmentSubmit" method="post" enctype="multipart/form-data">
-                            <input type="hidden" name="t_id_hidden_attach" value="<?php echo $id; ?>">
-                            <input type="file" id="attachments" name="attachments[]" class="d-none" multiple>
-                            <input type="button" class="form-control rounded-1 bg-dark text-white"
-                                value="+ Contract File"
-                                onclick="document.getElementById('attachments').click();" />
-                        </form>
-                        <script>
-                            document.getElementById("attachments").onchange = function() {
-                                document.getElementById("attachmentSubmit").submit();
+                        if ($purchase_pays_id > 0) {
+                            $purchase_paysQ = fetch('purchase_pays', array('id' => $purchase_pays_id));
+                            if (mysqli_num_rows($purchase_paysQ) > 0) {
+                                $pps = mysqli_fetch_assoc($purchase_paysQ);
+                                $adv_arr = array(
+                                    'finish' => array('div_class' => 'border border-danger', 'btn_text' => 'Update', 'btn_class' => 'btn-warning', 'back' => '<a href="purchase-credit?view=1&p_id=' . $id . '">Back</a>', 'purchase_pays_id' => $purchase_pays_id, 'action' => 'update'),
+                                    'dr_khaata_no' => $pps['dr_khaata_no'],
+                                    'cr_khaata_no' => $pps['cr_khaata_no'],
+                                    'currency1' => $pps['currency1'],
+                                    'amount' => $pps['amount'],
+                                    'currency2' => $pps['currency2'],
+                                    'rate' => $pps['rate'],
+                                    'opr' => $pps['opr'],
+                                    'final_amount' => $pps['final_amount'],
+                                    'transfer_date' => $pps['transfer_date'],
+                                    'report' => $pps['report']
+                                );
                             }
-                        </script>
-                        <?php $atts = getAttachments($id, 'purchase_contract');
-                        $no = 0;
-                        foreach ($atts as $att) {
-                            echo ++$no . '.<a class="text-decoration-underline" href="attachments/' . $att['attachment'] . '" title="' . $att['created_at'] . '" target="_blank">' . readMore($att['attachment'], 20) . '</a><br>';
-                        } ?>
-                    <?php } ?>
+                        }
+                        $rid_delete_array = array(); ?>
+                        <div class="card mt-3">
+                            <div class="card-body p-2">
+                                <form method="post" onsubmit="return confirm('Are you sure?');" class="table-form <?php echo $adv_arr['finish']['div_class'] ?>">
+                                    <?php echo $adv_arr['finish']['back']; ?>
+                                    <div class="row gx-0">
+                                        <div class="col-md-2">
+                                            <div class="input-group position-relative">
+                                                <label for="khaata_no1" class="text-success">Dr. A/c</label>
+                                                <input name="dr_khaata_no" id="khaata_no1" required class="form-control bg-transparent"
+                                                    value="<?php echo $adv_arr['dr_khaata_no']; ?>">
+                                                <small class="error-response top-0" id="p_response"></small>
+                                            </div>
+                                            <input type="hidden" name="dr_khaata_id" id="p_khaata_id">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="input-group position-relative">
+                                                <label for="khaata_no2" class="text-danger">Cr. A/c</label>
+                                                <input name="cr_khaata_no" id="khaata_no2" required class="form-control bg-transparent"
+                                                    value="<?php echo $adv_arr['cr_khaata_no']; ?>">
+                                                <small class="error-response top-0" id="s_response"></small>
+                                            </div>
+                                            <input type="hidden" name="cr_khaata_id" id="s_khaata_id">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="input-group">
+                                                <label for="currency1">Currency</label>
+                                                <select id="currency1" name="currency1" class="form-select bg-transparent" required>
+                                                    <option value="" hidden="">Select</option>
+                                                    <?php $currencies = fetch('currencies');
+                                                    while ($crr = mysqli_fetch_assoc($currencies)) {
+                                                        $sel_curr = $adv_arr['currency1'] == $crr['name'] ? 'selected' : '';
+                                                        echo '<option ' . $sel_curr . ' value="' . $crr['name'] . '">' . $crr['name'] . ' - ' . $crr['symbol'] . '</option>';
+                                                    } ?>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="input-group">
+                                                <label for="amount">Amount</label>
+                                                <input type="text" id="amount" name="amount" class="form-control currency"
+                                                    onkeyup="lastAmount()" required value="<?php echo $adv_arr['amount']; ?>">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="input-group">
+                                                <label for="currency2">Currency</label>
+                                                <select id="currency2" name="currency2" class="form-select bg-transparent" required>
+                                                    <option value="" hidden="">Select</option>
+                                                    <?php $currencies = fetch('currencies');
+                                                    while ($crr = mysqli_fetch_assoc($currencies)) {
+                                                        $sel_curr2 = $adv_arr['currency2'] == $crr['name'] ? 'selected' : '';
+                                                        echo '<option ' . $sel_curr2 . ' value="' . $crr['name'] . '">' . $crr['name'] . ' - ' . $crr['symbol'] . '</option>';
+                                                    } ?>
+                                                </select>
+                                                <label for="rate">Rate</label>
+                                                <input type="text" name="rate" class="form-control currency" id="rate" required
+                                                    onkeyup="lastAmount()" value="<?php echo $adv_arr['rate']; ?>">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-1">
+                                            <div class="input-group">
+                                                <label for="opr">Op.</label>
+                                                <select name="opr" class="form-select" id="opr" required onchange="lastAmount()">
+                                                    <?php $ops = array('[*]' => '*', '[/]' => '/');
+                                                    foreach ($ops as $opName => $op) {
+                                                        $sel_op = $adv_arr['opr'] == $op ? 'selected' : '';
+                                                        echo '<option ' . $sel_op . ' value="' . $op . '">' . $opName . '</option>';
+                                                    } ?>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 mt-3">
+                                            <div class="input-group">
+                                                <label for="final_amount">F.Amt.</label>
+                                                <input type="text" name="final_amount" class="form-control" id="final_amount" required
+                                                    readonly tabindex="-1" value="<?php echo $adv_arr['final_amount']; ?>">
 
-                    <?php if ($_fields['locked'] == 0 && $_fields['is_doc'] > 0) { ?>
-                        <form method="post" onsubmit="return confirm('Lock this purchase.\nPress OK to transfer')" action>
-                            <input type="hidden" name="p_id_hidden" value="<?php echo $id; ?>">
-                            <button name="transferPurchase" type="submit" class="btn btn-dark btn-sm w-100 mt-3">
-                                TRANSFER
-                            </button>
-                        </form>
-                    <?php } ?>
-                    <div class="bottom-buttons">
-                        <div class="px-2">
-                            <?php $update_url = $_fields['type'] == 'booking' ? 'purchase-add' : ($_fields['type'] == 'market' ? 'purchase-market-add' : 'purchase-local-add');
-                            if ($_POST['page'] !== "purchase-remaining") {
-                            ?>
-                                <a href="<?php echo $update_url . '?id=' . $id; ?>" class="btn btn-dark btn-sm w-100 mt-2">UPDATE</a>
-                            <?php } ?>
-                            <a href="print/purchase-single?t_id=<?php echo $id; ?>&action=order&secret=<?php echo base64_encode('powered-by-upsol') . "&print_type=full"; ?>"
-                                target="_blank" class="btn btn-dark btn-sm w-100 mt-2">PRINT</a>
-                            <?php if ($_fields['locked'] == 0) { ?>
-                                <form method="post" onsubmit="return confirm('Are you sure to delete?');">
-                                    <input type="hidden" name="p_id_hidden" value="<?php echo $id; ?>">
-                                    <button name="deleteTransaction" type="submit" class="btn btn-danger btn-sm w-100 mt-2">
-                                        DELETE
-                                    </button>
+                                                <label for="transfer_date">Date</label>
+                                                <input type="date" class="form-control" id="transfer_date" name="transfer_date" required
+                                                    value="<?php echo $adv_arr['transfer_date']; ?>">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-7 mt-3">
+                                            <div class="input-group">
+                                                <label for="report">Report</label>
+                                                <input placeholder="Report" class="form-control" id="report" name="report" required
+                                                    value="<?php echo $adv_arr['report']; ?>">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2 mt-3 text-end">
+                                            <button name="tCrdtSubmit" id="recordSubmit" type="submit"
+                                                class="btn <?php echo $adv_arr['finish']['btn_class']; ?> btn-sm  rounded-0"><i
+                                                    class="fa fa-paper-plane"></i> <?php echo $adv_arr['finish']['btn_text']; ?>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <input type="hidden" name="p_id_hidden" value="<?php echo $record['id']; ?>">
+                                    <input type="hidden" name="p_type_hidden" value="<?php echo $purchase_type; ?>">
+                                    <input type="hidden" name="purchase_pays_id_hidden" value="<?php echo $adv_arr['finish']['purchase_pays_id']; ?>">
+                                    <input type="hidden" name="action" value="<?php echo $adv_arr['finish']['action']; ?>">
+                                    <?php if ($purchase_pays_id > 0) {
+                                        $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'transfered_from_id' => $purchase_pays_id, 'transfered_from' => 'purchase_credit'));
+                                        if (mysqli_num_rows($rozQ) > 0) { ?>
+                                            <table class="table table-sm table-bordered">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Sr#</th>
+                                                        <th>Date</th>
+                                                        <th>A/c#</th>
+                                                        <th>Roz.#</th>
+                                                        <th>Name</th>
+                                                        <th>No</th>
+                                                        <th>Details</th>
+                                                        <th>Dr.</th>
+                                                        <th>Cr.</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php while ($roz = mysqli_fetch_assoc($rozQ)) {
+                                                        $rid_delete_array[] = $roz['r_id'];
+                                                        $dr = $cr = 0; ?>
+                                                        <input type="hidden" value="<?php echo $roz['r_id']; ?>" name="r_id[]">
+                                                        <tr>
+                                                            <td>
+                                                                <?php echo SuperAdmin() ? $roz['r_id'] . '-' . $roz['branch_serial'] : $roz['branch_serial']; ?>
+                                                            </td>
+                                                            <td><?php echo $roz['r_date']; ?></td>
+                                                            <td>
+                                                                <a href="ledger?back-khaata-no=<?php echo $roz['khaata_no']; ?>"
+                                                                    target="_blank"><?php echo $roz['khaata_no']; ?></a>
+                                                            </td>
+                                                            <td><?php echo $roz['roznamcha_no']; ?></td>
+                                                            <td class="small"><?php echo $roz['r_name']; ?></td>
+                                                            <td><?php echo $roz['r_no']; ?></td>
+                                                            <td class="small"><?php echo $roz['details']; ?></td>
+                                                            <?php if ($roz['dr_cr'] == "dr") {
+                                                                $dr = round($roz['amount']);
+                                                            } else {
+                                                                $cr = round($roz['amount']);
+                                                            } ?>
+                                                            <td class="text-success"><?php echo $dr; ?></td>
+                                                            <td class="text-danger"><?php echo $cr; ?></td>
+                                                        </tr>
+                                                    <?php } ?>
+                                                </tbody>
+                                            </table>
+                                    <?php }
+                                    } ?>
                                 </form>
-                            <?php } ?>
+                                <?php //$decodedArray = json_decode($_POST['p_type_hidden'], true);
+                                if ($purchase_pays_id > 0) { ?>
+                                    <form method="post"
+                                        onsubmit="return confirm('Are you sure to delete Payment?\nThe record will be delete from Roznamcha too.\nPress OK to Delete');">
+                                        <input type="hidden" name="r_id_hidden" value="<?php echo htmlspecialchars(json_encode($rid_delete_array)); ?>">
+                                        <input type="hidden" name="p_id_hidden" value="<?php echo $purchase_id; ?>">
+                                        <input type="hidden" name="p_type_hidden" value="<?php echo $purchase_type; ?>">
+                                        <input type="hidden" name="purchase_pays_id_hidden" value="<?php echo $purchase_pays_id; ?>">
+                                        <button name="deletePaymentAndRozSubmit" type="submit" class="btn btn-danger btn-sm">Delete This Payment</button>
+                                    </form>
+                                <?php } ?>
+                            </div>
                         </div>
                     </div>
+                    <div class="col-2 order-1 fixed-sidebar table-form">
+                        <div class="mt-3">
+                            <form id="attachmentSubmit" method="post" enctype="multipart/form-data">
+                                <input type="hidden" name="t_id_hidden_attach" value="<?php echo $id; ?>">
+                                <input type="file" id="attachments" name="attachments[]" class="d-none" multiple>
+                                <input type="button" class="form-control rounded-1 bg-dark text-white"
+                                    value="+ Contract File"
+                                    onclick="document.getElementById('attachments').click();" />
+                            </form>
+                            <script>
+                                document.getElementById("attachments").onchange = function() {
+                                    document.getElementById("attachmentSubmit").submit();
+                                }
+                            </script>
+                            <?php $atts = getAttachments($id, 'purchase_contract');
+                            $no = 0;
+                            foreach ($atts as $att) {
+                                echo ++$no . '.<a class="text-decoration-underline" href="attachments/' . $att['attachment'] . '" title="' . $att['created_at'] . '" target="_blank">' . readMore($att['attachment'], 20) . '</a><br>';
+                            } ?>
+                        <?php } ?>
+
+                        <?php if ($_fields['locked'] == 0 && $_fields['is_doc'] > 0) { ?>
+                            <form method="post" onsubmit="return confirm('Lock this purchase.\nPress OK to transfer')" action>
+                                <input type="hidden" name="p_id_hidden" value="<?php echo $id; ?>">
+                                <button name="transferPurchase" type="submit" class="btn btn-dark btn-sm w-100 mt-3">
+                                    TRANSFER
+                                </button>
+                            </form>
+                        <?php } ?>
+                        <div class="bottom-buttons">
+                            <div class="px-2">
+                                <?php $update_url = $_fields['type'] == 'booking' ? 'sale-add' : ($_fields['type'] == 'market' ? 'sale-add?type=local' : 'sale-add?type=local');
+                                if ($_POST['page'] !== "sale-advance") {
+                                ?>
+                                    <a href="<?php echo $update_url . '?id=' . $id; ?>" class="btn btn-dark btn-sm w-100 mt-2">UPDATE</a>
+                                <?php } ?>
+                                <a href="print/sale-single?t_id=<?php echo $id; ?>&action=order&secret=<?php echo base64_encode('powered-by-upsol') . "&print_type=full"; ?>"
+                                    target="_blank" class="btn btn-dark btn-sm w-100 mt-2">PRINT</a>
+                                <?php if ($_fields['locked'] == 0) { ?>
+                                    <form method="post" onsubmit="return confirm('Are you sure to delete?');">
+                                        <input type="hidden" name="p_id_hidden" value="<?php echo $id; ?>">
+                                        <button name="deleteTransaction" type="submit" class="btn btn-danger btn-sm w-100 mt-2">
+                                            DELETE
+                                        </button>
+                                    </form>
+                                <?php } ?>
+                            </div>
+                        </div>
+
+                    <?php }
+                    ?>
+                        </div>
                     </div>
                 </div>
-            <?php }
-            ?>
+            </div>
             <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
             <script>
                 $(document).ready(function() {
@@ -869,3 +756,4 @@ if ($id > 0) {
                     }
                 }
             </script>
+        </div>

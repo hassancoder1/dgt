@@ -55,9 +55,8 @@ if ($_GET) {
 // If there are any conditions, concatenate them with 'AND'
 if (count($conditions) > 0) {
     $sql .= ' AND ' . implode(' AND ', $conditions);
-} else {
-    $sql .= " AND locked = '1' AND transfer_level >= '6'";
 }
+$sql .= " AND locked IN ('1','2')  AND transfer_level >= '6'";
 
 $sql .= " ORDER BY id DESC";
 if (count($print_filters) > 0) {
@@ -301,7 +300,7 @@ $mypageURL = $pageURL;
                                     <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $id; ?>)"
                                         data-bs-toggle="modal" data-bs-target="#KhaataDetails">
                                         <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $id; ?>
-                                        <?php echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
+                                        <?php echo in_array($locked, [1, 2]) ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
                                     </td>
                                     <td class="<?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['type']); ?></td>
                                     <td class="<?php echo $rowColor; ?>"><?php echo branchName($_fields_single['branch_id']); ?></td>

@@ -1,5 +1,5 @@
 <?php
-$page_title = 'Local Purchase WareHouse Transfer';
+$page_title = 'Local P/S WareHouse Transfer';
 $pageURL = 'local-wareHouse-transfer-goods';
 include("header.php");
 
@@ -161,7 +161,7 @@ $total_pages = ceil($total_rows / $rows_per_page);
                         <thead>
                             <tr class="text-nowrap">
                                 <th>No.</th>
-                                <th>P# (SR#)</th>
+                                <th>P/S# (SR#)</th>
                                 <th>UID</th>
                                 <th>Goods Name / SIZE / BRAND</th>
                                 <th>ORIGIN</th>
@@ -187,9 +187,8 @@ $total_pages = ceil($total_rows / $rows_per_page);
                             ?>
                                     <tr class="text-nowrap">
                                         <td><?= htmlspecialchars($i); ?></td>
-                                        <td class="pointer" onclick="viewPurchase(<?php echo $entry['p_id']; ?>)"
-                                            data-bs-toggle="modal" data-bs-target="#KhaataDetails">
-                                            <b>P#</b> <?= htmlspecialchars($entry['p_id']); ?> (<?= $entry['sr_no']; ?>)
+                                        <td class="pointer" onclick="window.location.href = '?view=1&id=<?= $entry['p_id']; ?>';">
+                                            <b><?= ucfirst($entry['type']); ?>#</b> <?= htmlspecialchars($entry['p_id']); ?> (<?= $entry['sr_no']; ?>)
                                         </td>
                                         <td><?= htmlspecialchars($entry['uid']); ?></td>
                                         <td><?= goodsName(htmlspecialchars(json_decode($entry['goods_details'], true)['goods_id'])) . ' / ' . htmlspecialchars(json_decode($entry['goods_details'], true)['size']) . ' / ' . htmlspecialchars(json_decode($entry['goods_details'], true)['brand']); ?> </td>
@@ -236,10 +235,6 @@ $total_pages = ceil($total_rows / $rows_per_page);
     role="dialog" aria-labelledby="staticBackdropLabel" aria-hidden="true">
     <div class="modal-dialog modal-fullscreen -modal-xl -modal-dialog-centered" role="document">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="staticBackdropLabel">PURCHASE DETAILS</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
             <div class="modal-body bg-light pt-0" id="viewDetails"></div>
         </div>
     </div>
@@ -253,12 +248,12 @@ $total_pages = ceil($total_rows / $rows_per_page);
     function viewPurchase(id = null) {
         if (id) {
             $.ajax({
-                url: 'ajax/viewSingleTransaction.php',
+                url: 'ajax/viewStockTransferGoods.php',
                 type: 'post',
                 data: {
                     id: id,
                     level: 1,
-                    page: "confirm-stock"
+                    page: "stock-transfer-goods"
                 },
                 success: function(response) {
                     $('#viewDetails').html(response);
@@ -269,3 +264,8 @@ $total_pages = ceil($total_rows / $rows_per_page);
         }
     }
 </script>
+<?php if (isset($_GET['id']) && is_numeric($_GET['id']) && isset($_GET['view']) && $_GET['view'] == 1) {
+    $id = mysqli_real_escape_string($connect, $_GET['id']);
+    echo "<script>jQuery(document).ready(function ($) {  $('#KhaataDetails').modal('show');});</script>";
+    echo "<script>jQuery(document).ready(function ($) {  viewPurchase($id); });</script>";
+}

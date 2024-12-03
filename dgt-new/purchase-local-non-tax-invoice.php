@@ -1,6 +1,6 @@
 <?php
 $page_title = 'LOCAL NON-TAX INVOICE';
-$pageURL = 'local-non-tax-invoice';
+$pageURL = 'purchase-local-non-tax-invoice';
 include("header.php");
 $remove = $size = $brand = $goods_name = $start_print = $end_print = $is_transferred = $s_khaata_id = '';
 $is_search = false;
@@ -158,11 +158,29 @@ $mypageURL = $pageURL;
                     $_fields_sr = ['l_country' => '', 'l_date' => '', 'r_country' => '', 'r_date' => ''];
                     if (!empty($sea_road_array)) {
                         $sea_road = $sea_road_array->sea_road ?? '';
-                        if ($sea_road == 'sea') {
-                            $_fields_sr = ['l_country' => $sea_road_array->l_country, 'l_date' => $sea_road_array->l_date, 'r_country' => $sea_road_array->r_country, 'r_date' => $sea_road_array->r_date];
-                        }
-                        if ($sea_road == 'road') {
-                            $_fields_sr = ['l_country' => $sea_road_array->l_country_road, 'l_date' => $sea_road_array->l_date_road, 'r_country' => $sea_road_array->r_country_road, 'r_date' => $sea_road_array->r_date_road];
+                        $_fields_sr = [];
+                        if ($sea_road === 'sea') {
+                            $_fields_sr = [
+                                'l_country' => $sea_road_array->l_country ?? '',
+                                'l_date'    => $sea_road_array->l_date ?? '',
+                                'r_country' => $sea_road_array->r_country ?? '',
+                                'r_date'    => $sea_road_array->r_date ?? '',
+                                'truck_no' => $sea_road_array->truck_no ?? '',
+                                'truck_name' => $sea_road_array->truck_name ?? '',
+                                'loading_company_name' => $sea_road_array->loading_company_name ?? '',
+                                'loading_date' => $sea_road_array->loading_date ?? '',
+                                'transfer_name' => $sea_road_array->transfer_name ?? ''
+                            ];
+                        } elseif ($sea_road === 'road') {
+                            $_fields_sr = [
+                                'l_country' => $sea_road_array->l_country_road ?? '',
+                                'l_date'    => $sea_road_array->l_date_road ?? '',
+                                'r_country' => $sea_road_array->r_country_road ?? '',
+                                'r_date'    => $sea_road_array->r_date_road ?? '',
+                                'old_company_name' => $sea_road_array->old_company_name ?? '',
+                                'transfer_company_name' => $sea_road_array->transfer_company_name ?? '',
+                                'warehouse_date' => $sea_road_array->warehouse_date ?? '',
+                            ];
                         }
                     }
                     if ($is_search) {
@@ -192,10 +210,10 @@ $mypageURL = $pageURL;
                     if ($locked == 0) {
                         $rowColor = $is_doc == 0 ? ' text-danger ' : ' text-warning ';
                     }
-                    if(!empty($_fields_single['items'][0]['tax_amount'])){
+                    if (!empty($_fields_single['items'][0]['tax_amount'])) {
                         continue;
                     }
-                    ?>
+                ?>
                     <tr class="text-nowrap">
                         <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $id; ?>)"
                             data-bs-toggle="modal" data-bs-target="#KhaataDetails">
@@ -262,7 +280,8 @@ $mypageURL = $pageURL;
                 data: {
                     id: id,
                     level: 1,
-                    page: "purchases"
+                    page: "purchases",
+                    type: 'purchase'
                 },
                 success: function(response) {
                     $('#viewDetails').html(response);
@@ -362,7 +381,7 @@ if (isset($_POST['purchaseReports'])) {
 if (isset($_GET['deletePurchaseReport'])) {
     $id = isset($_GET['p_hidden_id']) ? $_GET['p_hidden_id'] : '';
     $type = $_GET['type'];
-    $pageURL = $pageURL . '?t_id='.$id;
+    $pageURL = $pageURL . '?t_id=' . $id;
     $deleteReport = isset($_GET['deletePurchaseReport']) ? $_GET['deletePurchaseReport'] : '';
     $records = fetch('transactions', ['id' => $id]);
     $record = mysqli_fetch_assoc($records);

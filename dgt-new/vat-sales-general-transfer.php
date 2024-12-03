@@ -1,19 +1,19 @@
 <?php
-$page_title = 'Agent Form';
-$pageURL = 'agent-form';
+$page_title = 'VAT SALES GENERAL TRANSFER';
+$pageURL = 'vat-sales-general-transfer';
 include("header.php");
-$remove = $start_print = $end_print = $type = $acc_no = $p_id = $sea_road = $blNoSearch = $date_type = '';
+$remove = $start_print = $end_print = $type = $acc_no = $warehouse_search = $p_id = $sea_road = $blNoSearch = $date_type = '';
 $is_search = false;
 global $connect;
 $results_per_page = 25;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $start_from = ($page - 1) * $results_per_page;
-$sql = "SELECT * FROM `general_loading`";
+$sql = "SELECT * FROM `general_loading` WHERE type='s'";
 $conditions = [];
 $print_filters = [];
 $user = $_SESSION['username'];
 if ($_GET) {
-    $remove = removeFilter('agent-form');
+    $remove = removeFilter($pageURL);
     $is_search = true;
     if (isset($_GET['p_id']) && !empty($_GET['p_id'])) {
         $p_id = mysqli_real_escape_string($connect, $_GET['p_id']);
@@ -55,6 +55,11 @@ if ($_GET) {
         $print_filters[] = 'acc_no=' . $acc_no;
         $conditions[] = "JSON_EXTRACT(agent_details, '$.ag_acc_no') = '$acc_no'";
     }
+    if (!empty($_GET['warehouse_search']) && $user === 'admin') {
+        $warehouse_search = mysqli_real_escape_string($connect, $_GET['warehouse_search']);
+        $print_filters[] = 'warehouse_search=' . $warehouse_search;
+        $conditions[] = "JSON_EXTRACT(agent_details, '$.cargo_transfer_warehouse') = '$warehouse_search'";
+    }
     if (!empty($_GET['sea_road'])) {
         $sea_road = mysqli_real_escape_string($connect, $_GET['sea_road']);
         $print_filters[] = 'sea_road=' . $sea_road;
@@ -62,7 +67,7 @@ if ($_GET) {
     }
 }
 if (count($conditions) > 0) {
-    $sql .= " WHERE " . implode(' AND ', $conditions);
+    $sql .= " AND " . implode(' AND ', $conditions);
 }
 if ($user !== 'admin') {
     $sql .= " AND JSON_EXTRACT(agent_details, '$.ag_id') = '$user'";
@@ -77,7 +82,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
 <div class="mx-5 bg-white p-3">
     <div class="d-flex justify-content-between align-items-center w-100">
         <h1 class="mb-2" style="font-size: 2rem; font-weight: 700; color: #333; text-transform: uppercase; letter-spacing: 1.5px; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">
-            Custom Clearing Agent Form
+            <?= $page_title; ?>
         </h1>
         <div class="d-flex gap-2">
             <nav aria-label="Page navigation example">
@@ -190,7 +195,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
     <form name="datesSubmit" class="mt-2" method="get">
         <div class="input-group input-group-sm">
             <div class="form-group">
-                <label for="p_id" class="form-label">P/S#</label>
+                <label for="p_id" class="form-label">S#</label>
                 <input type="number" name="p_id" value="<?php echo $p_id; ?>" id="p_id" class="form-control form-control-sm mx-1" style="max-width:80px;" placeholder="e.g. 33">
             </div>
             <div class="form-group">
@@ -238,6 +243,15 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                 <label for="acc_no" class="form-label">Acc No.</label>
                 <input type="text" class="form-control form-control-sm mx-1" style="max-width:90px;" name="acc_no" placeholder="Acc No." value="<?php echo $acc_no; ?>" id="acc_no">
             </div>
+            <div class="form-group mx-1">
+                <label for="warehouse_search" class="form-label">WareHouse</label>
+                <select id="warehouse_search" name="warehouse_search" class="form-select form-select-sm" required>
+                    <option disabled selected>Select One</option>
+                    <option value="Free Zone" <?= $warehouse_search === 'Free Zone' ? 'selected' : ''; ?>>Freezone Warehouse</option>
+                    <option value="OFF Site" <?= $warehouse_search === 'OFF Site' ? 'selected' : ''; ?>>Offsite Warehouse</option>
+                    <option value="Transit" <?= $warehouse_search === 'Transit' ? 'selected' : ''; ?>>Transit Warehouse</option>
+                </select>
+            </div>
             <div class="form-group mt-4 pt-1">
                 <?= $remove ? '<a href="' . $pageURL . '" class="btn btn-sm btn-danger"><i class="fa fa-sync-alt"></i></a>' : ''; ?>
                 <button type="submit" class="btn btn-sm btn-success">Search</button>
@@ -248,11 +262,12 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
         <table class="table table-bordered">
             <thead>
                 <tr class="text-nowrap">
-                    <th><?= SuperAdmin() ? 'P/S#+Bill#' : '#'; ?></th>
+                    <th><?= SuperAdmin() ? 'S#+Bill#' : '#'; ?></th>
                     <th>B/L No.</th>
                     <th>Containers</th>
                     <th>AG ID</th>
                     <th>AG NAME</th>
+                    <th>WareHouse</th>
                     <th>L_DATE</th>
                     <th>L_PORT</th>
                     <th>R_DATE</th>
@@ -304,7 +319,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                         <tr class="text-nowrap">
                             <?php if (SuperAdmin()) { ?>
                                 <td class="pointer text-uppercase <?php echo $rowColor; ?>" onclick="window.location.href= '?lp_id=<?= $SingleLoading['id']; ?>&view=1';">
-                                    <?= '<b>'.$SingleLoading['type'].'#' . $SingleLoading['p_id'] . "($billNumber)"; ?>
+                                    <?= '<b>S#' . $SingleLoading['p_id'] . "($billNumber)"; ?>
                                     <?php echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
                                 </td>
                             <?php } else { ?>
@@ -317,6 +332,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                             <td class="<?php echo $rowColor; ?>"><?= $containerCounts[$SingleLoading['bl_no']]; ?></td>
                             <td class="<?php echo $rowColor; ?>"><?= $agentDetails['ag_id']; ?></td>
                             <td class="<?php echo $rowColor; ?>"><?= $agentDetails['ag_name']; ?></td>
+                            <td class="<?php echo $rowColor; ?>"><?= $agentDetails['cargo_transfer_warehouse']; ?></td>
                             <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['loading_details'], true)['loading_date']; ?></td>
                             <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['loading_details'], true)['loading_port_name']; ?></td>
                             <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['receiving_details'], true)['receiving_date']; ?></td>
@@ -349,7 +365,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
             let action = '<?= isset($_GET['action']) ? $_GET['action'] : '' ?>';
             let editId = '<?= isset($_GET['editId']) ? $_GET['editId'] : '' ?>';
             $.ajax({
-                url: 'ajax/viewAgentForm.php',
+                url: 'ajax/viewVATTransfer.php',
                 type: 'post',
                 data: {
                     id: id,
@@ -382,74 +398,6 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
     };
 </script>
 <?php
-if (isset($_POST['TransferToPayments'])) {
-    $transferPairs = explode(',', $_POST['payment_transfer_ids']);
-    $parent_id = mysqli_real_escape_string($connect, $_POST['parent_id']);
-    $f = json_decode(mysqli_fetch_assoc(fetch('general_loading', ['id' => $parent_id]))['gloading_info'], true);
-    $checkTransfer = array_merge($f, ['transferred_to_payments' => true, 'payments_trans_ids' => $transferPairs]);
-    update('general_loading', ['gloading_info' => json_encode($checkTransfer)], ['id' => $parent_id]);
-    messageNew('success', $_SERVER['REQUEST_URI'], 'Transferred To Payments!');
-}
-if (isset($_POST['AgentFormSubmit'])) {
-    $msg = 'DB Error';
-    $msgType = 'danger';
-    $url = 'agent-form';
-    $id = mysqli_real_escape_string($connect, $_POST['id']);
-    $parent_id = mysqli_real_escape_string($connect, $_POST['parent_id']);
-    $agent = json_decode($_POST['existing_data'], true);
-    $uploadDir = 'attachments/';
-    $uploadedFiles = [];
-
-    $f = mysqli_fetch_assoc(fetch('general_loading', ['id' => $parent_id]));
-    $checkTransfer = array_merge(json_decode($f['gloading_info'], true), ['transferred_to_payments' => false]);
-    update('general_loading', ['gloading_info' => json_encode($checkTransfer)], ['id' => $parent_id]);
-
-    if (!empty($_FILES['agent_file']['name'][0])) {
-        foreach ($_FILES['agent_file']['name'] as $key => $filename) {
-            $tmpName = $_FILES['agent_file']['tmp_name'][$key];
-            $newFilename = time() . '_' . basename($filename);
-
-            if (move_uploaded_file($tmpName, $uploadDir . $newFilename)) {
-                $uploadedFiles[$key] = $newFilename;
-            }
-        }
-    }
-    $ag_id = $agent['ag_id'];
-    $billNQ = mysqli_query($connect, "SELECT COUNT(*) as billCount FROM general_loading WHERE JSON_EXTRACT(agent_details, '$.ag_id') = '$ag_id' AND JSON_EXTRACT(agent_details, '$.ag_billNumber')");
-    $billNumber = 0;
-    if ($billNQ && $result = mysqli_fetch_assoc($billNQ)) {
-        if ($_POST['case'] === 'new') {
-            $billNumber = $result['billCount'] + 1;
-        } elseif ($_POST['case'] === 'update') {
-            $billNumber = $result['billCount'];
-        }
-    }
-    $agentD = [
-        'ag_acc_no' => mysqli_real_escape_string($connect, $agent['ag_acc_no']),
-        'ag_name' => mysqli_real_escape_string($connect, $agent['ag_name']),
-        'ag_id' => mysqli_real_escape_string($connect, $agent['ag_id']),
-        'cargo_transfer_warehouse' => mysqli_real_escape_string($connect, $agent['cargo_transfer_warehouse']),
-        'row_id' => mysqli_real_escape_string($connect, $agent['row_id']),
-        'transferred' => true,
-        'permission_to_edit' => 'No',
-        'ag_billNumber' => $billNumber,
-        'received_date' => mysqli_real_escape_string($connect, $_POST['received_date']),
-        'clearing_date' => mysqli_real_escape_string($connect, $_POST['clearing_date']),
-        'bill_of_entry_no' => (string)mysqli_real_escape_string($connect, $_POST['bill_of_entry_no']),
-        'loading_truck_number' => mysqli_real_escape_string($connect, $_POST['loading_truck_number']),
-        'truck_returning_date' => mysqli_real_escape_string($connect, $_POST['truck_returning_date']),
-        'report' => mysqli_real_escape_string($connect, $_POST['report']),
-        'attachments' => empty($uploadedFiles) ? json_decode($f['agent_details'], true)['attachments'] : $uploadedFiles
-    ];
-    $data = ['agent_details' => json_encode($agentD, JSON_UNESCAPED_UNICODE)];
-    $done = update('general_loading', $data, ['id' => $id]);
-    $done = update('user_permissions', array('permission' => json_encode(['agent-form', 'agent-payments-form'])), array('id' => $agent['row_id']));
-    if ($done) {
-        $type = 'success';
-        $msg = 'Agent Form Updated!';
-    }
-    message($type, $url . "?lp_id=" . $parent_id . '&view=1&action=update&editId=' . $id, $msg);
-}
 if (isset($_GET['lp_id']) && is_numeric($_GET['lp_id']) && isset($_GET['view']) && $_GET['view'] == 1) {
     $lp_id = mysqli_real_escape_string($connect, $_GET['lp_id']);
     echo "<script>jQuery(document).ready(function ($) {  $('#KhaataDetails').modal('show');});</script>";

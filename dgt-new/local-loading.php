@@ -8,7 +8,7 @@ global $connect;
 $results_per_page = 25;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $start_from = ($page - 1) * $results_per_page;
-$sql = "SELECT * FROM `transactions` WHERE p_s='p' AND type='local' AND sea_road IS NOT NULL";
+$sql = "SELECT * FROM `transactions` WHERE type='local' AND sea_road IS NOT NULL";
 $conditions = [];
 $print_filters = [];
 if ($_GET) {
@@ -79,11 +79,12 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     unset($query_params['page']);
                     $base_url = $url_parts['path'] . '?' . http_build_query($query_params);
 
-                    $count_sql = "SELECT COUNT(id) AS total FROM `transactions` WHERE p_s='p'";
+                    $count_sql = "SELECT COUNT(id) AS total FROM `transactions` WHERE ";
                     if (count($conditions) > 0) {
-                        $count_sql .= ' AND ' . implode(' AND ', $conditions);
+                        $count_sql .= '' . implode(' AND ', $conditions);
+                        $count_sql .= ' AND ';
                     }
-                    $count_sql .= " AND locked = '1' AND transfer_level >= '2' ORDER BY id DESC";
+                    $count_sql .= "locked = '1' AND transfer_level >= '2' ORDER BY id DESC";
                     $count_result = mysqli_query($connect, $count_sql);
                     $row = mysqli_fetch_assoc($count_result);
                     $total_pages = ceil($row['total'] / $results_per_page);
@@ -181,7 +182,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
     <form name="datesSubmit" class="mt-2" method="get">
         <div class="input-group input-group-sm">
             <div class="form-group">
-                <label for="p_id" class="form-label">P#</label>
+                <label for="p_id" class="form-label">P/S#</label>
                 <input type="number" name="p_id" value="<?php echo $p_id; ?>" id="p_id" class="form-control form-control-sm mx-1" style="max-width:80px;" placeholder="e.g. 33">
             </div>
             <div class="form-group">
@@ -300,8 +301,12 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                                 'truck_no' => $sea_road_array->truck_no ?? '',
                                 'truck_name' => $sea_road_array->truck_name ?? '',
                                 'loading_company_name' => $sea_road_array->loading_company_name ?? '',
+                                'receiving_company_name' => $sea_road_array->receiving_company_name ?? '',
                                 'loading_date' => $sea_road_array->loading_date ?? '',
-                                'transfer_name' => $sea_road_array->transfer_name ?? ''
+                                'receiving_date' => $sea_road_array->receiving_date ?? '',
+                                'loading_warehouse' => $sea_road_array->loading_warehouse ?? '',
+                                'receiving_warehouse' => $sea_road_array->receiving_warehouse ?? '',
+                                'warehouse_transfer' => $sea_road_array->warehouse_transfer ?? ''
                             ];
                         } elseif ($sea_road === 'warehouse') {
                             $_fields_sr = [
@@ -310,9 +315,11 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                                 'l_date'    => $sea_road_array->l_date_road ?? '',
                                 'r_country' => $sea_road_array->r_country_road ?? '',
                                 'r_date'    => $sea_road_array->r_date_road ?? '',
-                                'old_company_name' => $sea_road_array->old_company_name ?? '',
-                                'transfer_company_name' => $sea_road_array->transfer_company_name ?? '',
-                                'warehouse_date' => $sea_road_array->warehouse_date ?? '',
+                                'loading_company_name' => $sea_road_array->loading_company_name ?? '',
+                                'receiving_company_name' => $sea_road_array->receiving_company_name ?? '',
+                                'loading_date' => $sea_road_array->loading_date ?? '',
+                                'receiving_date' => $sea_road_array->receiving_date ?? '',
+                                'warehouse_transfer' => $sea_road_array->warehouse_transfer ?? ''
                             ];
                         }
                     }
@@ -356,7 +363,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                         <?php if ($sea_road == '') { ?>
                             <td class="<?php echo $rowColor; ?>" colspan="3"></td>
                         <?php } else { ?>
-                            <td class="<?php echo $rowColor; ?>"><?= ucwords($sea_road); ?></td>
+                            <td class="<?php echo $rowColor; ?>"><?= $sea_road === 'local' ? 'Loading' : 'Warehouse';; ?></td>
                         <?php
                             echo '<td class="' . $rowColor . '">' .  my_date($_fields_sr['l_date']) . '</td>';
                             echo '<td class="' . $rowColor . '">' . my_date($_fields_sr['r_date']) . '</td>';
@@ -515,20 +522,19 @@ if (isset($_POST['LLoadingSubmit'])) {
             'loading_warehouse' => mysqli_real_escape_string($connect, $_POST['loading_warehouse']) ?? '',
             'receiving_warehouse' => mysqli_real_escape_string($connect, $_POST['receiving_warehouse']) ?? '',
         ];
-    } else {
-        $transfer_details = [
-            'warehouse_transfer' => mysqli_real_escape_string($connect, $_POST['warehouse_transfer']) ?? '',
-        ];
     }
-    $transfer_details = array_merge($transfer_details, 
-    [
-        'route' => $route,
-        'uid' => $uid,
-        'loading_company_name' => mysqli_real_escape_string($connect, $_POST['loading_company_name']) ?? '',
-        'receiving_company_name' => mysqli_real_escape_string($connect, $_POST['receiving_company_name']) ?? '',
-        'loading_date' => mysqli_real_escape_string($connect, $_POST['loading_date']) ?? '',
-        'receiving_date' => mysqli_real_escape_string($connect, $_POST['receiving_date']) ?? '',
-    ]);
+    $transfer_details = array_merge(
+        $transfer_details,
+        [
+            'route' => $route,
+            'uid' => $uid,
+            'loading_company_name' => mysqli_real_escape_string($connect, $_POST['loading_company_name']) ?? '',
+            'receiving_company_name' => mysqli_real_escape_string($connect, $_POST['receiving_company_name']) ?? '',
+            'loading_date' => mysqli_real_escape_string($connect, $_POST['loading_date']) ?? '',
+            'receiving_date' => mysqli_real_escape_string($connect, $_POST['receiving_date']) ?? '',
+            'warehouse_transfer' => mysqli_real_escape_string($connect, $_POST['warehouse_transfer']) ?? '',
+        ]
+    );
     if ($mustUpdateRoute) {
         $existingRouteData = json_decode($_POST['existingRouteData'], true);
         $routeDetails = array_merge($existingRouteData, $transfer_details);
@@ -550,6 +556,7 @@ if (isset($_POST['LLoadingSubmit'])) {
     $data = [
         'sr_no' => $sr_no,
         'p_id' => $p_id,
+        'type' => $_POST['type'],
         'p_branch' => $p_branch,
         'p_date' => $p_date,
         'p_cr_acc' => $p_cr_acc,

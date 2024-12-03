@@ -1,5 +1,4 @@
 <?php include('../connection.php');
-var_dump($_POST);
 if (isset($_POST["goods_id"])) {
     $good_id = $_POST["goods_id"];
     if(!isset($_POST['allot'])){

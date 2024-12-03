@@ -1,15 +1,15 @@
 <?php
-$page_title = 'Purchase Crdt';
-$pageURL = 'purchase-credit';
+$page_title = 'Sale  Credit';
+$pageURL = 'sale-credit';
 include("header.php");
 $remove = $size = $brand = $goods_name = $start_print = $end_print = $is_transferred = $s_khaata_id = '';
 $is_search = false;
 global $connect;
-$sql = "SELECT * FROM `transactions` WHERE p_s='p'";
+$sql = "SELECT * FROM `transactions` WHERE p_s='s'";
 $conditions = []; // Store all conditions here
 $print_filters = [];
 if ($_GET) {
-    $remove = removeFilter('purchase-credit');
+    $remove = removeFilter('sale-credit');
     $is_search = true;
 
     // Filter by goods_name
@@ -55,10 +55,8 @@ if ($_GET) {
 // If there are any conditions, concatenate them with 'AND'
 if (count($conditions) > 0) {
     $sql .= ' AND ' . implode(' AND ', $conditions);
-} else {
-    $sql .= " AND locked = '1' AND transfer_level >= '2'";
 }
-
+$sql .= " AND locked IN ('1','2') AND transfer_level >= '2'";
 $sql .= " ORDER BY id DESC";
 if (count($print_filters) > 0) {
     $pageURL .= "?";
@@ -278,7 +276,7 @@ $mypageURL = $pageURL;
                                     <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $id; ?>)"
                                         data-bs-toggle="modal" data-bs-target="#KhaataDetails">
                                         <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $id; ?>
-                                        <?php echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
+                                        <?php echo in_array($locked, [1,2]) ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
                                     </td>
                                     <td class="<?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['type']); ?></td>
                                     <td class="<?php echo $rowColor; ?>"><?php echo branchName($_fields_single['branch_id']); ?></td>
@@ -337,7 +335,7 @@ $mypageURL = $pageURL;
     <div class="modal-dialog modal-fullscreen -modal-xl -modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="staticBackdropLabel">PURCHASE CREDIT</h5>
+                <h5 class="modal-title" id="staticBackdropLabel">SALE CREDIT</h5>
                 <a href="<?php echo $mypageURL; ?>" class="btn-close" aria-label="Close"></a>
             </div>
             <div class="modal-body bg-light pt-0" id="viewDetails"></div>
@@ -352,12 +350,12 @@ $mypageURL = $pageURL;
                 pp_id = purchase_pays_id;
             }
             $.ajax({
-                url: 'ajax/viewPurchaseCredit.php',
+                url: 'ajax/viewSaleCredit.php',
                 type: 'post',
                 data: {
                     id: id,
                     level: 1,
-                    page: "purchase-credit",
+                    page: "sale-credit",
                     purchase_pays_id: pp_id
                 },
                 success: function(response) {
@@ -375,7 +373,7 @@ if (isset($_POST['tCrdtSubmit'])) {
     $msgType = 'danger';
     $p_id = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
     $p_type = mysqli_real_escape_string($connect, $_POST['p_type_hidden']);
-    $url = 'purchase-credit?p_id=' . $p_id . '&view=1';
+    $url = 'sale-credit?p_id=' . $p_id . '&view=1';
     $jmaa_khaata_no = mysqli_real_escape_string($connect, $_POST['dr_khaata_no']);
     $jmaa_khaata_id = mysqli_real_escape_string($connect, $_POST['dr_khaata_id']);
     $bnaam_khaata_no = mysqli_real_escape_string($connect, $_POST['cr_khaata_no']);
@@ -418,8 +416,8 @@ if (isset($_POST['tCrdtSubmit'])) {
     }
 
     $r_type = 'Business';
-    $transfered_from = 'purchase_credit';
-    $type = 'P.C';
+    $transfered_from = 'sale_credit';
+    $type = 'S.C';
     if ($adv_payment_added) {
         $msg = 'credit payment saved in DB. ';
         //$msg = 'Transferred to Business Roznamcha ' . $str . ' Also, transferred Loading form.';
@@ -440,7 +438,7 @@ if (isset($_POST['tCrdtSubmit'])) {
             'r_no' => $p_id,
             'details' => $details
         );
-        $str = ucfirst($p_data['type']) . " Purchase#" . $p_id . " ";
+        $str = ucfirst($p_data['type']) . " Sale#" . $p_id . " ";
         $transferred = false;
         if (isset($_POST['r_id'])) {
             $r_ids = $_POST['r_id'];
@@ -520,7 +518,7 @@ if (isset($_POST['deletePaymentAndRozSubmit'])) {
     $type = 'danger';
     $msg = 'DB Failed';
     $p_id_hidden = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
-    $url_ = "purchase-credit?view=1&p_id=" . $p_id_hidden;
+    $url_ = "sale-credit?view=1&p_id=" . $p_id_hidden;
     $p_type_hidden = mysqli_real_escape_string($connect, $_POST['p_type_hidden']);
     $purchase_pays_id = mysqli_real_escape_string($connect, $_POST['purchase_pays_id_hidden']);
     $r_id_hidden = json_decode($_POST['r_id_hidden'], true);
@@ -574,7 +572,7 @@ if (isset($_POST['transferCreditToFinal'])) {
     $type = 'danger';
     $msg = 'DB Failed';
     $p_id_hidden = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
-    $data = array('transfer_level' => 6 , '`from`' => 'purchase-credit');
+    $data = array('transfer_level' => 6 , '`from`' => 'sale-credit');
     // $data = array('transfer_level' => 4, 't2_date' => date('Y-m-d'));
     $locked = update('transactions', $data, array('id' => $p_id_hidden));
     if ($locked) {

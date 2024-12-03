@@ -69,7 +69,7 @@ if ($_GET) {
 if (count($conditions) > 0) {
     $sql .= " WHERE " . implode(' AND ', $conditions);
 }
-$sql .= " ORDER BY id DESC LIMIT $start_from, $results_per_page";
+$sql .= " ORDER BY sr_no ASC LIMIT $start_from, $results_per_page";
 $query_string = implode('&', $print_filters);
 $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
 $count_sql = "SELECT COUNT(id) AS total FROM `general_loading`" . (count($conditions) > 0 ? " WHERE " . implode(' AND ', $conditions) : "");
@@ -167,7 +167,7 @@ $total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_pa
     <form name="datesSubmit" class="mt-2" method="get">
         <div class="input-group input-group-sm">
             <div class="form-group">
-                <label for="p_id" class="form-label">P#</label>
+                <label for="p_id" class="form-label">P/S#</label>
                 <input type="number" name="p_id" value="<?php echo $p_id; ?>" id="p_id" class="form-control form-control-sm mx-1" style="max-width:80px;" placeholder="e.g. 33">
             </div>
             <div class="form-group">
@@ -243,7 +243,7 @@ $total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_pa
         <table class="table table-bordered">
             <thead>
                 <tr class="text-nowrap">
-                    <th>P#</th>
+                    <th>P/S#</th>
                     <th>Sr#</th>
                     <th>L_DATE</th>
                     <th>L_COUNTRY</th>
@@ -277,7 +277,7 @@ $total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_pa
                     <tr class="text-nowrap">
                         <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $SingleLoading['id']; ?>)"
                             data-bs-toggle="modal" data-bs-target="#KhaataDetails">
-                            <?php echo '<b>P#', $SingleLoading['p_id']; ?>
+                            <?php echo '<b>'.ucfirst($SingleLoading['type']).'#', $SingleLoading['p_id']; ?>
                             <?php echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
                         </td>
                         <td class="<?php echo $rowColor; ?>"><?php echo $SingleLoading['sr_no']; ?></td>

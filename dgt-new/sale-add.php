@@ -146,13 +146,12 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                 </button>
                 <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
                     <?php
-                    // Fetch the types from the database
-                    $static_types = fetch('static_types', ['type_for' => 'ps_types']);
-
-                    // Loop through each type and render it as a dropdown item with links
-                    while ($static_type = mysqli_fetch_assoc($static_types)) {
-                        // Generate a URL parameter for each link based on `type_name`
-                        echo '<li><a class="dropdown-item" href="sale-add?type=' . urlencode($static_type['type_name']) . '">' . htmlspecialchars($static_type['details']) . '</a></li>';
+                    $query = "SELECT * FROM static_types WHERE type_for IN ('ps_types', 's_types')";
+                    $result = mysqli_query($connect, $query);
+                    if ($result) {
+                        while ($row = mysqli_fetch_assoc($result)) {
+                            echo '<li><a class="dropdown-item" href="sale-add?type=' . urlencode($row['type_name']) . '">' . htmlspecialchars($row['details']) . '</a></li>';
+                        }
                     }
                     ?>
                 </ul>
@@ -340,10 +339,10 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                                 // Determine the route type based on sale type
                                 $routeText = '';
                                 if (!empty($_fields['sea_road'])) {
-                                    if ($_GET['type'] === 'booking') {
+                                    if (in_array($_GET['type'], ['booking', 'commission'])) {
                                         $routeText = $_fields['sea_road'] === 'sea' ? 'Sea' : 'Road';
                                     } elseif ($_GET['type'] === 'local') {
-                                        $routeText = $_fields['sea_road'] == 'sea' ? 'Local' : 'Warehouse';
+                                        $routeText = $_fields['sea_road'] == 'sea' ? 'Loading' : 'Warehouse';
                                     }
                                 } else {
                                     $routeText = '';
@@ -379,8 +378,8 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                                     <?php } ?>
                                 </li>
                                 <!-- Third Party Bank -->
-                                <li class="<?= !empty($bank_details['acc_no']) ? 'text-success' : 'text-danger'; ?> fw-bold">
-                                    <i class="fa <?= !empty($bank_details['acc_no']) ? 'fa-check' : 'fa-times'; ?> mr-2"></i>
+                                <li class="<?= !empty($bank_details['iban']) ? 'text-success' : 'text-danger'; ?> fw-bold">
+                                    <i class="fa <?= !empty($bank_details['iban']) ? 'fa-check' : 'fa-times'; ?> mr-2"></i>
                                     Third-Party Bank
                                 </li>
                             </ul>
@@ -408,223 +407,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                 </form>
             </div>
         </div>
-
-        <?php if ($id > 0): ?>
-            <div class="card mb-3" style="border: none;">
-                <div class="card-body">
-                    <div class="row gx-3">
-                        <?php if (!empty($_fields['sea_road_array'])) {
-                            if ($_GET['type'] == 'booking'): ?>
-                                <!-- Sea/Road Details Column -->
-                                <div class="col-md-3 col-sm-12 mb-3">
-                                    <div class="border rounded p-3 bg-light">
-                                        <h5 class="fw-bold text-primary">By <?= $_fields['sea_road']; ?></h5>
-                                        <h6 class="fw-bold">Loading Details</h6>
-                                        <ul class="list-unstyled">
-                                            <?php foreach ($_fields['sea_road_array'] as $key => $value): ?>
-                                                <?php if (strpos($key, 'l_') === 0): ?>
-                                                    <li>
-                                                        <strong><?= is_array($value) ? $value[0] : strtoupper($key); ?>:</strong>
-                                                        <?= is_array($value) ? $value[1] : $value; ?>
-                                                    </li>
-                                                    <?php
-                                                    $prepareLoadingReport .= sprintf(
-                                                        "%s: %s, ",
-                                                        is_array($value) ? $value[0] : strtoupper($key),
-                                                        is_array($value) ? $value[1] : $value
-                                                    );
-                                                    ?>
-                                                <?php endif; ?>
-                                            <?php endforeach; ?>
-                                        </ul>
-                                    </div>
-                                </div>
-
-                                <!-- Receiving Details Column -->
-                                <div class="col-md-3 col-sm-12 mb-3">
-                                    <div class="border rounded p-3 bg-light">
-                                        <h6 class="fw-bold">Receiving Details</h6>
-                                        <ul class="list-unstyled">
-                                            <?php foreach ($_fields['sea_road_array'] as $key => $value): ?>
-                                                <?php if (strpos($key, 'r_') === 0 || strpos($key, 'd_') === 0): ?>
-                                                    <li>
-                                                        <strong><?= $key === 'd_date_road' ? 'Arrival Date' : (is_array($value) ? $value[0] : strtoupper($key)); ?>:</strong>
-                                                        <?= is_array($value) ? $value[1] : $value; ?>
-                                                    </li>
-                                                    <?php
-                                                    $prepareLoadingReport .= sprintf(
-                                                        "%s: %s, ",
-                                                        $key === 'd_date_road' ? 'Arrival Date' : (is_array($value) ? $value[0] : strtoupper($key)),
-                                                        is_array($value) ? $value[1] : $value
-                                                    );
-                                                    ?>
-                                                <?php endif; ?>
-                                            <?php endforeach; ?>
-                                        </ul>
-                                    </div>
-                                </div>
-
-                            <?php else: ?>
-                                <!-- Local Sea/Road Details Column -->
-                                <div class="col-md-4 col-sm-12 mb-3">
-                                    <div class="border rounded p-3 bg-light">
-                                        <h6 class="fw-bold"><?= $sea_road['sea_road'] == 'sea' ? 'Local' : 'Warehouse'; ?> Details</h6>
-                                        <ul class="list-unstyled">
-                                            <?php if ($sea_road['sea_road'] == 'sea'): ?>
-                                                <?php
-                                                $fields = [
-                                                    'Truck No' => $sea_road['truck_no'],
-                                                    'Truck Name' => $sea_road['truck_name'],
-                                                    'Loading Company Name' => $sea_road['loading_company_name'],
-                                                    'Date' => $sea_road['loading_date'],
-                                                    'Transfer Name' => $sea_road['transfer_name']
-                                                ];
-                                                ?>
-                                            <?php else: ?>
-                                                <?php
-                                                $fields = [
-                                                    'Old Company Name' => $sea_road['old_company_name'],
-                                                    'Transfer Company Name' => $sea_road['transfer_company_name'],
-                                                    'Date' => $sea_road['warehouse_date']
-                                                ];
-                                                ?>
-                                            <?php endif; ?>
-
-                                            <?php foreach ($fields as $label => $value): ?>
-                                                <li><strong><?= $label; ?>:</strong> <?= $value; ?></li>
-                                                <?php $prepareLoadingReport .= sprintf("%s: %s, ", $label, $value); ?>
-                                            <?php endforeach; ?>
-                                        </ul>
-                                    </div>
-                                </div>
-                        <?php endif;
-                        } ?>
-
-
-
-                        <!-- Payment Details Column -->
-                        <?php $preparePaymentReport = '';
-                        if (!empty(json_decode($record['payments'], true))) { ?>
-                            <div class="col-md-3 col-sm-12 mb-3">
-                                <div class="border rounded p-3 bg-light">
-                                    <h6 class="fw-bold">Payment Details</h6>
-                                    <?php
-                                    $payments = $_fields['payment_details'];
-                                    $total_amount = $_fields['items_sum']['sum_final_amount'] ?? 0;
-                                    $percentage = $payments->pct_value ?? 0;
-                                    $remaining_percentage = 100 - $percentage;
-                                    $partial_amount1 = ($percentage / 100) * $total_amount;
-                                    $partial_amount2 = ($remaining_percentage / 100) * $total_amount;
-
-                                    $preparePaymentReport = "Type: " . ucfirst($payments->full_advance) . ", ";
-                                    $preparePaymentReport .= "Total Amount: " . number_format($total_amount, 2) . ", ";
-                                    ?>
-                                    <div class="mb-2">
-                                        <?php if ($payments->full_advance === 'advance'): ?>
-                                            <strong>Type:</strong> Advance - <?= $percentage; ?>% (Remaining: <?= $remaining_percentage; ?>%)<br>
-                                            <strong>P.Amt 1:</strong> <?= number_format($partial_amount1, 2); ?><br>
-                                            <strong>Date:</strong> <?= $payments->partial_date1; ?><br>
-                                            <strong>Report:</strong> <?= ucfirst($payments->partial_report1); ?><br>
-                                            <strong>P.Amt 2:</strong> <?= number_format($partial_amount2, 2); ?><br>
-                                            <strong>Date:</strong> <?= $payments->partial_date2; ?><br>
-                                            <strong>Report:</strong> <?= ucfirst($payments->partial_report2); ?><br>
-                                            <?php
-                                            $preparePaymentReport .= "Advance Amount: " . number_format($partial_amount1, 2) . ", Remaining: " . number_format($partial_amount2, 2) . ", ";
-                                            ?>
-                                        <?php elseif ($payments->full_advance === 'full'): ?>
-                                            <strong>Type:</strong> Full Payment<br>
-                                            <strong>T.Amount:</strong> <?= number_format($total_amount, 2); ?><br>
-                                            <strong>Date:</strong> <?= $payments->full_date; ?><br>
-                                            <strong>Report:</strong> <?= ucfirst($payments->full_report); ?><br>
-                                            <?php
-                                            $preparePaymentReport .= "Full Payment on " . $payments->full_date . ", ";
-                                            ?>
-                                        <?php elseif ($payments->full_advance === 'credit'): ?>
-                                            <strong>Type:</strong> Credit Payment<br>
-                                            <strong>T.Amount:</strong> <?= number_format($total_amount, 2); ?><br>
-                                            <strong>Date:</strong> <?= $payments->credit_date; ?><br>
-                                            <strong>Report:</strong> <?= ucfirst($payments->credit_report); ?><br>
-                                            <?php
-                                            $preparePaymentReport .= "Credit Payment on " . $payments->credit_date . ", ";
-                                            ?>
-                                        <?php else: ?>
-                                            <strong>No payment details available.</strong>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            </div>
-                        <?php } ?>
-
-                        <!-- Bank Details Column -->
-                        <?php $prepareBankReport = '';
-                        if (!empty($bank_details['acc_no'])) { ?>
-                            <div class="col-md-3 col-sm-12 mb-3">
-                                <div class="border rounded p-3 bg-light">
-                                    <h6 class="fw-bold">Bank Details</h6>
-                                    <ul class="list-unstyled">
-                                        <?php
-                                        $prepareBankReport = "Account Name: " . ($bank_details['acc_name'] ?? 'N/A') . ", ";
-                                        $prepareBankReport .= "Account Number: " . ($bank_details['acc_no'] ?? 'N/A') . ", ";
-                                        $prepareBankReport .= "Company: " . ($bank_details['company'] ?? 'N/A') . ", ";
-                                        ?>
-                                        <li><strong>Acc.Name:</strong> <?= $bank_details['acc_name'] ?? 'N/A'; ?> ( <strong>No:</strong> <?= $bank_details['acc_no'] ?? 'N/A'; ?> )</li>
-                                        <li><strong>Company:</strong> <?= $bank_details['company'] ?? 'N/A'; ?></li>
-                                        <li><strong>IBAN:</strong> <?= $bank_details['iban'] ?? 'N/A'; ?></li>
-                                        <li><strong>Branch Code:</strong> <?= $bank_details['branch_code'] ?? 'N/A'; ?></li>
-                                        <li><strong>Currency:</strong> <?= $bank_details['currency'] ?? 'N/A'; ?></li>
-                                    </ul>
-                                </div>
-                            </div>
-                        <?php } ?>
-
-                        <!-- Sale Reports Section -->
-                        <div class="col-md-12 mt-3">
-                            <h4 class="fw-bold">Sale Reports</h4>
-                            <div class="table-responsive">
-                                <table class="table table-hover table-striped">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th scope="col">Report Type</th>
-                                            <th scope="col">Report Details</th>
-                                            <th scope="col">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php
-                                        echo '<script>let saleReports;</script>';
-                                        $sale_reports = [];
-                                        if (!empty($record['reports']) && $record['reports'] !== '[]') {
-                                            $sale_reports = json_decode($record['reports'], true);
-                                            if (!empty($sale_reports)) {
-                                                foreach ($sale_reports as $key => $value): ?>
-                                                    <tr>
-                                                        <td class="fw-bold"><?php echo ucwords(str_replace('_', ' ', $key)); ?></td>
-                                                        <td><?php echo nl2br(htmlspecialchars($value)); ?></td>
-                                                        <td>
-                                                            <a href="?deleteSaleReport=<?= urlencode($key); ?>&p_hidden_id=<?= $id; ?>&type=<?= $_GET['type']; ?>" class="btn btn-sm btn-outline-danger"><i class="fa fa-trash-alt"></i></a>
-                                                            <button onclick="setupReports('<?= htmlspecialchars($key); ?>')" class="btn btn-sm btn-outline-primary"><i class="fa fa-pencil"></i></button>
-                                                        </td>
-                                                    </tr>
-                                        <?php endforeach;
-                                            } else {
-                                                echo '<tr><td colspan="3" class="text-center">No Reports Found!</td></tr>';
-                                                $sale_reports = ["loading_details" => $prepareLoadingReport, "payment_details" => $preparePaymentReport];
-                                            }
-                                        } else {
-                                            echo '<tr><td colspan="3" class="text-center">No Reports Found!</td></tr>';
-                                            $sale_reports = ["loading_details" => $prepareLoadingReport, "payment_details" => $preparePaymentReport];
-                                        }
-                                        echo '<script>saleReports = ' . json_encode($sale_reports) . ';</script>';
-                                        ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        <?php endif;
-        if ($item_id == 0) { ?>
+        <?php if ($item_id == 0) { ?>
             <div class="card mb-2">
                 <div class="card-body">
                     <div class="table-responsive">
@@ -746,6 +529,9 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                 </div>
             </div>
         <?php } ?>
+        <div class="card">
+            <div id="availableQuantitiesTable" class="mt-4"></div>
+        </div>
         <?php if ($id > 0) { ?>
             <div class="card mb-2">
                 <div class="position-absolute end-0 top-0">
@@ -762,17 +548,41 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                                     <div class="col-md-7">
                                         <div><b>Sr# </b> <?php echo $_fields['sr_no']; ?></div>
                                         <div class="row g-0">
-                                            <label for="allotment_name" class="col-md-6 col-form-label text-nowrap">Allotment Name</label>
-                                            <div class="col-md-6">
+                                            <label for="allotment_name" class="col-md-2 col-form-label text-nowrap">Allot</label>
+                                            <style>
+                                                .rotate {
+                                                    animation: rotate 1s linear infinite;
+                                                }
+
+                                                @keyframes rotate {
+                                                    from {
+                                                        transform: rotate(0deg);
+                                                    }
+
+                                                    to {
+                                                        transform: rotate(360deg);
+                                                    }
+                                                }
+
+                                                .table-hover tbody tr:hover {
+                                                    background-color: #f1f1f1;
+                                                }
+
+                                                .table-striped tbody tr:nth-of-type(odd) {
+                                                    background-color: rgba(0, 0, 0, 0.05);
+                                                }
+                                            </style>
+                                            <div class="col-md-10 d-flex gap-1 align-items-center">
                                                 <input value="<?= isset($item_fields['allotment_name']) ? $item_fields['allotment_name'] : ''; ?>" id="allotment_name"
                                                     name="allotment_name" id="allotment_name" class="form-control" required>
+                                                <button type="button" id="allotSearch" onclick="fetchGoods()" class="btn ml-1 btn-sm btn-success"><i class="fa fa-search"></i></button>
                                             </div>
                                         </div>
                                     </div>
                                     <div class="col-md-7">
                                         <div class="input-group">
                                             <label for="goods_id">GOODS</label>
-                                            <select id="goods_id" name="goods_id" class="form-select" required>
+                                            <select id="goods_id" name="goods_id" class="form-select" onchange="finalAmount()" required>
                                                 <option hidden value="">Select</option>
                                                 <?php $goods = fetch('goods');
                                                 while ($good = mysqli_fetch_assoc($goods)) {
@@ -785,9 +595,9 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                                     <div class="col-md-5">
                                         <div class="input-group">
                                             <label for="size">SIZE</label>
-                                            <select class="form-select" name="size" id="size" required>
+                                            <select class="form-select" name="size" id="size" onchange="finalAmount()" required>
                                                 <option hidden value="">Select</option>
-                                                <?php $goods_sizes = mysqli_query($connect, "SELECT DISTINCT size FROM good_details WHERE goods_id = " . $item_fields['goods_id']);
+                                                <?php $goods_sizes = mysqli_query($connect, "SELECT DISTINCT size FROM good_details");
                                                 while ($size_s = mysqli_fetch_assoc($goods_sizes)) {
                                                     $size_selected = $size_s['size'] == $item_fields['size'] ? 'selected' : '';
                                                     echo '<option ' . $size_selected . ' value="' . $size_s['size'] . '">' . $size_s['size'] . '</option>';
@@ -798,9 +608,9 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                                     <div class="col-md-7">
                                         <div class="input-group">
                                             <label for="origin">ORIGIN</label>
-                                            <select class="form-select" name="origin" id="origin" required>
+                                            <select class="form-select" name="origin" id="origin" onchange="finalAmount()" required>
                                                 <option hidden value="">Select</option>
-                                                <?php $goods_sizes = mysqli_query($connect, "SELECT DISTINCT origin FROM good_details WHERE goods_id = " . $item_fields['goods_id']);
+                                                <?php $goods_sizes = mysqli_query($connect, "SELECT DISTINCT origin FROM good_details");
                                                 while ($size_s = mysqli_fetch_assoc($goods_sizes)) {
                                                     $size_selected = $size_s['origin'] == $item_fields['origin'] ? 'selected' : '';
                                                     echo '<option ' . $size_selected . ' value="' . $size_s['origin'] . '">' . $size_s['origin'] . '</option>';
@@ -812,9 +622,9 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                                         <div class="input-group">
                                             <label for="brand">BRAND</label>
                                             <!-- <input type="text" name="brand" id="brand" value="<?= $item_fields['brand']; ?>" class="form-control" required> -->
-                                            <select class="form-select" name="brand" id="brand" required>
+                                            <select class="form-select" name="brand" id="brand" onchange="finalAmount()" required>
                                                 <option hidden value="">Select</option>
-                                                <?php $goods_sizes = mysqli_query($connect, "SELECT DISTINCT brand FROM good_details WHERE goods_id = " . $item_fields['goods_id']);
+                                                <?php $goods_sizes = mysqli_query($connect, "SELECT DISTINCT brand FROM good_details");
                                                 while ($size_s = mysqli_fetch_assoc($goods_sizes)) {
                                                     $size_selected = $size_s['brand'] == $item_fields['brand'] ? 'selected' : '';
                                                     echo '<option ' . $size_selected . ' value="' . $size_s['brand'] . '">' . $size_s['brand'] . '</option>';
@@ -831,7 +641,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                                             <label for="qty_name" class="col-sm-4 col-form-label text-nowrap">Qty
                                                 Name</label>
                                             <div class="col-sm">
-                                                <input value="<?php echo $item_fields['qty_name']; ?>" id="qty_name"
+                                                <input value="<?php echo $item_fields['qty_name']; ?>" onchange="finalAmount()" id="qty_name"
                                                     name="qty_name" class="form-control" required>
                                             </div>
                                         </div>
@@ -843,7 +653,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                                             <div class="col-sm">
                                                 <input value="<?php echo $item_fields['qty_no']; ?>" id="qty_no"
                                                     name="qty_no"
-                                                    class="form-control currency" required>
+                                                    class="form-control currency" onchange="finalAmount()" required>
                                             </div>
                                         </div>
                                     </div>
@@ -989,7 +799,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                                                 <div class="col-sm">
                                                     <input type="text" value="<?php echo $item_fields['tax_percent']; ?>" id="tax_percent"
                                                         name="tax_percent"
-                                                        class="form-control" required>
+                                                        class="form-control">
                                                 </div>
                                             </div>
                                         </div>
@@ -1001,7 +811,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                                                 <div class="col-sm">
                                                     <input type="text" value="<?php echo $item_fields['tax_amount']; ?>" id="tax_amount"
                                                         name="tax_amount"
-                                                        class="form-control" readonly required>
+                                                        class="form-control" readonly>
                                                 </div>
                                             </div>
                                         </div>
@@ -1057,6 +867,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                                     echo $item_id > 0 ? backUrl('sale-add?id=' . $id . '&type=' . $_GET['type']) : '';
                                     ?>
                                 </div>
+                                <span class="fw-bold text-danger d-none" id="qtyAlert">Enough Stock Not Found!</span>
                             </div>
                         </div>
                         <input type="hidden" name="hidden_id" value="<?php echo $id; ?>">
@@ -1067,7 +878,218 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
         <?php } ?>
     </div>
 </div>
-<?php include("footer.php"); ?>
+<?php if ($id > 0): ?>
+    <div class="card mb-3" style="border: none;">
+        <div class="card-body">
+            <div class="row gx-3">
+                <?php if (!empty($_fields['sea_road_array'])) {
+                    if ($_GET['type'] == 'booking'): ?>
+                        <!-- Sea/Road Details Column -->
+                        <!-- <div class="col-md-3 col-sm-12 mb-3">
+                                    <div class="border rounded p-3 bg-light">
+                                        <h5 class="fw-bold text-primary">By <?= $_fields['sea_road']; ?></h5>
+                                        <h6 class="fw-bold">Loading Details</h6>
+                                        <ul class="list-unstyled"> -->
+                        <?php foreach ($_fields['sea_road_array'] as $key => $value): ?>
+                            <?php if (strpos($key, 'l_') === 0): ?>
+                                <!-- <li>
+                                                        <strong><?= is_array($value) ? $value[0] : strtoupper($key); ?>:</strong> -->
+                                <?= is_array($value) ? $value[1] : $value; ?>
+                                <!-- </li> -->
+                                <?php
+                                $prepareLoadingReport .= sprintf(
+                                    "%s: %s, ",
+                                    is_array($value) ? $value[0] : strtoupper($key),
+                                    is_array($value) ? $value[1] : $value
+                                );
+                                ?>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                        <!-- </ul>
+                                    </div>
+                                </div> -->
+
+                        <!-- Receiving Details Column -->
+                        <!-- <div class="col-md-3 col-sm-12 mb-3">
+                                    <div class="border rounded p-3 bg-light">
+                                        <h6 class="fw-bold">Receiving Details</h6>
+                                        <ul class="list-unstyled"> -->
+                        <?php foreach ($_fields['sea_road_array'] as $key => $value): ?>
+                            <?php if (strpos($key, 'r_') === 0 || strpos($key, 'd_') === 0): ?>
+                                <!-- <li>
+                                                        <strong><?= $key === 'd_date_road' ? 'Arrival Date' : (is_array($value) ? $value[0] : strtoupper($key)); ?>:</strong> -->
+                                <?= is_array($value) ? $value[1] : $value; ?>
+                                <!-- </li> -->
+                                <?php
+                                $prepareLoadingReport .= sprintf(
+                                    "%s: %s, ",
+                                    $key === 'd_date_road' ? 'Arrival Date' : (is_array($value) ? $value[0] : strtoupper($key)),
+                                    is_array($value) ? $value[1] : $value
+                                );
+                                ?>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                        <!-- </ul>
+                                    </div>
+                                </div> -->
+
+                    <?php else: ?>
+                        <!-- Local Sea/Road Details Column -->
+                        <!-- <div class="col-md-4 col-sm-12 mb-3">
+                                    <div class="border rounded p-3 bg-light">
+                                        <h6 class="fw-bold"><?= $sea_road['sea_road'] == 'sea' ? 'Loading' : 'Warehouse'; ?> Details</h6>
+                                        <ul class="list-unstyled"> -->
+                        <?php
+                        $fields = ['Route' => $sea_road['route'] ?? 'N/A'];
+                        if ($sea_road['sea_road'] == 'sea'):
+                            $fields += [
+                                'Truck No' => $sea_road['truck_no'] ?? 'N/A',
+                                'Truck Name' => $sea_road['truck_name'] ?? 'N/A',
+                                'L Warehouse' => $sea_road['loading_warehouse'] ?? 'N/A',
+                                'R Warehouse' => $sea_road['receiving_warehouse'] ?? 'N/A',
+                            ];
+                        ?>
+                        <?php endif;
+                        $fields = array_merge($fields, [
+                            'WareHouse Transfer' => $sea_road['warehouse_transfer'] ?? 'N/A',
+                            'L Comp Name' => $sea_road['loading_company_name'] ?? 'N/A',
+                            'R Comp Name' => $sea_road['receiving_company_name'] ?? 'N/A',
+                            'L Date' => $sea_road['loading_date'] ?? 'N/A',
+                            'R Date' => $sea_road['receiving_date'] ?? 'N/A',
+                        ]);
+                        ?>
+                        <?php foreach ($fields as $label => $value): ?>
+                            <!-- <li><strong><?= $label; ?>:</strong> <?= $value; ?></li> -->
+                            <?php $prepareLoadingReport .= sprintf("%s: %s, ", $label, $value); ?>
+                        <?php endforeach; ?>
+                        <!-- </ul>
+                                    </div>
+                                </div> -->
+                <?php endif;
+                } ?>
+
+
+
+                <!-- Payment Details Column -->
+                <?php $preparePaymentReport = '';
+                if (!empty(json_decode($record['payments'], true))) { ?>
+                    <!-- <div class="col-md-3 col-sm-12 mb-3">
+                                <div class="border rounded p-3 bg-light">
+                                    <h6 class="fw-bold">Payment Details</h6> -->
+                    <?php
+                    $payments = $_fields['payment_details'];
+                    $total_amount = $_fields['items_sum']['sum_final_amount'] ?? 0;
+                    $percentage = $payments->pct_value ?? 0;
+                    $remaining_percentage = 100 - $percentage;
+                    $partial_amount1 = ($percentage / 100) * $total_amount;
+                    $partial_amount2 = ($remaining_percentage / 100) * $total_amount;
+
+                    $preparePaymentReport = "Type: " . ucfirst($payments->full_advance) . ", ";
+                    $preparePaymentReport .= "Total Amount: " . number_format($total_amount, 2) . ", ";
+                    ?>
+                    <!-- <div class="mb-2"> -->
+                    <?php if ($payments->full_advance === 'advance'): ?>
+                        <!-- <strong>Type:</strong> Advance - <?= $percentage; ?>% (Remaining: <?= $remaining_percentage; ?>%)<br>
+                                            <strong>P.Amt 1:</strong> <?= number_format($partial_amount1, 2); ?><br>
+                                            <strong>Date:</strong> <?= $payments->partial_date1; ?><br>
+                                            <strong>Report:</strong> <?= ucfirst($payments->partial_report1); ?><br>
+                                            <strong>P.Amt 2:</strong> <?= number_format($partial_amount2, 2); ?><br>
+                                            <strong>Date:</strong> <?= $payments->partial_date2; ?><br>
+                                            <strong>Report:</strong> <?= ucfirst($payments->partial_report2); ?><br> -->
+                        <?php
+                        $preparePaymentReport .= "Advance Amount: " . number_format($partial_amount1, 2) . ", Remaining: " . number_format($partial_amount2, 2) . ", ";
+                        ?>
+                    <?php elseif ($payments->full_advance === 'full'): ?>
+                        <!-- <strong>Type:</strong> Full Payment<br>
+                                            <strong>T.Amount:</strong> <?= number_format($total_amount, 2); ?><br>
+                                            <strong>Date:</strong> <?= $payments->full_date; ?><br>
+                                            <strong>Report:</strong> <?= ucfirst($payments->full_report); ?><br> -->
+                        <?php
+                        $preparePaymentReport .= "Full Payment on " . $payments->full_date . ", ";
+                        ?>
+                    <?php elseif ($payments->full_advance === 'credit'): ?>
+                        <!-- <strong>Type:</strong> Credit Payment<br>
+                                            <strong>T.Amount:</strong> <?= number_format($total_amount, 2); ?><br>
+                                            <strong>Date:</strong> <?= $payments->credit_date; ?><br>
+                                            <strong>Report:</strong> <?= ucfirst($payments->credit_report); ?><br> -->
+                        <?php
+                        $preparePaymentReport .= "Credit Payment on " . $payments->credit_date . ", ";
+                        ?>
+                    <?php else: ?>
+                        <!-- <strong>No payment details available.</strong> -->
+                    <?php endif; ?>
+                    <!-- </div>
+                                </div>
+                            </div> -->
+                <?php } ?>
+
+                <!-- Bank Details Column -->
+                <?php $prepareBankReport = '';
+                if (!empty($bank_details['acc_no'])) { ?>
+                    <!-- <div class="col-md-3 col-sm-12 mb-3">
+                                <div class="border rounded p-3 bg-light">
+                                    <h6 class="fw-bold">Bank Details</h6>
+                                    <ul class="list-unstyled"> -->
+                    <?php
+                    $prepareBankReport = "Account Name: " . ($bank_details['acc_name'] ?? 'N/A') . ", ";
+                    $prepareBankReport .= "Account Number: " . ($bank_details['acc_no'] ?? 'N/A') . ", ";
+                    $prepareBankReport .= "Company: " . ($bank_details['company'] ?? 'N/A') . ", ";
+                    ?>
+                    <!-- <li><strong>Acc.Name:</strong> <?= $bank_details['acc_name'] ?? 'N/A'; ?> ( <strong>No:</strong> <?= $bank_details['acc_no'] ?? 'N/A'; ?> )</li>
+                                        <li><strong>Company:</strong> <?= $bank_details['company'] ?? 'N/A'; ?></li>
+                                        <li><strong>IBAN:</strong> <?= $bank_details['iban'] ?? 'N/A'; ?></li>
+                                        <li><strong>Branch Code:</strong> <?= $bank_details['branch_code'] ?? 'N/A'; ?></li>
+                                        <li><strong>Currency:</strong> <?= $bank_details['currency'] ?? 'N/A'; ?></li>
+                                    </ul>
+                                </div>
+                            </div> -->
+                <?php } ?>
+
+                <!-- Purchase Reports Section -->
+                <div class="col-md-12 mt-3">
+                    <h4 class="fw-bold">Purchase Reports</h4>
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col">Report Type</th>
+                                    <th scope="col">Report Details</th>
+                                    <th scope="col">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                echo '<script>let purchaseReports;</script>';
+                                $purchase_reports = [];
+                                if (!empty($record['reports']) && $record['reports'] !== '[]') {
+                                    $purchase_reports = json_decode($record['reports'], true);
+                                    if (!empty($purchase_reports)) {
+                                        foreach ($purchase_reports as $key => $value): ?>
+                                            <tr>
+                                                <td class="fw-bold"><?php echo ucwords(str_replace('_', ' ', $key)); ?></td>
+                                                <td><?php echo nl2br(htmlspecialchars($value)); ?></td>
+                                                <td>
+                                                    <a href="?deletePurchaseReport=<?= urlencode($key); ?>&p_hidden_id=<?= $id; ?>&type=<?= $_GET['type']; ?>" class="btn btn-sm btn-outline-danger"><i class="fa fa-trash-alt"></i></a>
+                                                    <button onclick="setupReports('<?= htmlspecialchars($key); ?>')" class="btn btn-sm btn-outline-primary"><i class="fa fa-pencil"></i></button>
+                                                </td>
+                                            </tr>
+                                <?php endforeach;
+                                    }
+                                }else {
+                                    echo '<tr><td colspan="3" class="text-center">No Reports Found!</td></tr>';
+                                }
+                                $purchase_reports = ["loading_details" => $prepareLoadingReport, "payment_details" => $preparePaymentReport];
+                                echo '<script>purchaseReports = ' . json_encode($purchase_reports) . ';</script>';
+                                ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+<?php endif;
+include("footer.php"); ?>
 <script type="text/javascript">
     $(document).on('keyup', "#dr_acc", function(e) {
         fetchKhaata("#dr_acc", "#dr_acc_id", "#dr_acc_kd_id", "saleSubmit");
@@ -1347,105 +1369,141 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     });
 </script>
 <script type="text/javascript">
+    let availableQuantities;
+
     $(document).ready(function() {
         finalAmount();
-        $('#qty_no,#qty_kgs,#empty_kgs,#weight,#rate1,#rate2,#opr').on('keyup', function() {
+
+        $('#qty_no, #qty_kgs, #empty_kgs, #weight, #rate1, #rate2, #opr').on('keyup', function() {
             finalAmount();
         });
 
-        /*toggleQtyAndRequired();
-        $("#is_qty").change(toggleQtyAndRequired);
-        $('#opr').on('change', function () {
-            finalAmount();
-        });*/
+        $('#allotSearch').on('click', function() {
+            fetchGoods();
+        });
 
-        /*var goods_id = $('#goods_id').find(":selected").val();
-        goodDetails(goods_id);*/
-        $("#allotment_name").change(function() {
-            var allotment_name = $(this).val();
-            availGoods(allotment_name);
+        $('#goods_id').on('change', function() {
+            updateSizeOptions($(this).val());
         });
-        $("#goods_id").change(function() {
-            var goods_id = $(this).val();
-            goodDetails(goods_id, $('#allotment_name').val());
-        });
-        $("#type").change(function() {
-            $('#bookingForm').toggleClass('d-none row');
-            $('#localForm').toggleClass('d-none row');
+
+        $('#size').on('change', function() {
+            updateBrandOriginTable($(this).val());
         });
     });
 
-    function availGoods(allotment_name) {
-        if (allotment_name !== '') {
-            $.ajax({
-                type: 'POST',
-                url: 'ajax/fetch_goods.php',
-                data: {
-                    allot: allotment_name
-                },
-                success: function(html) {
-                    $('#goods_id').html(html);
-                }
-            });
-        } else {
-            $('#goods_id').html('<option value="">Select</option>');
+    function fetchGoods() {
+        let allot = $('#allotment_name').val().trim();
+        if (!allot) {
+            alert('Please enter an allotment name.');
+            return;
         }
+
+        $.ajax({
+            type: 'POST',
+            url: 'ajax/fetch_goods_by_allot.php',
+            data: {
+                allot
+            },
+            success: function(res) {
+                res = JSON.parse(res);
+                $('#goods_id').html(res.html);
+                availableQuantities = res.quantities;
+                $('#size, #brand, #origin').html('<option value="">Select</option>');
+                $('#availableQuantitiesTable').empty();
+            },
+            error: function(err) {
+                console.error('AJAX error:', err);
+                alert('Failed to fetch allotment details. Please try again later.');
+            }
+        });
     }
 
-    function goodDetails(goods_id, allotment_name) {
-        if (goods_id > 0) {
-            $.ajax({
-                type: 'POST',
-                url: 'ajax/fetch_good_sizes.php',
-                data: {
-                    goods_id: goods_id,
-                    allot: allotment_name
-                },
-                success: function(html) {
-                    $('#size').html(html);
-                }
+    function updateSizeOptions(goodsId) {
+        if (!goodsId) {
+            $('#size').html('<option value="">Select</option>');
+            return;
+        }
+
+        let selectedGood = availableQuantities.find(item => item.goods_id == goodsId);
+        if (selectedGood) {
+            let sizeOptions = '<option value="" selected>Select Size</option>';
+            selectedGood.sizes.forEach(size => {
+                sizeOptions += `<option value="${size.size}">${size.size}</option>`;
             });
-            $.ajax({
-                type: 'POST',
-                url: 'ajax/fetch_good_brands.php',
-                data: {
-                    goods_id: goods_id,
-                    allot: allotment_name
-                },
-                success: function(html) {
-                    $('#brand').html(html);
-                }
-            });
-            $.ajax({
-                type: 'POST',
-                url: 'ajax/fetch_good_origins.php',
-                data: {
-                    goods_id: goods_id,
-                    allot: allotment_name
-                },
-                success: function(html) {
-                    $('#origin').html(html);
-                }
-            });
+            $('#size').html(sizeOptions);
         } else {
             $('#size').html('<option value="">Select</option>');
-            $('#brand').html('<option value="">Select</option>');
-            $('#origin').html('<option value="">Select</option>');
         }
     }
 
-    /*function toggleQtyAndRequired() {
-        finalAmount();
-        var $toggleQty = $(".toggleQty");
-        var $is_qty2 = $("#is_qty");
-        if ($is_qty2.is(":checked")) {
-            $toggleQty.show();
-            $("#currency2, #rate2, #opr").attr('required', true);
-        } else {
-            $toggleQty.hide();
-            $("#currency2, #rate2, #opr").attr('required', false);
+    function updateBrandOriginTable(size) {
+        let selectedGood = $('#goods_id').val();
+        if (!selectedGood || !size) {
+            $('#availableQuantitiesTable').html('<p class="text-warning">Please select both a good and size to view available quantities.</p>');
+            return;
         }
-    }*/
+
+        let selectedGoodData = availableQuantities.find(item => item.goods_id == selectedGood);
+        if (!selectedGoodData) return;
+
+        let sizeData = selectedGoodData.sizes.find(item => item.size == size);
+        if (!sizeData) return;
+
+        let originOptions = '<option value="" selected>Select Origin</option>';
+        let brandOptions = '<option value="" selected>Select Brand</option>';
+
+        let uniqueOrigins = new Set();
+        let uniqueBrands = new Set();
+
+        sizeData.brands.forEach(item => {
+            uniqueOrigins.add(item.origin);
+            uniqueBrands.add(item.brand);
+        });
+
+        uniqueOrigins.forEach(origin => {
+            originOptions += `<option value="${origin}">${origin}</option>`;
+        });
+
+        uniqueBrands.forEach(brand => {
+            brandOptions += `<option value="${brand}">${brand}</option>`;
+        });
+
+        $('#origin').html(originOptions);
+        $('#brand').html(brandOptions);
+
+        let tableHTML = `
+        <table class="table table-bordered table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>Brand</th>
+                    <th>Origin</th>
+                    <th>Qty Name</th>
+                    <th>Purchased Quantity</th>
+                    <th>Sold Quantity</th>
+                    <th>Remaining Quantity</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+        sizeData.brands.forEach(item => {
+            item.quantities.forEach(qty => {
+                tableHTML += `
+                <tr>
+                    <td class="tbrand">${item.brand}</td>
+                    <td class="origin">${item.origin}</td>
+                    <td class="text-info tqty_name">${qty.qty_name}</td>
+                    <td class="fw-bold text-success">${qty.purchased_quantity}</td>
+                    <td class="fw-bold text-danger">${qty.sold_quantity}</td>
+                    <td class="fw-bold text-dark tqty_remaining">${qty.remaining_quantity}</td>
+                </tr>
+            `;
+            });
+        });
+
+        tableHTML += `</tbody></table>`;
+        $('#availableQuantitiesTable').html(tableHTML);
+    }
 
     function finalAmount() {
         var qty_no = parseFloat($("#qty_no").val()) || 0;
@@ -1487,8 +1545,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
 
         $("#amount").val(isNaN(amount) ? '' : amount);
         $("#amount_span").text(isNaN(amount) ? '' : amount);
-        updateTaxAndTotal();
-        //if ($("#is_qty").prop('checked') == true) {
+
         var rate2 = parseFloat($("#rate2").val()) || 0;
         let operator = $('#opr').find(":selected").val();
 
@@ -1496,7 +1553,6 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
             final_amount = (operator === '/') ? amount / rate2 : rate2 * amount;
             final_amount = final_amount.toFixed(3);
         }
-        //}
 
         $("#final_amount").val(isFinite(final_amount) ? final_amount : '');
         $("#final_amount_span").text(isFinite(final_amount) ? final_amount : '');
@@ -1505,6 +1561,43 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
             disableButton('recordSubmit');
         } else {
             enableButton('recordSubmit');
+        }
+
+        checkRemainingQuantity(qty_no);
+    }
+
+    function checkRemainingQuantity(qty_no) {
+        if (qty_no < 1) {
+            disableButton('recordSubmit');
+        }
+        var qty_name = $("#qty_name").val().toLowerCase();
+        var origin = $("#origin").val().toLowerCase();
+        var brand = $("#brand").val().toLowerCase();
+        var exceedLimit = false;
+
+        $("#availableQuantitiesTable tr").each(function() {
+            var Tbrand = $(this).find(".tbrand").text().toLowerCase();
+            var Torigin = $(this).find(".origin").text().toLowerCase();
+            var Tqty_name = $(this).find(".tqty_name").text().toLowerCase();
+            var Tqty_remaining = parseFloat($(this).find(".tqty_remaining").text()) || 0;
+
+            if (Tbrand === brand && Torigin === origin && Tqty_name === qty_name) {
+                if (qty_no > Tqty_remaining) {
+                    exceedLimit = true;
+                    return false; // Exit loop
+                }
+            }
+        });
+
+        if (exceedLimit) {
+            disableButton('recordSubmit');
+            $('#qtyAlert').removeClass('d-none');
+            $('#qty_no').addClass('is-invalid');
+
+        } else {
+            enableButton('recordSubmit');
+            $('#qtyAlert').addClass('d-none');
+            $('#qty_no').removeClass('is-invalid');
         }
     }
 </script>
@@ -1584,6 +1677,7 @@ if (isset($_POST['recordSubmit'])) {
         $pageURL .= '?id=' . $hidden_id . '&type=' . $record['type'];
         $data = array(
             'allotment_name' => mysqli_real_escape_string($connect, $_POST['allotment_name']),
+            'p_s' => mysqli_real_escape_string($connect, 's'),
             'goods_id' => mysqli_real_escape_string($connect, $_POST['goods_id']),
             'size' => mysqli_real_escape_string($connect, $_POST['size']),
             'brand' => mysqli_real_escape_string($connect, $_POST['brand']),
@@ -1715,6 +1809,23 @@ if (isset($_GET['deleteSaleReport'])) {
     </div>
 </div>
 
+
+<!-- Modal -->
+<div class="modal fade" id="allotSearchModel" tabindex="-1" aria-labelledby="allotSearchModelLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="allotSearchModelLabel">Search Allotment Name</h5>
+                <button type="button" class="btn-close text-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="height: 400px; overflow-y:scroll;"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="insertGoodsBtn" onclick="insertBtnClick()" disabled>Insert</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 
 <div class="modal fade" id="seaRoadDetails" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
@@ -2082,10 +2193,15 @@ if (isset($_GET['deleteSaleReport'])) {
                         <span id="responseText" class="p-1 bg-opacity-10"></span>
                         <div class="col-md-4">
                             <div class="input-group">
+                                <label for="bank_name" class="form-label">Bank Name.</label>
+                                <input value="<?= isset($bank_details['bank_name']) ? $bank_details['bank_name'] : '' ?>" id="bank_name"
+                                    name="bank_name" class="form-control" required>
+                            </div>
+                            <!-- <div class="input-group">
                                 <label for="acc_no" class="form-label">A/c No.</label>
                                 <input value="<?= isset($bank_details['acc_no']) ? $bank_details['acc_no'] : '' ?>" id="acc_no"
                                     name="acc_no" class="form-control" required>
-                            </div>
+                            </div> -->
                         </div>
                         <div class="col-md-4">
                             <div class="input-group">
@@ -2144,7 +2260,7 @@ if (isset($_GET['deleteSaleReport'])) {
                         <div class="col-md-4">
                             <div class="input-group">
                                 <label for="bank_city" class="form-label">City</label>
-                                <input value="<?= isset($bank_details['city']) ? $bank_details['acc_no'] : '' ?>" id="bank_city" name="city"
+                                <input value="<?= isset($bank_details['city']) ? $bank_details['city'] : '' ?>" id="bank_city" name="city"
                                     class="form-control">
                             </div>
                         </div>
@@ -2413,7 +2529,7 @@ if (isset($_POST['thirdPartyBankSubmit'])) {
         $('#actionSelect').change(function() {
             var selectedAction = $(this).val();
             if (selectedAction === 'seaRoadBtn') {
-                var seaRoadModal = new bootstrap.Modal(document.getElementById('<?= $_GET['type'] == 'booking' ? "seaRoadDetails" : "localSeaRoadDetails"; ?>'));
+                var seaRoadModal = new bootstrap.Modal(document.getElementById('<?= $_GET['type'] == 'local' ?  "localSeaRoadDetails" : "seaRoadDetails"; ?>'));
                 seaRoadModal.show();
             } else if (selectedAction === 'paymentsBtn') {
                 var paymentsModal = new bootstrap.Modal(document.getElementById('paymentDetails'));
@@ -2437,7 +2553,7 @@ if (isset($_POST['thirdPartyBankSubmit'])) {
         let taxPercent = parseFloat($('#tax_percent').val()) || 0;
         let taxAmount = (amount * (taxPercent / 100)).toFixed(2);
         let totalWithTax = (amount + parseFloat(taxAmount)).toFixed(2);
-        $('#tax_amount').val(taxAmount);
+        $('#tax_amount').val(taxAmount != 0 ? taxAmount : '');
         $('#total_with_tax').val(totalWithTax);
         $('#total_with_tax_span').text(totalWithTax);
     }

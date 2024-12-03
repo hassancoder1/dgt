@@ -408,8 +408,8 @@ if ($id > 0) {
                                 <?php $adv_paid = purchaseSpecificData($record['id'], 'adv');
                                 $i = 1;
                                 foreach ($adv_paid as $item) {
-                                    // $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $purchase_id, 'transfered_from' => 'purchase_' . $record['type']));
-                                    // $roz = mysqli_fetch_assoc($rozQ);
+                                    $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $purchase_id, 'transfered_from' => 'purchase_' . $record['type']));
+                                    $roz = mysqli_fetch_assoc($rozQ);
                                     echo '<tr>';
                                     echo '<td class="border border-dark">' . $i++ . '</td>';
                                     echo '<td class="border border-dark">' . my_date($item['created_at']) . '</td>';
@@ -752,11 +752,11 @@ if ($id > 0) {
                         //     disableButton('recordSubmit');
                         // }
                         if (balance >= 1) {
-                            if (final_amount <= balance + 0.5) {
-                                enableButton('recordSubmit');
-                            } else {
-                                disableButton('recordSubmit');
-                            }
+                            // if (final_amount <= balance + 0.5) {
+                            //     enableButton('recordSubmit');
+                            // } else {
+                            //     disableButton('recordSubmit');
+                            // }
                         } else {
                             disableButton('recordSubmit');
                         }

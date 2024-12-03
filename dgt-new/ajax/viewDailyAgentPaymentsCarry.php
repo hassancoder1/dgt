@@ -301,6 +301,7 @@ $firstRow = $rowCount > 0 ? $rows[0] : null;
                         <input type="hidden" name="parent_payment_id" value="<?= $firstRow['id']; ?>">
                         <input type="hidden" name="child_ids" value="<?= $child_ids; ?>">
                         <input type="hidden" name="existing_data" value='<?= $firstRow['transfer_details']; ?>'>
+                        <input type="hidden" name="type" value='<?= $parentRow['type']; ?>'>
                         <div class="col-2">
                             <button name="agPaymentSubmit" type="submit" id="SubmitForm"
                                 class="btn btn-primary w-100 btn-sm"><i class="fa fa-upload"></i>Transfer
