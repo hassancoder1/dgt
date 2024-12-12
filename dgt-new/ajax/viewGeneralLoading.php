@@ -62,7 +62,7 @@ if ($id > 0) {
         $remaining_quantity_no = $total_quantity_no - $total_loaded_quantity_no;
         $remaining_gross_weight = $total_gross_weight - $total_loaded_gross_weight;
         $remaining_net_weight = $total_net_weight - $total_loaded_net_weight;
-        ?>
+?>
         <div class="modal-header d-flex justify-content-between bg-white align-items-center">
             <h5 class="modal-title" id="staticBackdropLabel">GENERAL LOADING</h5>
             <div class="d-flex align-items-center gap-2">
@@ -201,7 +201,7 @@ if ($id > 0) {
                                     $i = 0;
                                     $rate = 0;
                                     foreach ($items as $details) {
-                                        echo '<tr class="goodRow" data-empty-kgs="' . $details['empty_kgs'] . '" data-rate="' . $details['qty_kgs'] . '" data-quantity="' . $details['qty_no'] . '" data-quantity-name="' . $details['qty_name'] . '" data-net-kgs="' . round($details['net_kgs'], 2) . '" data-gross-kgs="' . round($details['total_kgs'], 2) . '">';
+                                        echo '<tr class="goodRow" data-empty-kgs="' . $details['empty_kgs'] . '" data-rate="' . $details['qty_kgs'] . '" data-quantity="' . $details['qty_no'] . '" data-quantity-name="' . $details['qty_name'] . '" data-net-kgs="' . round($details['net_kgs'], 2) . '" data-gross-kgs="' . round($details['total_kgs'], 2) . '" data-goodsjson=\'' . json_encode($details) . '\'>';
                                         echo '<td>' . $details['sr'] . '</td>';
                                         echo '<td class="TgoodsId d-none">' . $details['goods_id'] . '</td>';
                                         echo '<td>' . goodsName($details['goods_id']) . '</td>';
@@ -606,6 +606,7 @@ if ($id > 0) {
                                 ?>
 
                                 <div class="row g-3">
+                                    <input type="hidden" name="goods_json" id="goods_json">
                                     <!-- Goods Name -->
                                     <div class="col-md-2">
                                         <label for="goods_id" class="form-label">Goods Name</label>
@@ -673,6 +674,8 @@ if ($id > 0) {
                                     <div class="col-md-1">
                                         <label for="quantity_no" class="form-label">Qty No</label>
                                         <input type="number" name="quantity_no" value="<?= $Goods['quantity_no']; ?>" id="quantity_no" required class="form-control form-control-sm" step="0.01" onkeyup="autoCalc('#quantity_no', '#gross_weight', '#net_weight', Rate, emptyKgs)">
+                                        <input type="hidden" name="rate" id="rate" value="">
+                                        <input type="hidden" name="empty_kgs" id="empty_kgs" value="">
                                     </div>
 
                                     <!-- Gross Weight -->
@@ -1262,6 +1265,8 @@ if ($id > 0) {
         $(grossWeight).val(myGrossweight.toFixed(2));
         let myNetWeight = myGrossweight - (parseFloat(emptyKgs) * qty);
         $(netWeight).val(myNetWeight.toFixed(2));
+        $('#rate').val(Rate);
+        $('#empty_kgs').val(emptyKgs);
     }
 
     function populateFields() {
@@ -1279,15 +1284,16 @@ if ($id > 0) {
             const rowSize = row.find('.size').text();
             const rowBrand = row.find('.brand').text();
             const rowOrigin = row.find('.origin').text();
-            console.log(TgoodsId, rowSize, rowBrand, rowOrigin);
-            console.log(goodsId, size, brand, origin);
             if (goodsId === TgoodsId && size === rowSize && brand === rowBrand && origin === rowOrigin) {
                 $('#myquantity_name').val(row.data('quantity-name'));
                 $('#quantity_no').val(row.data('quantity')).trigger('keyup');
                 $('#gross_weight').val(row.data('gross-kgs'));
                 $('#net_weight').val(row.data('net-kgs'));
+                $('#goods_json').val(JSON.stringify(row.data('goodsjson')));
                 emptyKgs = row.data('empty-kgs');
                 Rate = row.data('rate');
+                $('#rate').val(Rate);
+                $('#empty_kgs').val(emptyKgs);
                 return false;
             }
         });

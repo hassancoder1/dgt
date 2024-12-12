@@ -362,17 +362,12 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
 <script>
     function viewPurchase(id = null) {
         if (id) {
-            let action = '<?= isset($_GET['action']) ? $_GET['action'] : '' ?>';
-            let editId = '<?= isset($_GET['editId']) ? $_GET['editId'] : '' ?>';
             $.ajax({
-                url: 'ajax/viewVATTransfer.php',
+                url: 'ajax/editCopiedData.php',
                 type: 'post',
                 data: {
                     id: id,
-                    level: 1,
-                    page: "agent-form",
-                    action: action,
-                    editId: editId
+                    page: "vat-purchases-general-transfer",
                 },
                 success: function(response) {
                     $('#viewDetails').html(response);

@@ -178,20 +178,18 @@ if ($id > 0) {
                                             <th class="bg-dark text-white text-center"><i class="fa fa-check-square-o"></i></th>
                                             <th class="bg-dark text-white">Sr#</th>
                                             <th class="bg-dark text-white">Container No</th>
-                                            <!-- <th class="bg-dark text-white">B/L.No</th> -->
-                                            <th class="bg-dark text-white">G.Ne</th>
-                                            <th class="bg-dark text-white">Qty Ne</th>
-                                            <th class="bg-dark text-white">Qty No</th>
-                                            <th class="bg-dark text-white">G.W.KGS</th>
-                                            <th class="bg-dark text-white">N.W.KGS</th>
-                                            <th class="bg-dark text-white">L.FILE(S)</th>
-                                            <?php  // if (isset($Agent['permission_to_edit'])): 
+                                            <th class="bg-dark text-white">Goods Name</th>
+                                            <th class="bg-dark text-white">Quantity</th>
+                                            <?php // if (isset($Agent['permission_to_edit'])): 
                                             ?>
-                                            <th class="bg-dark text-white">R.Date</th>
-                                            <th class="bg-dark text-white">Clear.D</th>
-                                            <th class="bg-dark text-white">Bl.No</th>
-                                            <th class="bg-dark text-white">L.Truck No</th>
-                                            <th class="bg-dark text-white">Truck R.Date</th>
+                                            <th class="bg-dark text-white">BOE.D</th>
+                                            <th class="bg-dark text-white">PickUp.D</th>
+                                            <th class="bg-dark text-white">Waiting(YES/NO)</th>
+                                            <th class="bg-dark text-white">No.of.Days.W</th>
+                                            <th class="bg-dark text-white">Return.D</th>
+                                            <th class="bg-dark text-white">Truck No.</th>
+                                            <th class="bg-dark text-white">Driver</th>
+                                            <th class="bg-dark text-white">Transporter</th>
                                             <th class="bg-dark text-white">Ag.FILE(S)</th>
                                             <?php // endif; 
                                             ?>
@@ -226,39 +224,17 @@ if ($id > 0) {
                                                         } ?>
                                                     </td>
                                                     <td class="border border-dark"><?= json_decode($record['goods_details'], true)['container_no']; ?></td>
-                                                    <!-- <td class="border border-dark"><?= $record['bl_no']; ?></td> -->
                                                     <td class="border border-dark"><?= goodsName(json_decode($record['goods_details'], true)['goods_id']); ?></td>
-
-                                                    <td class="border border-dark"><?= json_decode($record['goods_details'], true)['quantity_name']; ?></td>
-                                                    <td class="border border-dark"><?= json_decode($record['goods_details'], true)['quantity_no']; ?></td>
-                                                    <td class="border border-dark"><?= json_decode($record['goods_details'], true)['gross_weight']; ?></td>
-                                                    <td class="border border-dark"><?= json_decode($record['goods_details'], true)['net_weight']; ?></td>
-                                                    <td class="border border-dark text-success" style="position: relative;">
-                                                        <?php
-                                                        $attachments1 = json_decode($record['attachments'], true) ?? [];
-                                                        if ($attachments1 !== []) {
-                                                            echo '<a href="javascript:void(0);" onclick="toggleDownloadMenu(event, this)" style="text-decoration: none; color: inherit;">
-                                                <i class="fa fa-paperclip"></i>
-                                            </a>
-                                            <div class="bg-light border border-dark p-2 attachment-menu" style="position: absolute; top: -100%; left: -350%; display: none; z-index: 1000; width: 200px;">';
-                                                            foreach ($attachments1 as $item1) {
-                                                                $fileName1 = htmlspecialchars($item1[1], ENT_QUOTES);
-                                                                $fileExtension1 = pathinfo($fileName1, PATHINFO_EXTENSION);
-                                                                $trimmedName1 = (strlen($fileName1) > 15) ? substr($fileName1, 0, 15) . '...' . $fileExtension1 : $fileName1;
-                                                                echo '<a href="attachments/' . $fileName1 . '" download="' . $fileName1 . '" class="d-block mb-2">' . $trimmedName1 . '</a>';
-                                                            }
-                                                            echo '</div>';
-                                                        } else {
-                                                            echo '<i class="fw-bold fa fa-times text-danger"></i>';
-                                                        }
-                                                        ?>
-                                                    </td>
+                                                    <td class="border border-dark"><?= json_decode($record['goods_details'], true)['quantity_no']; ?> <sub class="fw-bold"><?= json_decode($record['goods_details'], true)['quantity_name']; ?></sub></td>
                                                     <?php if (isset($Agent['permission_to_edit'])): ?>
-                                                        <td class="border border-dark"><?= json_decode($record['agent_details'], true)['received_date']; ?></td>
-                                                        <td class="border border-dark ag_clearing_date"><?= json_decode($record['agent_details'], true)['clearing_date']; ?></td>
-                                                        <td class="border border-dark"><?= json_decode($record['agent_details'], true)['bill_of_entry_no']; ?></td>
-                                                        <td class="border border-dark"><?= json_decode($record['agent_details'], true)['loading_truck_number']; ?></td>
-                                                        <td class="border border-dark"><?= json_decode($record['agent_details'], true)['truck_returning_date']; ?></td>
+                                                        <td class="border border-dark"><?= $Agent['boe_date'] ?? ''; ?></td>
+                                                        <td class="border border-dark"><?= $Agent['pick_up_date'] ?? ''; ?></td>
+                                                        <td class="border border-dark"><?= $Agent['waiting_if_any'] ?? ''; ?></td>
+                                                        <td class="border border-dark"><?= $Agent['days_waiting'] ?? ''; ?></td>
+                                                        <td class="border border-dark"><?= $Agent['return_date'] ?? ''; ?></td>
+                                                        <td class="border border-dark"><?= $Agent['truck_number'] ?? ''; ?></td>
+                                                        <td class="border border-dark"><?= $Agent['driver_details'] ?? ''; ?></td>
+                                                        <td class="border border-dark"><?= $Agent['transporter_name'] ?? ''; ?></td>
                                                         <td class="border border-dark text-success" style="position: relative;">
                                                             <?php
                                                             $attachments2 = $Agent['attachments'] ?? [];
@@ -268,36 +244,27 @@ if ($id > 0) {
               </a>
               <div class="bg-light border border-dark p-2 attachment-menu" style="position: absolute; top: -100%; left: -500%; display: none; z-index: 1000; width: 200px;">';
 
-                                                                // Loop through each file in the attachments array
                                                                 foreach ($attachments2 as $fileName2) {
-                                                                    // Ensure each file name is safe for display
                                                                     $fileName2 = htmlspecialchars($fileName2, ENT_QUOTES);
                                                                     $fileExtension2 = pathinfo($fileName2, PATHINFO_EXTENSION);
-
-                                                                    // Trim the file name if it’s too long (excluding the extension)
                                                                     $baseName = pathinfo($fileName2, PATHINFO_FILENAME);
                                                                     $trimmedName2 = (strlen($baseName) > 15) ? substr($baseName, 0, 15) . '...' : $baseName;
-
-                                                                    // Combine trimmed name with file extension
                                                                     $displayName = $trimmedName2 . '.' . $fileExtension2;
-
-                                                                    // Display clickable link for each file
                                                                     echo '<a href="attachments/' . $fileName2 . '" download="' . $fileName2 . '" class="d-block mb-2">' . $displayName . '</a>';
                                                                 }
-
                                                                 echo '</div>';
                                                             } else {
                                                                 echo '<i class="fw-bold fa fa-times text-danger"></i>';
                                                             }
                                                             ?>
                                                         </td>
-
                                                     <?php endif; ?>
                                                 </tr>
                                         <?php }
                                         } ?>
                                     </tbody>
                                 </table>
+
                             </div>
                             <span class="fw-bold text-danger tex-sm my-2 d-none" id="transfer-alert"></span>
                             <?php
@@ -319,39 +286,77 @@ if ($id > 0) {
                                             } ?>
                                             <h5 class="text-primary">Agent Form</h5>
                                             <div class="row g-3">
-                                                <div class="col-md-2">
-                                                    <label for="received_date" class="form-label">Received Date</label>
-                                                    <input type="date" name="received_date" id="received_date" required value="<?= isset($myAgent['received_date']) ? $myAgent['received_date'] : ''; ?>" class="form-control form-control-sm">
-                                                </div>
+                                                <!-- BOE DATE -->
                                                 <div class="col-md-3">
-                                                    <label for="clearing_date" class="form-label">Clearing Date</label>
-                                                    <input type="date" name="clearing_date" id="clearing_date" required class="form-control form-control-sm" value="<?= isset($myAgent['clearing_date']) ? $myAgent['clearing_date'] : ''; ?>">
+                                                    <label for="boe_date" class="form-label">BOE Date</label>
+                                                    <input type="date" name="boe_date" id="boe_date" required
+                                                        class="form-control form-control-sm"
+                                                        value="<?= isset($myAgent['boe_date']) ? $myAgent['boe_date'] : ''; ?>">
                                                 </div>
 
+                                                <!-- PICK UP DATE -->
                                                 <div class="col-md-3">
-                                                    <label for="bill_of_entry_no" class="form-label">Bill Of Entry No</label>
-                                                    <input type="text" name="bill_of_entry_no" id="bill_of_entry_no" required class="form-control form-control-sm" value="<?= isset($myAgent['bill_of_entry_no']) ? $myAgent['bill_of_entry_no'] : ''; ?>">
+                                                    <label for="pick_up_date" class="form-label">Pick Up Date</label>
+                                                    <input type="date" name="pick_up_date" id="pick_up_date" required
+                                                        class="form-control form-control-sm"
+                                                        value="<?= isset($myAgent['pick_up_date']) ? $myAgent['pick_up_date'] : ''; ?>">
                                                 </div>
 
+                                                <!-- WAITING IF ANY -->
                                                 <div class="col-md-3">
-                                                    <label for="loading_truck_number" class="form-label">Loading Truck Number</label>
-                                                    <input type="text" name="loading_truck_number" id="loading_truck_number" required class="form-control form-control-sm" value="<?= isset($myAgent['loading_truck_number']) ? $myAgent['loading_truck_number'] : ''; ?>">
+                                                    <label for="waiting_if_any" class="form-label">Waiting (If Any)</label>
+                                                    <input type="text" name="waiting_if_any" id="waiting_if_any"
+                                                        class="form-control form-control-sm"
+                                                        value="<?= isset($myAgent['waiting_if_any']) ? $myAgent['waiting_if_any'] : ''; ?>">
                                                 </div>
 
+                                                <!-- NO. OF DAYS WAITING -->
                                                 <div class="col-md-3">
-                                                    <label for="truck_returning_date" class="form-label">Truck Retruning Date</label>
-                                                    <input type="date" name="truck_returning_date" id="truck_returning_date" required class="form-control form-control-sm" value="<?= isset($myAgent['truck_returning_date']) ? $myAgent['truck_returning_date'] : ''; ?>">
+                                                    <label for="days_waiting" class="form-label">No. of Days Waiting</label>
+                                                    <input type="number" name="days_waiting" id="days_waiting"
+                                                        class="form-control form-control-sm"
+                                                        value="<?= isset($myAgent['days_waiting']) ? $myAgent['days_waiting'] : ''; ?>">
                                                 </div>
 
-                                                <div class="col-md-5">
-                                                    <label for="report" class="form-label">Report</label>
-                                                    <input type="text" name="report" id="report" required class="form-control form-control-sm" value="<?= isset($myAgent['report']) ? $myAgent['report'] : ''; ?>">
+                                                <!-- RETURN DATE -->
+                                                <div class="col-md-3">
+                                                    <label for="return_date" class="form-label">Return Date</label>
+                                                    <input type="date" name="return_date" id="return_date" required
+                                                        class="form-control form-control-sm"
+                                                        value="<?= isset($myAgent['return_date']) ? $myAgent['return_date'] : ''; ?>">
                                                 </div>
 
+                                                <!-- TRUCK NUMBER -->
+                                                <div class="col-md-3">
+                                                    <label for="truck_number" class="form-label">Truck Number</label>
+                                                    <input type="text" name="truck_number" id="truck_number" required
+                                                        class="form-control form-control-sm"
+                                                        value="<?= isset($myAgent['truck_number']) ? $myAgent['truck_number'] : ''; ?>">
+                                                </div>
+
+                                                <!-- DRIVER NAME/DRIVER NUMBER -->
+                                                <div class="col-md-3">
+                                                    <label for="driver_details" class="form-label">Driver Name/Number</label>
+                                                    <input type="text" name="driver_details" id="driver_details" required
+                                                        class="form-control form-control-sm"
+                                                        value="<?= isset($myAgent['driver_details']) ? $myAgent['driver_details'] : ''; ?>">
+                                                </div>
+
+                                                <!-- TRANSPORTER NAME -->
+                                                <div class="col-md-3">
+                                                    <label for="transporter_name" class="form-label">Transporter Name</label>
+                                                    <input type="text" name="transporter_name" id="transporter_name" required
+                                                        class="form-control form-control-sm"
+                                                        value="<?= isset($myAgent['transporter_name']) ? $myAgent['transporter_name'] : ''; ?>">
+                                                </div>
+
+                                                <!-- Action Buttons -->
                                                 <div class="row mt-4">
                                                     <div class="col-md-12 text-end">
                                                         <input type="file" id="agent_file" name="agent_file[]" class="d-none" multiple>
-                                                        <span class="btn cursor btn-sm btn-success" onclick="document.getElementById('agent_file').click();"><i class="fa fa-paperclip"></i> Add File(s)</span>
+                                                        <span class="btn cursor btn-sm btn-success" onclick="document.getElementById('agent_file').click();">
+                                                            <i class="fa fa-paperclip"></i> Add File(s)
+                                                        </span>
                                                         <button name="AgentFormSubmit" id="AgentFormSubmit" type="submit"
                                                             class="btn btn-primary btn-sm rounded-0">
                                                             Save
@@ -359,6 +364,7 @@ if ($id > 0) {
                                                     </div>
                                                 </div>
                                             </div>
+
                                         </form>
                                     </div>
                                 </div>

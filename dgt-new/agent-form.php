@@ -293,7 +293,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     $billNumber = json_decode($SingleLoading['gloading_info'], true)['billNumber'] ?? '';
                     $agentDetails = json_decode($SingleLoading['agent_details'], true);
                     if (!empty($agentDetails) && isset($agentDetails['transferred']) && $agentDetails['transferred'] === true) {
-                        if (isset($agentDetails['bill_of_entry_no'])) {
+                        if (isset($agentDetails['transporter_name'])) {
                             $rowColor = 'text-dark';
                             $locked = 1;
                         } else {
@@ -304,7 +304,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                         <tr class="text-nowrap">
                             <?php if (SuperAdmin()) { ?>
                                 <td class="pointer text-uppercase <?php echo $rowColor; ?>" onclick="window.location.href= '?lp_id=<?= $SingleLoading['id']; ?>&view=1';">
-                                    <?= '<b>'.$SingleLoading['type'].'#' . $SingleLoading['p_id'] . "($billNumber)"; ?>
+                                    <?= '<b>' . $SingleLoading['type'] . '#' . $SingleLoading['p_id'] . "($billNumber)"; ?>
                                     <?php echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
                                 </td>
                             <?php } else { ?>
@@ -433,12 +433,14 @@ if (isset($_POST['AgentFormSubmit'])) {
         'transferred' => true,
         'permission_to_edit' => 'No',
         'ag_billNumber' => $billNumber,
-        'received_date' => mysqli_real_escape_string($connect, $_POST['received_date']),
-        'clearing_date' => mysqli_real_escape_string($connect, $_POST['clearing_date']),
-        'bill_of_entry_no' => (string)mysqli_real_escape_string($connect, $_POST['bill_of_entry_no']),
-        'loading_truck_number' => mysqli_real_escape_string($connect, $_POST['loading_truck_number']),
-        'truck_returning_date' => mysqli_real_escape_string($connect, $_POST['truck_returning_date']),
-        'report' => mysqli_real_escape_string($connect, $_POST['report']),
+        'boe_date' => mysqli_real_escape_string($connect, $_POST['boe_date']),
+        'pick_up_date' => mysqli_real_escape_string($connect, $_POST['pick_up_date']),
+        'waiting_if_any' => mysqli_real_escape_string($connect, $_POST['waiting_if_any']),
+        'days_waiting' => mysqli_real_escape_string($connect, $_POST['days_waiting']),
+        'return_date' => mysqli_real_escape_string($connect, $_POST['return_date']),
+        'truck_number' => mysqli_real_escape_string($connect, $_POST['truck_number']),
+        'driver_details' => mysqli_real_escape_string($connect, $_POST['driver_details']),
+        'transporter_name' => mysqli_real_escape_string($connect, $_POST['transporter_name']),
         'attachments' => empty($uploadedFiles) ? json_decode($f['agent_details'], true)['attachments'] : $uploadedFiles
     ];
     $data = ['agent_details' => json_encode($agentD, JSON_UNESCAPED_UNICODE)];

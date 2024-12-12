@@ -1,9 +1,9 @@
 <?php
-$page_title = 'Custom Clearing';
-$pageURL = 'custom-clearing-invoice-form';
+$page_title = 'GOODS STOCK => TRANSFER GOODS';
+$pageURL = 'goods-stock-transfer-goods';
 include("header.php");
 
-$resetFilters = $size = $brand = $origin = $goods_name = $date_from = $date_to = $net_kgs = $qty_no = '';
+$resetFilters = $size = $brand = $origin = $goods_id = $goods_name = $date_from = $date_to = $net_kgs = $qty_no = '';
 $is_search = false;
 
 global $connect;
@@ -11,7 +11,7 @@ $rows_per_page = 50;
 $current_page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($current_page - 1) * $rows_per_page;
 
-$conditions = ["agent_details IS NOT NULL"]; // Base condition for general_loading
+$conditions = [];
 
 // Handle filters
 if ($_GET) {
@@ -51,28 +51,30 @@ if ($_GET) {
     }
 }
 
-// Build the WHERE clause
-$where_clause = 'WHERE ' . implode(' AND ', $conditions);
+// Apply conditions separately to each part of the UNION
+$where_clause = !empty($conditions) ? ' AND ' . implode(' AND ', $conditions) : '';
 
-// Get total rows count for pagination
-$total_rows_query = "
-    SELECT COUNT(*) AS total 
+$sql = "
+    SELECT id, MAX(sr_no) AS sr_no, p_id, type, p_type, goods_details, shipping_details, agent_details, created_at, bl_no, loading_details, receiving_details, 'general' AS source 
     FROM general_loading 
-    {$where_clause}
-";
-$total_rows_result = mysqli_query($connect, $total_rows_query);
+    WHERE agent_details IS NOT NULL {$where_clause} 
+    GROUP BY bl_no
+    UNION
+    SELECT id, MAX(sr_no) AS sr_no, p_id, type, 'local' as p_type, goods_details, transfer_details AS shipping_details, 'dummy_agent' as agent_details, created_at, uid AS bl_no, 'dummy1' AS dummy1, 'dummy2' AS dummy2, 'local' AS source 
+    FROM local_loading 
+    WHERE goods_details IS NOT NULL {$where_clause} 
+    GROUP BY uid";
+
+$is_search = !empty($conditions);
+
+$total_rows_result = mysqli_query($connect, "SELECT COUNT(*) AS total FROM ({$sql}) AS subquery");
 $total_rows = mysqli_fetch_assoc($total_rows_result)['total'];
 
-// Fetch paginated entries
-$sql = "
-    SELECT * FROM general_loading {$where_clause} ORDER BY p_id, created_at, sr_no LIMIT $rows_per_page OFFSET $offset";
+$sql .= " ORDER BY p_id, created_at LIMIT $rows_per_page OFFSET $offset";
+
 $entries = mysqli_query($connect, $sql);
-
-// Calculate total pages
 $total_pages = ceil($total_rows / $rows_per_page);
-$is_search = !empty($conditions);
 ?>
-
 
 <div class="fixed-top">
     <?php require_once('nav-links.php'); ?>
@@ -173,47 +175,63 @@ $is_search = !empty($conditions);
                             <tr class="text-nowrap">
                                 <th>No.</th>
                                 <th>P/S# (SR#)</th>
-                                <th>B/L</th>
-                                <th>Warehouse</th>
-                                <th>Goods Name / SIZE / BRAND</th>
-                                <th>ORIGIN</th>
-                                <th>Qty.Name</th>
-                                <th>Qty No</th>
-                                <th>G.W.KGS</th>
-                                <th>N.W.KGS</th>
-                                <th>Loading</th>
-                                <th>Receiving</th>
+                                <th>BL / UID (Count)</th>
+                                <th>Type</th>
+                                <th>WareHouse</th>
+                                <th>Goods Name / ORIGIN</th>
+                                <th>Quantity</th>
+                                <th>Gross.KGS</th>
+                                <th>Net.KGS</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php
                             $i = $offset + 1;
+                            $entryCount = 1;
+                            $currentPID = null;
+                            $entryCountPerBL = [];
+                            $generalBlNos = mysqli_fetch_all(mysqli_query($connect, "SELECT bl_no FROM general_loading"));
+                            $localBlNos = mysqli_fetch_all(mysqli_query($connect, "SELECT uid FROM local_loading"));
+                            $flatBlNos = array_merge(
+                                array_map(function ($item) {
+                                    return $item[0];
+                                }, $generalBlNos),
+                                array_map(function ($item) {
+                                    return $item[0];
+                                }, $localBlNos)
+                            );
+                            $entryCountPerBL = array_count_values($flatBlNos);
                             if (mysqli_num_rows($entries) > 0):
                                 $total_qty_no = $total_gross_weight_kgs = $total_net_weight_kgs = 0;
+
                                 while ($entry = mysqli_fetch_assoc($entries)) {
                                     $goodsDetails = json_decode($entry['goods_details'], true);
                                     $shippingDetails = json_decode($entry['shipping_details'], true);
-                                    $agentDetails = json_decode($entry['agent_details'], true);
+                                    $agent = json_decode($entry['agent_details'], true);
+                                    if ($currentPID !== $entry['p_id']) {
+                                        $currentPID = $entry['p_id'];
+                                        $entryCount = 1;
+                                    } else {
+                                        $entryCount++;
+                                    }
+                                    $route = $shippingDetails['transfer_by'] ?? $shippingDetails['route'];
+                                    $unique_code = $entry['type'] . $entry['p_type'][0] . (isset($shippingDetails['route'])
+                                        ? ($shippingDetails['route'] === 'local' ? 'ld' : 'wr')
+                                        : ($shippingDetails['transfer_by'] === 'sea' ? 'se' : 'rd'))
+                                        . '_' . $entry['p_id'] . '_' . $entry['bl_no'];
                             ?>
                                     <tr class="text-nowrap">
                                         <td><?= htmlspecialchars($i); ?></td>
-                                        <td class="pointer" onclick="viewPurchase(<?php echo $entry['p_id']; ?>)" data-bs-toggle="modal" data-bs-target="#KhaataDetails">
-                                            <b><?= ucfirst($entry['type']); ?>#</b> <?= htmlspecialchars($entry['p_id']); ?> (<?= $entry['sr_no']; ?>)
+                                        <td class="pointer" onclick="window.location.href = '?view=1&unique_code=<?= $unique_code; ?>';">
+                                            <b><?= ucfirst($entry['type']); ?>#</b> <?= htmlspecialchars($entry['p_id']); ?> (<?= $entryCount; ?>)
                                         </td>
-                                        <td><?= $entry['bl_no']; ?></td>
-                                        <td><?= $agentDetails['cargo_transfer_warehouse']; ?></td>
-                                        <td><?= goodsName(htmlspecialchars($goodsDetails['goods_id'])) . ' / ' . htmlspecialchars($goodsDetails['size']) . ' / ' . htmlspecialchars($goodsDetails['brand']); ?></td>
-                                        <td><?= htmlspecialchars($goodsDetails['origin']); ?></td>
-                                        <td><?= htmlspecialchars($goodsDetails['quantity_name']); ?></td>
-                                        <td><?= htmlspecialchars($goodsDetails['quantity_no']); ?></td>
+                                        <td><?= htmlspecialchars($entry['source'] === 'general' ? 'B/L: ' . $entry['bl_no'] : 'UID: ' . $entry['bl_no']); ?> (<?= $entryCountPerBL[$entry['bl_no']]; ?>)</td>
+                                        <td><?= ucfirst(htmlspecialchars($entry['p_type'])); ?></td>
+                                        <td><?= htmlspecialchars($entry['source'] === 'general' ? ($agent['cargo_transfer_warehouse'] ?? 'Not Selected!') : ($shippingDetails['warehouse_transfer']) ?? 'Not Selected!'); ?></td>
+                                        <td><?= goodsName(htmlspecialchars($goodsDetails['goods_id'])) . ' / ' . htmlspecialchars($goodsDetails['origin']); ?></td>
+                                        <td><?= htmlspecialchars($goodsDetails['quantity_no']); ?> <sub><?= htmlspecialchars($goodsDetails['quantity_name']); ?></sub></td>
                                         <td><?= htmlspecialchars($goodsDetails['gross_weight']); ?></td>
                                         <td><?= htmlspecialchars($goodsDetails['net_weight']); ?></td>
-                                        <td>
-                                            <b><?= htmlspecialchars($shippingDetails['transfer_by']) === 'sea' ? 'Port' : 'Border'; ?>: </b> <?= json_decode($entry['loading_details'], true)['loading_port_name']; ?>
-                                        </td>
-                                        <td>
-                                            <b><?= htmlspecialchars($shippingDetails['transfer_by']) === 'sea' ? 'Port' : 'Border'; ?>: </b> <?= json_decode($entry['receiving_details'], true)['receiving_port_name']; ?>
-                                        </td>
                                     </tr>
                                 <?php
                                     $i++;
@@ -250,10 +268,6 @@ $is_search = !empty($conditions);
     role="dialog" aria-labelledby="staticBackdropLabel" aria-hidden="true">
     <div class="modal-dialog modal-fullscreen -modal-xl -modal-dialog-centered" role="document">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="staticBackdropLabel">PURCHASE DETAILS</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
             <div class="modal-body bg-light pt-0" id="viewDetails"></div>
         </div>
     </div>
@@ -264,15 +278,14 @@ $is_search = !empty($conditions);
     $("#show_total_gross_weight_kgs").text($("#total_gross_weight_kgs").val());
     $("#show_total_net_weight_kgs").text($("#total_net_weight_kgs").val());
 
-    function viewPurchase(id = null) {
-        if (id) {
+    function viewPurchase(uniqueCode) {
+        if (uniqueCode) {
             $.ajax({
-                url: 'ajax/viewSingleTransaction.php',
+                url: 'ajax/editGoodsTransfer.php',
                 type: 'post',
                 data: {
-                    id: id,
-                    level: 1,
-                    page: "confirm-stock"
+                    unique_code: uniqueCode,
+                    page: "<?= $pageURL; ?>"
                 },
                 success: function(response) {
                     $('#viewDetails').html(response);
@@ -283,3 +296,58 @@ $is_search = !empty($conditions);
         }
     }
 </script>
+<?php if (isset($_GET['unique_code']) && isset($_GET['view']) && $_GET['view'] == 1) {
+    $unique_code = mysqli_real_escape_string($connect, $_GET['unique_code']);
+    echo "<script>jQuery(document).ready(function ($) {  $('#KhaataDetails').modal('show');});</script>";
+    echo "<script>jQuery(document).ready(function ($) {  viewPurchase('$unique_code'); });</script>";
+}
+if (isset($_POST['reSubmit'])) {
+    $unique_code = $_POST['unique_code'];
+    $SaleEntry = decode_unique_code($unique_code, 'Ttype') === 's';
+    $data_for = $_POST['data_for'];
+    $tdata = json_decode($_POST['tdata'], true);
+    $ldata = json_decode($_POST['ldata'], true);
+    $update = isset($_POST['updateTrue']);
+    $recordEdited = $_POST['recordEdited'];
+    unset($_POST['reSubmit'], $_POST['unique_code'], $_POST['data_for'], $_POST['tdata'], $_POST['ldata'], $_POST['updateTrue']);
+    $newldata = [];
+    $newtdata = [];
+
+    foreach ($_POST as $key => $value) {
+        if (strpos($key, 'l_' . $recordEdited . '_') === 0) {
+            $newldata[$key] = $value;
+        } elseif (strpos($key, 't_') === 0) {
+            $newKey = substr($key, 2);
+            $newtdata[$newKey] = $value;
+        }
+    }
+
+    if ($SaleEntry) {
+        $warehouseEntryValue = $newldata['l_' . $recordEdited . '_warehouse_entry'];
+        list($decodedUniqueCode, $decodedLoadingID, $decodedGoodsID, $decodedGoodsName, $decodedSize, $decodedBrand, $decodedOrigin, $decodedQuantityNo, $decodedQuantityName, $decodedGrossWeight, $decodedNetWeight) = explode('~', $warehouseEntryValue);
+        $retrievedData = mysqli_fetch_assoc(mysqli_query($connect, "SELECT ldata FROM data_copies WHERE unique_code='$decodedUniqueCode'"));
+        $retrievedLdata = json_decode($retrievedData['ldata'], true);
+        $retrievedLdata['l_' . $decodedLoadingID . '_sold_to'] = $unique_code . '~' . $recordEdited . '~' . goodsName($ldata['l_' . $recordEdited . '_goods_id']);
+        $NewwLdata = mysqli_real_escape_string($connect, json_encode($retrievedLdata));
+        update('data_copies', ['ldata' => $NewwLdata], ['unique_code' => $decodedUniqueCode]);
+    }
+    // echo "THIS IS LDATA: ".json_encode($ldata)."<br><br><br>";
+    // echo "THIS IS NEW L DATA: ".json_encode($newldata)."<br><br><br>";
+    // echo "THIS IS DB DATA: ".mysqli_real_escape_string($connect, json_encode(array_merge($ldata, $newldata)))."<br><br><br>";
+
+    $tdata = json_encode(array_merge($tdata, $newtdata));
+    $ldata = json_encode(array_merge($ldata, $newldata));
+    $tdata = mysqli_real_escape_string($connect, $tdata);
+    $ldata = mysqli_real_escape_string($connect, $ldata);
+
+    $done = $update
+        ? update('data_copies', ['tdata' => $tdata, 'ldata' => $ldata], ['data_for' => $data_for, 'unique_code' => $unique_code])
+        : insert('data_copies', ['data_for' => $data_for, 'unique_code' => $unique_code, 'tdata' => $tdata, 'ldata' => $ldata]);
+
+    if ($done) {
+        messageNew('success', $pageURL . '?view=1&unique_code=' . $unique_code, ($update ? 'Record Updated!' : 'Record Added!'));
+    }
+}
+
+
+?>

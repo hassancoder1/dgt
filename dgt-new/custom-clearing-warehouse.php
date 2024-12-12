@@ -1,42 +1,54 @@
 <?php
-$page_title = 'Local P/S WareHouse Transfer';
-$pageURL = 'local-warehouse-transfer-goods';
+$page_title = 'CUSTOM CLEARING => WAREHOUSE';
+$CCWPage = '';
+switch ($_GET['CCWpage']) {
+    case 'transit':
+        $CCWPage = 'Transit';
+        break;
+    case 'freezone-import':
+        $CCWPage = 'Free Zone Import';
+        break;
+    case 'local-import':
+        $CCWPage = 'Local Import';
+        break;
+    case 'import-re-export':
+        $CCWPage = 'Import Re-Export';
+        break;
+    case 'local-export':
+        $CCWPage = 'Local Export';
+        break;
+    case 'local-market':
+        $CCWPage = 'Local Market';
+        break;
+    default:
+        $CCWPage = '';
+}
+$pageURL = 'custom-clearing-warehouse?CCWpage=' . $_GET['CCWpage'];
 include("header.php");
-/*
-Table data_copies COlumn Unique_code will contain data like [pbse_1_1, pbrd_1_1, plld_1_1, pllc_1_1, sbse_1_1, sbrd_1_1, slld_1_1, sllc_1_1, scse_1_1, scrd_1_1]
-P: Purchase/Sale (First character of the value)
-S/B/L/C: Booking/Local/Commission (Second character of the value)
-BR/LD/SE/LC: Sea/Road/Loading/Local (Two-character route indicator)
-First Number (After first Underscore): Purhcase/Sale Record ID
-Second Number (After first Underscore): General/Local Loading ID
-*/
-$resetFilters = $size = $brand = $origin = $goods_name = $date_from = $date_to = $net_kgs = $qty_no = '';
+$resetFilters = $size = $brand = $origin = $goods_id = $date_from = $date_to = $net_kgs = $qty_no = '';
 $is_search = false;
 global $connect;
 $rows_per_page = 50;
 $current_page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($current_page - 1) * $rows_per_page;
-$sql = "SELECT * FROM local_loading WHERE JSON_EXTRACT(transfer_details, '$.warehouse_transfer') IS NOT NULL";
 $conditions = [];
-
-// Handle filters
 if ($_GET) {
     $resetFilters = removeFilter($pageURL);
     if (!empty($_GET['size'])) {
         $size = mysqli_real_escape_string($connect, $_GET['size']);
-        $conditions[] = "JSON_EXTRACT(goods_details, '$.size')='$size'";
+        $conditions[] = "JSON_EXTRACT(goods_details, '$.size') = '$size'";
     }
     if (!empty($_GET['brand'])) {
         $brand = mysqli_real_escape_string($connect, $_GET['brand']);
-        $conditions[] = "JSON_EXTRACT(goods_details, '$.brand')='$brand'";
+        $conditions[] = "JSON_EXTRACT(goods_details, '$.brand') = '$brand'";
     }
     if (!empty($_GET['origin'])) {
         $origin = mysqli_real_escape_string($connect, $_GET['origin']);
-        $conditions[] = "JSON_EXTRACT(goods_details, '$.origin')='$origin'";
+        $conditions[] = "JSON_EXTRACT(goods_details, '$.origin') = '$origin'";
     }
     if (!empty($_GET['goods_id'])) {
         $goods_id = mysqli_real_escape_string($connect, $_GET['goods_id']);
-        $conditions[] = "JSON_EXTRACT(goods_details, '$.goods_id')='$goods_id'";
+        $conditions[] = "JSON_EXTRACT(goods_details, '$.goods_id') = '$goods_id'";
     }
     if (!empty($_GET['date_from'])) {
         $date_from = mysqli_real_escape_string($connect, $_GET['date_from']);
@@ -48,25 +60,28 @@ if ($_GET) {
     }
     if (!empty($_GET['net_kgs'])) {
         $net_kgs = mysqli_real_escape_string($connect, $_GET['net_kgs']);
-        $conditions[] = "JSON_EXTRACT(goods_details, '$.net_weight')='$net_kgs'";
+        $conditions[] = "JSON_EXTRACT(goods_details, '$.net_weight') = '$net_kgs'";
     }
     if (!empty($_GET['qty_no'])) {
         $qty_no = mysqli_real_escape_string($connect, $_GET['qty_no']);
-        $conditions[] = "JSON_EXTRACT(goods_details, '$.quantity_no')='$qty_no'";
+        $conditions[] = "JSON_EXTRACT(goods_details, '$.quantity_no') = '$qty_no'";
     }
 }
-
-if (!empty($conditions)) {
-    $sql .= ' AND ' . implode(' AND ', $conditions);
-    $is_search = true;
+$sql = "SELECT * FROM data_copies LIMIT $rows_per_page OFFSET $offset";
+$result = mysqli_query($connect, $sql);
+$data = [];
+while ($row = mysqli_fetch_assoc($result)) {
+    $ldata = json_decode($row['ldata'], true);
+    $normalized_data = [];
+    foreach ($ldata as $key => $value) {
+        $normalized_key = preg_replace('/^l_\w+?_/', '', $key);
+        $normalized_data[$normalized_key] = $value;
+    }
+    if (isset($normalized_data['warehouse_transfer']) && $normalized_data['warehouse_transfer'] === $CCWPage) {
+        $data[] = $row;
+    }
 }
-
-$total_rows_result = mysqli_query($connect, $sql);
-$total_rows = mysqli_num_rows($total_rows_result);
-
-$sql .= " ORDER BY p_id, created_at, sr_no LIMIT $rows_per_page OFFSET $offset";
-
-$entries = mysqli_query($connect, $sql);
+$total_rows = count($data);
 $total_pages = ceil($total_rows / $rows_per_page);
 ?>
 
@@ -169,53 +184,67 @@ $total_pages = ceil($total_rows / $rows_per_page);
                             <tr class="text-nowrap">
                                 <th>No.</th>
                                 <th>P/S# (SR#)</th>
-                                <th>UID</th>
-                                <th>Goods Name / SIZE / BRAND</th>
-                                <th>ORIGIN</th>
-                                <th>Qty.Name</th>
-                                <th>Qty No</th>
+                                <th>BL / UID (Count)</th>
+                                <th>Type</th>
                                 <th>WareHouse</th>
-                                <th>G.W.KGS</th>
-                                <th>N.W.KGS</th>
-                                <th>L Comp Name</th>
-                                <th>R Comp Name</th>
-                                <th>L Date</th>
-                                <th>R Date</th>
+                                <th>Goods Name / ORIGIN</th>
+                                <th>Quantity</th>
+                                <th>Gross.KGS</th>
+                                <th>Net.KGS</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php
                             $i = $offset + 1;
-                            if (mysqli_num_rows($entries) > 0):
-                                $total_qty_no = 0;
-                                $total_gross_weight_kgs = 0;
-                                $total_net_weight_kgs = 0;
-                                while ($entry = mysqli_fetch_assoc($entries)) {
-                                    $unique_code = $entry['type'] . 'l' . (json_decode($entry['transfer_details'], true)['route'] === 'local' ? 'ld' : 'wr') . '_' . $entry['p_id'] . '_' . $entry['id'];
+                            $entryCount = 1;
+                            $currentPID = null;
+                            $entryCountPerBL = [];
+                            $generalBlNos = mysqli_fetch_all(mysqli_query($connect, "SELECT bl_no FROM general_loading"));
+                            $localBlNos = mysqli_fetch_all(mysqli_query($connect, "SELECT uid FROM local_loading"));
+                            $flatBlNos = array_merge(
+                                array_map(function ($item) {
+                                    return $item[0];
+                                }, $generalBlNos),
+                                array_map(function ($item) {
+                                    return $item[0];
+                                }, $localBlNos)
+                            );
+                            $entryCountPerBL = array_count_values($flatBlNos);
+                            if (count($data) > 0):
+                                $total_qty_no = $total_gross_weight_kgs = $total_net_weight_kgs = 0;
+                                foreach ($data as $entry) {
+                                    $Tdata = json_decode($entry['tdata'], true);
+                                    $Ldata = json_decode($entry['ldata'], true);
+                                    reset($Ldata);  // Move the internal pointer to the first element of the array
+                                    $firstKey = key($Ldata);
+                                    preg_match('/^l_(\d+)_/', $firstKey, $matches);
+                                    if (!empty($matches[1])) {
+                                        $firstID = $matches[1];
+                                    }
+                                    if ($currentPID !== $Ldata['l_' . $firstID . '_p_id']) {
+                                        $currentPID = $Ldata['l_' . $firstID . '_p_id'];
+                                        $entryCount = 1;
+                                    } else {
+                                        $entryCount++;
+                                    }
                             ?>
                                     <tr class="text-nowrap">
                                         <td><?= htmlspecialchars($i); ?></td>
-                                        <td class="pointer" onclick="window.location.href = '?view=1&unique_code=<?= $unique_code; ?>';">
-                                            <b><?= ucfirst($entry['type']); ?>#</b> <?= htmlspecialchars($entry['p_id']); ?> (<?= $entry['sr_no']; ?>)
+                                        <td class="pointer" onclick="window.location.href = '?CCWpage=<?= $_GET['CCWpage']; ?>&view=1&unique_code=<?= $entry['unique_code']; ?>';">
+                                            <b><?= ucfirst($Ldata['l_' . $firstID . '_type']); ?>#</b> <?= htmlspecialchars($Ldata['l_' . $firstID . '_p_id']); ?> (<?= $entryCount; ?>)
                                         </td>
-                                        <td><?= htmlspecialchars($entry['uid']); ?></td>
-                                        <td><?= goodsName(htmlspecialchars(json_decode($entry['goods_details'], true)['goods_id'])) . ' / ' . htmlspecialchars(json_decode($entry['goods_details'], true)['size']) . ' / ' . htmlspecialchars(json_decode($entry['goods_details'], true)['brand']); ?> </td>
-                                        <td><?= htmlspecialchars(json_decode($entry['goods_details'], true)['origin']); ?></td>
-                                        <td><?= htmlspecialchars(json_decode($entry['goods_details'], true)['quantity_name']); ?></td>
-                                        <td><?= htmlspecialchars(json_decode($entry['goods_details'], true)['quantity_no']); ?></td>
-                                        <td><?= htmlspecialchars(json_decode($entry['transfer_details'], true)['warehouse_transfer']); ?></td>
-                                        <td><?= htmlspecialchars(json_decode($entry['goods_details'], true)['gross_weight']); ?></td>
-                                        <td><?= htmlspecialchars(json_decode($entry['goods_details'], true)['net_weight']); ?></td>
-                                        <td><?= htmlspecialchars(json_decode($entry['transfer_details'], true)['loading_company_name']); ?></td>
-                                        <td><?= htmlspecialchars(json_decode($entry['transfer_details'], true)['receiving_company_name']); ?></td>
-                                        <td><?= my_date(htmlspecialchars(json_decode($entry['transfer_details'], true)['loading_date'])); ?></td>
-                                        <td><?= my_date(htmlspecialchars(json_decode($entry['transfer_details'], true)['receiving_date'])); ?></td>
+                                        <td><?= htmlspecialchars(isset($Ldata['l_' . $firstID . '_bl_no']) ? 'B/L: ' . $Ldata['l_' . $firstID . '_bl_no'] : 'UID: ' . $Ldata['l_' . $firstID . '_uid']); ?> (<?= $entryCountPerBL[$Ldata['l_' . $firstID . '_bl_no'] ?? $Ldata['l_' . $firstID . '_uid']]; ?>)</td>
+                                        <td><?= ucfirst(htmlspecialchars($Tdata['type'])); ?></td>
+                                        <td><?= ucfirst(htmlspecialchars($Ldata['l_' . $firstID . '_warehouse_transfer'])); ?></td>
+                                        <td><?= goodsName(htmlspecialchars($Ldata['l_' . $firstID . '_goods_id'])) . ' / ' . htmlspecialchars($Ldata['l_' . $firstID . '_origin']); ?></td>
+                                        <td><?= htmlspecialchars($Ldata['l_' . $firstID . '_quantity_no']); ?> <sub><?= htmlspecialchars($Ldata['l_' . $firstID . '_quantity_name']); ?></sub></td>
+                                        <td><?= htmlspecialchars($Ldata['l_' . $firstID . '_gross_weight']); ?></td>
+                                        <td><?= htmlspecialchars($Ldata['l_' . $firstID . '_net_weight']); ?></td>
                                     </tr>
-                                <?php $i++;
-                                    $total_qty_no += round(htmlspecialchars(json_decode($entry['goods_details'], true)['quantity_no']));
-                                    $total_gross_weight_kgs += round(htmlspecialchars(json_decode($entry['goods_details'], true)['gross_weight']));
-                                    $total_net_weight_kgs += round(htmlspecialchars(json_decode($entry['goods_details'], true)['net_weight']));
-                                }; ?>
+                                <?php
+                                    $i++;
+                                }
+                                ?>
                                 <input type="hidden" id="total_qty_no" value="<?= $total_qty_no; ?>">
                                 <input type="hidden" id="total_gross_weight_kgs" value="<?= $total_gross_weight_kgs; ?>">
                                 <input type="hidden" id="total_net_weight_kgs" value="<?= $total_net_weight_kgs; ?>">
@@ -225,6 +254,7 @@ $total_pages = ceil($total_rows / $rows_per_page);
                                 </tr>
                             <?php endif; ?>
                         </tbody>
+
                     </table>
                 </div>
             </div>
@@ -256,11 +286,12 @@ $total_pages = ceil($total_rows / $rows_per_page);
     function viewPurchase(uniqueCode) {
         if (uniqueCode) {
             $.ajax({
-                url: 'ajax/editCopiedData.php',
+                url: 'ajax/editCustomClearing.php',
                 type: 'post',
                 data: {
                     unique_code: uniqueCode,
-                    page: "<?= $pageURL; ?>"
+                    page: "<?= $pageURL; ?>",
+                    CCWpage: true
                 },
                 success: function(response) {
                     $('#viewDetails').html(response);
@@ -281,35 +312,29 @@ if (isset($_POST['reSubmit'])) {
     $data_for = $_POST['data_for'];
     $tdata = json_decode($_POST['tdata'], true);
     $ldata = json_decode($_POST['ldata'], true);
-    unset($_POST['reSubmit'], $_POST['unique_code'], $_POST['data_for'], $_POST['tdata'], $_POST['ldata']);
-    if (isset($_POST['updateTrue'])) {
-        unset($_POST['updateTrue']);
-        $update = true;
-    } else {
-        $update = false;
-    }
+    $update = isset($_POST['updateTrue']);
+    $recordEdited = $_POST['recordEdited'];
+    unset($_POST['reSubmit'], $_POST['unique_code'], $_POST['data_for'], $_POST['tdata'], $_POST['ldata'], $_POST['updateTrue']);
     $newldata = [];
     $newtdata = [];
-
     foreach ($_POST as $key => $value) {
-        if (strpos($key, 'l_') === 0) {
-            $newKey = substr($key, 2);
-            $newldata[$newKey] = $value;
+        if (strpos($key, 'l_' . $recordEdited . '_') === 0) {
+            $newldata[$key] = $value;
         } elseif (strpos($key, 't_') === 0) {
             $newKey = substr($key, 2);
             $newtdata[$newKey] = $value;
         }
     }
-
-
     $tdata = json_encode(array_merge($tdata, $newtdata));
     $ldata = json_encode(array_merge($ldata, $newldata));
     $tdata = mysqli_real_escape_string($connect, $tdata);
     $ldata = mysqli_real_escape_string($connect, $ldata);
-
-    $done = $update ? update('data_copies', ['tdata' => $tdata, 'ldata' => $ldata], ['data_for' => $data_for, 'unique_code' => $unique_code]) : insert('data_copies', ['data_for' => $data_for, 'unique_code' => $unique_code, 'tdata' => $tdata, 'ldata' => $ldata]);
+    $done = $update
+        ? update('data_copies', ['tdata' => $tdata, 'ldata' => $ldata], ['data_for' => $data_for, 'unique_code' => $unique_code])
+        : insert('data_copies', ['data_for' => $data_for, 'unique_code' => $unique_code, 'tdata' => $tdata, 'ldata' => $ldata]);
     if ($done) {
         messageNew('success', $pageURL . '?view=1&unique_code=' . $unique_code, ($update ? 'Record Updated!' : 'Record Added!'));
     }
 }
+
 ?>

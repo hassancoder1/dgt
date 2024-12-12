@@ -70,7 +70,7 @@ $firstRow = $rowCount > 0 ? $rows[0] : null;
                                 echo '<b>B/L No: ' . $bl_no . '</b> - No containers found';
                             }
                             ?>
-                             <span class="fw-bold d-block">By <?= ucwords(json_decode($parentRow['shipping_details'], true)['transfer_by']); ?></span>
+                            <span class="fw-bold d-block">By <?= ucwords(json_decode($parentRow['shipping_details'], true)['transfer_by']); ?></span>
                         </div>
                     </div>
 
@@ -91,12 +91,30 @@ $firstRow = $rowCount > 0 ? $rows[0] : null;
 
                     <?php if (!empty($parentAgent)): ?>
                         <div class="col-md-3">
-                            <div>
+                        <div>
                                 <?php
+                                // Define the keys you want to display
+                                $allowedKeys = [
+                                    'received_date',
+                                    'clearing_date',
+                                    'loading_truck_number',
+                                    'truck_returning_date',
+                                    'boe_date',
+                                    'pick_up_date',
+                                    'waiting_if_any',
+                                    'days_waiting',
+                                    'return_date',
+                                    'truck_number',
+                                    'driver_details',
+                                    'transporter_name'
+                                ];
+
+                                // Iterate over $parentAgent or $Agent and display only the allowed keys
                                 foreach ($parentAgent as $key => $value) {
-                                    if ($key === 'received_date' || $key === 'clearing_date' || $key === 'loading_truck_number' || $key === 'truck_returning_date') {
-                                        echo '<b>' . ucwords(str_replace('_', ' ', str_replace('ag_', 'Agent ', $key))) . ': </b>' . $value . "<br>";
-                                    };
+                                    if (in_array($key, $allowedKeys)) {
+                                        // Format and output key and value
+                                        echo '<b>' . ucwords(str_replace('_', ' ', str_replace('ag_', 'Agent ', $key))) . ': </b>' . htmlspecialchars($value) . "<br>";
+                                    }
                                 }
                                 ?>
                             </div>
@@ -105,7 +123,7 @@ $firstRow = $rowCount > 0 ? $rows[0] : null;
                 </div>
             </div>
             <div class="col-md-12 mx-3">
-                            <b>Bill Details</b> <?= $firstRow['bill_details'] ?>
+                <b>Bill Details</b> <?= $firstRow['bill_details'] ?>
             </div>
             <?php
             $TtoAccounts = !$firstRow || ($firstRow && json_decode($firstRow['transfer_details'], true)['transferred_to_accounts'] === false);
@@ -363,128 +381,129 @@ $firstRow = $rowCount > 0 ? $rows[0] : null;
                     } ?>
                 </form>
             </div>
-        </div> </div>
-        <div class="col-2 order-1 table-form bg-white">
-            <div class="align-items-center justify-content-between flex-wrap pt-2">
-                <div>
-                    <strong><?php echo strtoupper($_fields['p_s_name']) . ' #'; ?></strong>
-                    <?php echo $_fields['sr_no']; ?>
-                </div>
-                <div>
-                    <strong>User:</strong> <?php echo $_fields['username']; ?>
-                </div>
-                <div>
-                    <strong>Date:</strong> <?php echo my_date($_fields['_date']); ?>
-                </div>
-                <div>
-                    <strong>Type:</strong> <?php echo badge(strtoupper($_fields['type']), 'dark'); ?>
-                </div>
-                <div>
-                    <strong>Country:</strong> <?php echo $_fields['country']; ?>
-                </div>
-                <div>
-                    <strong>Branch:</strong> <?php echo branchName($_fields['branch_id']); ?>
-                </div>
-            </div>
-            <div class="my-3">
-                <!-- Total Details  -->
-                <b>T. AMOUNT: </b><span id="show_total_amount"><?= isset($total_amount) ? $total_amount : ''; ?></span><br>
-                <b>T. TAX: </b><span id="show_total_amount"><?= isset($total_tax) ? $total_tax : ''; ?></span><br>
-                <b>T.B. AMOUNT: </b><span id="show_total_amount"><?= isset($total_bill_amount) ? $total_bill_amount : ''; ?></span>
-            </div>
-            <?php if (!empty($firstRow) && json_decode($firstRow['transfer_details'], true)['transferred_to_accounts'] === true) {
-                echo '<b class="text-success mt-3"><i class="fa fa-check"></i> Transferred</b>';
-            } ?></button>
-            <button class="btn btn-warning d-block btn-sm" onclick="document.querySelector('.transfer-form').classList.toggle('d-none');">Toggle Form</button>
         </div>
-        <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
-        <script>
-            function agentDetails() {
-                var agentAccNo = $('#ag_acc_no').val().toUpperCase();
-                $.ajax({
-                    type: 'POST',
-                    url: 'ajax/fetchAgentDetails.php',
-                    data: 'agent_acc_no=' + agentAccNo,
-                    success: function(html) {
-                        let data = JSON.parse(html).data;
-                        if (data.ag_acc_no !== '') {
-                            $('#ag_acc_no').addClass('is-valid');
-                            $('#ag_acc_no').removeClass('is-invalid');
-                            $('#ag_name').val(data.ag_name);
-                            $('#ag_id').val(data.ag_id);
-                        } else {
-                            $('#ag_acc_no').removeClass('is-valid');
-                            $('#ag_acc_no').addClass('is-invalid');
-                            $('#ag_name').val('');
-                            $('#ag_id').val('');
-                        }
-                    },
-                    error: function(err) {
-
-                    }
-                });
-            }
-
-            function toggleDownloadMenu(event, iconElement) {
-                event.preventDefault();
-                document.querySelectorAll('.attachment-menu').forEach(menu => {
-                    menu.style.display = 'none';
-                });
-                const currentMenu = iconElement.nextElementSibling;
-                if (currentMenu.style.display === 'none' || currentMenu.style.display === '') {
-                    currentMenu.style.display = 'block';
-                } else {
-                    currentMenu.style.display = 'none';
-                }
-            }
-
-            function calcGrand(value1, value2, Operator, totalInput) {
-                let grand_Total = 0;
-                grand_Total = Operator === 'multi' ? parseFloat($(value1).val()) * parseFloat($(value2).val()) : parseFloat($(value1).val()) + parseFloat($(value2).val());
-                $(totalInput).val(isNaN(grand_Total) ? '' : grand_Total);
-            }
-
-            function calcTax(taxPercentageSelector, totalSelector, taxSelector) {
-                var taxPercentage = parseFloat($(taxPercentageSelector).val().replace('%', '')) || 0;
-                $(taxSelector).val(((taxPercentage / 100) * (parseFloat($(totalSelector).val()) || 0)).toFixed(2));
-                calcGrand('#total', '#tax', 'plus', '#grand_total');
-            }
-
-            function lastAmount() {
-                let amount = $("#amount").val();
-                let rate = $("#rate").val();
-                let operator = $('#opr').find(":selected").val();
-                let final_amount;
-
-                if (amount && rate) { // Ensure both amount and rate have values
-                    if (operator === "/") {
-                        final_amount = Number(amount) / Number(rate);
+    </div>
+    <div class="col-2 order-1 table-form bg-white">
+        <div class="align-items-center justify-content-between flex-wrap pt-2">
+            <div>
+                <strong><?php echo strtoupper($_fields['p_s_name']) . ' #'; ?></strong>
+                <?php echo $_fields['sr_no']; ?>
+            </div>
+            <div>
+                <strong>User:</strong> <?php echo $_fields['username']; ?>
+            </div>
+            <div>
+                <strong>Date:</strong> <?php echo my_date($_fields['_date']); ?>
+            </div>
+            <div>
+                <strong>Type:</strong> <?php echo badge(strtoupper($_fields['type']), 'dark'); ?>
+            </div>
+            <div>
+                <strong>Country:</strong> <?php echo $_fields['country']; ?>
+            </div>
+            <div>
+                <strong>Branch:</strong> <?php echo branchName($_fields['branch_id']); ?>
+            </div>
+        </div>
+        <div class="my-3">
+            <!-- Total Details  -->
+            <b>T. AMOUNT: </b><span id="show_total_amount"><?= isset($total_amount) ? $total_amount : ''; ?></span><br>
+            <b>T. TAX: </b><span id="show_total_amount"><?= isset($total_tax) ? $total_tax : ''; ?></span><br>
+            <b>T.B. AMOUNT: </b><span id="show_total_amount"><?= isset($total_bill_amount) ? $total_bill_amount : ''; ?></span>
+        </div>
+        <?php if (!empty($firstRow) && json_decode($firstRow['transfer_details'], true)['transferred_to_accounts'] === true) {
+            echo '<b class="text-success mt-3"><i class="fa fa-check"></i> Transferred</b>';
+        } ?></button>
+        <button class="btn btn-warning d-block btn-sm" onclick="document.querySelector('.transfer-form').classList.toggle('d-none');">Toggle Form</button>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script>
+        function agentDetails() {
+            var agentAccNo = $('#ag_acc_no').val().toUpperCase();
+            $.ajax({
+                type: 'POST',
+                url: 'ajax/fetchAgentDetails.php',
+                data: 'agent_acc_no=' + agentAccNo,
+                success: function(html) {
+                    let data = JSON.parse(html).data;
+                    if (data.ag_acc_no !== '') {
+                        $('#ag_acc_no').addClass('is-valid');
+                        $('#ag_acc_no').removeClass('is-invalid');
+                        $('#ag_name').val(data.ag_name);
+                        $('#ag_id').val(data.ag_id);
                     } else {
-                        final_amount = Number(amount) * Number(rate);
+                        $('#ag_acc_no').removeClass('is-valid');
+                        $('#ag_acc_no').addClass('is-invalid');
+                        $('#ag_name').val('');
+                        $('#ag_id').val('');
                     }
-                    final_amount = final_amount.toFixed(2);
-                    $("#final_amount").val(final_amount);
+                },
+                error: function(err) {
 
-                    let balance = $("#balance").val();
-                    balance = parseFloat(balance);
-                    // if (balance !== 0) {
-                    //     if (final_amount > balance) {
-                    //         disableButton('agPaymentSubmit');
-                    //     } else {
-                    //         enableButton('agPaymentSubmit');
-                    //     }
-                    // } else {
-                    //     disableButton('agPaymentSubmit');
-                    // }
-                    if (balance >= 1) {
-                        if (final_amount <= balance + 0.5) {
-                            enableButton('agPaymentSubmit');
-                        } else {
-                            disableButton('agPaymentSubmit');
-                        }
+                }
+            });
+        }
+
+        function toggleDownloadMenu(event, iconElement) {
+            event.preventDefault();
+            document.querySelectorAll('.attachment-menu').forEach(menu => {
+                menu.style.display = 'none';
+            });
+            const currentMenu = iconElement.nextElementSibling;
+            if (currentMenu.style.display === 'none' || currentMenu.style.display === '') {
+                currentMenu.style.display = 'block';
+            } else {
+                currentMenu.style.display = 'none';
+            }
+        }
+
+        function calcGrand(value1, value2, Operator, totalInput) {
+            let grand_Total = 0;
+            grand_Total = Operator === 'multi' ? parseFloat($(value1).val()) * parseFloat($(value2).val()) : parseFloat($(value1).val()) + parseFloat($(value2).val());
+            $(totalInput).val(isNaN(grand_Total) ? '' : grand_Total);
+        }
+
+        function calcTax(taxPercentageSelector, totalSelector, taxSelector) {
+            var taxPercentage = parseFloat($(taxPercentageSelector).val().replace('%', '')) || 0;
+            $(taxSelector).val(((taxPercentage / 100) * (parseFloat($(totalSelector).val()) || 0)).toFixed(2));
+            calcGrand('#total', '#tax', 'plus', '#grand_total');
+        }
+
+        function lastAmount() {
+            let amount = $("#amount").val();
+            let rate = $("#rate").val();
+            let operator = $('#opr').find(":selected").val();
+            let final_amount;
+
+            if (amount && rate) { // Ensure both amount and rate have values
+                if (operator === "/") {
+                    final_amount = Number(amount) / Number(rate);
+                } else {
+                    final_amount = Number(amount) * Number(rate);
+                }
+                final_amount = final_amount.toFixed(2);
+                $("#final_amount").val(final_amount);
+
+                let balance = $("#balance").val();
+                balance = parseFloat(balance);
+                // if (balance !== 0) {
+                //     if (final_amount > balance) {
+                //         disableButton('agPaymentSubmit');
+                //     } else {
+                //         enableButton('agPaymentSubmit');
+                //     }
+                // } else {
+                //     disableButton('agPaymentSubmit');
+                // }
+                if (balance >= 1) {
+                    if (final_amount <= balance + 0.5) {
+                        enableButton('agPaymentSubmit');
                     } else {
                         disableButton('agPaymentSubmit');
                     }
+                } else {
+                    disableButton('agPaymentSubmit');
                 }
             }
-        </script>
+        }
+    </script>

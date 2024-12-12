@@ -110,6 +110,38 @@ function fetch($table, $where = null)
         return $result;
     }
 }
+function decode_unique_code($unique_code, $keys = 'all')
+{
+    $data = [];
+    if (preg_match('/^([ps])([blc]{1})(se|rd|ld|wr)_(\d+)_(\d+)$/', $unique_code, $matches)) {
+        $data = [
+            'Ttype' => $matches[1],
+            'Tcat' => $matches[2],
+            'Troute' => $matches[3],
+            'TID' => $matches[4],
+            'BLUID' => $matches[5]
+        ];
+    } else {
+        echo "Invalid Unique Code format.";
+        exit;
+    }
+    if ($keys === 'all') {
+        return array_values($data);
+    }
+    if (is_string($keys)) {
+        return $data[$keys] ?? null;
+    }
+    if (is_array($keys)) {
+        $filteredData = [];
+        foreach ($keys as $key) {
+            $filteredData[] = $data[$key] ?? null;
+        }
+        return $filteredData;
+    }
+    echo "Invalid keys parameter.";
+    exit;
+}
+
 
 function recordExists($table, $conditions)
 {
@@ -1075,7 +1107,6 @@ function getCompanyName($kd_id)
     }
     return null;
 }
-
 function purchasePaysArray($purchaseId, $type, $final_amount = false, $GetValue = 'final_amount')
 {
     $purchase_pays = fetch('purchase_pays', array('purchase_id' => $purchaseId, 'type' => $type));

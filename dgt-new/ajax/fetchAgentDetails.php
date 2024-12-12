@@ -20,3 +20,12 @@ if (isset($_POST["agent_acc_no"])) {
     }
     echo json_encode(['data' => $data]);
 }
+if (isset($_POST["acc_no"])) {
+    $acc_no = strtoupper(mysqli_real_escape_string($connect, $_POST['acc_no']));
+    $khaataQ = mysqli_query($connect, "SELECT * FROM khaata WHERE UPPER(khaata_no) = '$acc_no'");
+    $data = ['acc_no' => '', 'acc_name' => '', 'row_id' => ''];
+    if ($khaata = mysqli_fetch_assoc($khaataQ)) {
+        $data = ['acc_no' => strtoupper($khaata['khaata_no']), 'acc_name' => $khaata['khaata_name'], 'row_id' => $khaata['id']];
+    }
+    echo json_encode(['data' => $data]);
+}

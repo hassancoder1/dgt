@@ -541,16 +541,23 @@ if (isset($_POST['LLoadingSubmit'])) {
         $data = ['sea_road' => json_encode($routeDetails)];
         update('transactions', $data, ['id' => $p_id]);
     }
-
+    $_POST['goods_json'] = json_decode($_POST['goods_json'], true);
+    if (isset($_POST['goods_json']['sr_no'])) {
+        unset($_POST['goods_json']['sr_no']);
+    }
+    $_POST['goods_json'] = json_encode($_POST['goods_json']);
     $goods_details = [
         'goods_id' => mysqli_real_escape_string($connect, $_POST['goods_id']),
         'quantity_no' => mysqli_real_escape_string($connect, $_POST['quantity_no']),
+        'rate' => mysqli_real_escape_string($connect, $_POST['rate']),
+        'empty_kgs' => mysqli_real_escape_string($connect, $_POST['empty_kgs']),
         'quantity_name' => mysqli_real_escape_string($connect, $_POST['quantity_name']),
         'size' => mysqli_real_escape_string($connect, $_POST['size']),
         'brand' => mysqli_real_escape_string($connect, $_POST['brand']),
         'origin' => mysqli_real_escape_string($connect, $_POST['origin']),
         'net_weight' => mysqli_real_escape_string($connect, $_POST['net_weight']),
-        'gross_weight' => mysqli_real_escape_string($connect, $_POST['gross_weight'])
+        'gross_weight' => mysqli_real_escape_string($connect, $_POST['gross_weight']),
+        'goods_json' => mysqli_real_escape_string($connect, $_POST['goods_json'])
     ];
 
     $data = [

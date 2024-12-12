@@ -86,13 +86,32 @@ $parentGLoadingInfo = json_decode($parentRow['gloading_info'], true);
                         <div class="col-md-3">
                             <div>
                                 <?php
+                                // Define the keys you want to display
+                                $allowedKeys = [
+                                    'received_date',
+                                    'clearing_date',
+                                    'loading_truck_number',
+                                    'truck_returning_date',
+                                    'boe_date',
+                                    'pick_up_date',
+                                    'waiting_if_any',
+                                    'days_waiting',
+                                    'return_date',
+                                    'truck_number',
+                                    'driver_details',
+                                    'transporter_name'
+                                ];
+
+                                // Iterate over $parentAgent or $Agent and display only the allowed keys
                                 foreach ($parentAgent as $key => $value) {
-                                    if ($key === 'received_date' || $key === 'clearing_date' || $key === 'loading_truck_number' || $key === 'truck_returning_date') {
-                                        echo '<b>' . ucwords(str_replace('_', ' ', str_replace('ag_', 'Agent ', $key))) . ': </b>' . $value . "<br>";
-                                    };
+                                    if (in_array($key, $allowedKeys)) {
+                                        // Format and output key and value
+                                        echo '<b>' . ucwords(str_replace('_', ' ', str_replace('ag_', 'Agent ', $key))) . ': </b>' . htmlspecialchars($value) . "<br>";
+                                    }
                                 }
                                 ?>
                             </div>
+
                         </div>
                     <?php
                     endif;

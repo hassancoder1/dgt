@@ -289,12 +289,16 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                         <th>AGENT ID</th>
                         <th>AGENT NAME</th>
                     <?php endif; ?>
-                    <th>Received Date</th>
-                    <th>Clearing Date</th>
-                    <th>L Truck No</th>
-                    <th>Truck.R.Date</th>
-                    <th>T.Bill Amt</th>
-                    <th>Transfer Date</th>
+                    <th>BOE.Date</th>
+                    <th>PickUp.Date</th>
+                    <th>Waiting(YES/NO)</th>
+                    <th>No.of.Days.W</th>
+                    <th>Return.Date</th>
+                    <th>Truck No.</th>
+                    <th>Driver</th>
+                    <th>Transporter</th>
+                    <th>T.Bill.Amt</th>
+                    <th>Acc Trans Date</th>
                     <th>Roz#</th>
                 </tr>
             </thead>
@@ -357,10 +361,14 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                         <?php if (SuperAdmin()): ?>
                             <td class="<?= $SuperCode; ?>"><b><?= $SingleLoading['bl_no']; ?></b></td>
                         <?php endif; ?>
-                        <td class="<?= $rowColor; ?>"><?= $agentDetails['received_date']; ?></td>
-                        <td class="<?= $rowColor; ?>"><?= $agentDetails['clearing_date']; ?></td>
-                        <td class="<?= $rowColor; ?>"><?= $agentDetails['loading_truck_number']; ?></td>
-                        <td class="<?= $rowColor; ?>"><?= $agentDetails['truck_returning_date']; ?></td>
+                        <td class="<?= $rowColor; ?>"><?= $agentDetails['boe_date'] ?? ''; ?></td>
+                        <td class="<?= $rowColor; ?>"><?= $agentDetails['pick_up_date'] ?? ''; ?></td>
+                        <td class="<?= $rowColor; ?>"><?= $agentDetails['waiting_if_any'] ?? ''; ?></td>
+                        <td class="<?= $rowColor; ?>"><?= $agentDetails['days_waiting'] ?? ''; ?></td>
+                        <td class="<?= $rowColor; ?>"><?= $agentDetails['return_date'] ?? ''; ?></td>
+                        <td class="<?= $rowColor; ?>"><?= $agentDetails['truck_number'] ?? ''; ?></td>
+                        <td class="<?= $rowColor; ?>"><?= $agentDetails['driver_details'] ?? ''; ?></td>
+                        <td class="<?= $rowColor; ?>"><?= $agentDetails['transporter_name'] ?? ''; ?></td>
                         <td class="<?= $rowColor; ?>"><?= $grandTotal; ?></td>
                         <td class="<?= $rowColor; ?> transfer_date"><?= !empty($createdAt) ? $createdAt : '<i class="fa fa-times text-danger"></i>'; ?></td>
                         <td class="<?= $rowColor; ?>"><?= !empty($roznamchaasDisplay) ? $roznamchaasDisplay : '<i class="fa fa-times text-danger"></i>'; ?></td>

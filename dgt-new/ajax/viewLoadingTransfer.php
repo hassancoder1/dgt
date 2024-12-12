@@ -253,10 +253,14 @@ if ($id > 0) {
                                                         <label for="cargo_transfer" class="form-label">Cargo Transfer</label>
                                                         <select id="cargo_transfer" name="cargo_transfer" class="form-select form-control-sm" required>
                                                             <option disabled selected>Select One</option>
-                                                            <option value="Free Zone">Freezone Warehouse</option>
-                                                            <option value="OFF Site">Offsite Warehouse</option>
-                                                            <option value="Transit">Transit Warehouse</option>
+                                                            <option value="Local Import">Local Import</option>
+                                                            <option value="Free Zone Import">Free Zone Import</option>
+                                                            <option value="Import Re-Export">Import Re-Export</option>
+                                                            <option value="Transit">Transit</option>
+                                                            <option value="Local Export">Local Export</option>
+                                                            <option value="Local Market">Local Market</option>
                                                         </select>
+
                                                     </div>
                                                     <div class="col-md-8">
                                                         <label for="ag_transfer_ids" class="form-label">Transfer IDs <small> ( Ex:66-4,57-1,66-5 )</small></label>

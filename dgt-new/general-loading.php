@@ -529,9 +529,16 @@ if (isset($_POST['GLoadingSubmit'])) {
         'xp_acc_kd_id' => mysqli_real_escape_string($connect, $_POST['xp_acc_kd_id']),
         'xp_acc_details' => mysqli_real_escape_string($connect, $_POST['xp_acc_details'])
     ];
+    $_POST['goods_json'] = json_decode($_POST['goods_json'], true);
+    if (isset($_POST['goods_json']['sr_no'])) {
+        unset($_POST['goods_json']['sr_no']);
+    }
+    $_POST['goods_json'] = json_encode($_POST['goods_json']);
     $goods_details = [
         'goods_id' => mysqli_real_escape_string($connect, $_POST['goods_id']),
         'quantity_no' => mysqli_real_escape_string($connect, $_POST['quantity_no']),
+        'rate' => mysqli_real_escape_string($connect, $_POST['rate']),
+        'empty_kgs' => mysqli_real_escape_string($connect, $_POST['empty_kgs']),
         'quantity_name' => mysqli_real_escape_string($connect, $_POST['quantity_name']),
         'size' => mysqli_real_escape_string($connect, $_POST['size']),
         'brand' => mysqli_real_escape_string($connect, $_POST['brand']),
@@ -539,7 +546,8 @@ if (isset($_POST['GLoadingSubmit'])) {
         'net_weight' => mysqli_real_escape_string($connect, $_POST['net_weight']),
         'gross_weight' => mysqli_real_escape_string($connect, $_POST['gross_weight']),
         'container_no' => mysqli_real_escape_string($connect, $_POST['container_no']),
-        'container_name' => mysqli_real_escape_string($connect, $_POST['container_name'])
+        'container_name' => mysqli_real_escape_string($connect, $_POST['container_name']),
+        'goods_json' => mysqli_real_escape_string($connect, $_POST['goods_json'])
     ];
     $shipping_details = [
         'shipping_name' => mysqli_real_escape_string($connect, $_POST['shipping_name']),
@@ -570,7 +578,6 @@ if (isset($_POST['GLoadingSubmit'])) {
         'shipping_details' => json_encode($shipping_details),
         'attachments' => json_encode($uploadedFiles)
     ];
-
     if (isset($_POST['action']) && isset($_POST['id'])) {
         $url_ = "general-loading?p_id=" . $p_id . "&view=1";
         if ($data['attachments'] == '[]') {

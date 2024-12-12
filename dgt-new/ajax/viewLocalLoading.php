@@ -163,7 +163,7 @@ if ($id > 0) {
                                     $items = $_fields['items'];
                                     $qty_no = $total_kgs = $net_kgs = $final_amount = $total_tax_amount = $total_with_tax = 0;
                                     foreach ($items as $details) {
-                                        echo '<tr class="goodRow" data-empty-kgs="' . $details['empty_kgs'] . '" data-rate="' . $details['qty_kgs'] . '" data-quantity="' . $details['qty_no'] . '" data-quantity-name="' . $details['qty_name'] . '" data-net-kgs="' . round($details['net_kgs'], 2) . '" data-gross-kgs="' . round($details['total_kgs'], 2) . '">';
+                                        echo '<tr class="goodRow" data-empty-kgs="' . $details['empty_kgs'] . '" data-rate="' . $details['qty_kgs'] . '" data-quantity="' . $details['qty_no'] . '" data-quantity-name="' . $details['qty_name'] . '" data-net-kgs="' . round($details['net_kgs'], 2) . '" data-gross-kgs="' . round($details['total_kgs'], 2) . '" data-goodsjson=\'' . json_encode($details) . '\'>';
                                         echo '<td>' . $details['sr'] . '</td>';
                                         echo '<td class="TgoodsId d-none">' . $details['goods_id'] . '</td>';
                                         echo '<td>' . goodsName($details['goods_id']) . '</td>';
@@ -499,10 +499,14 @@ if ($id > 0) {
                                         <label for="warehouse_transfer" class="form-label">Cargo Transfer</label>
                                         <select id="warehouse_transfer" name="warehouse_transfer" class="form-select form-control-sm" required>
                                             <option disabled <?= empty($Transfer['warehouse_transfer']) ? 'selected' : '' ?>>Select One</option>
-                                            <option value="Free Zone" <?= isset($Transfer['warehouse_transfer']) && $Transfer['warehouse_transfer'] === 'Free Zone' ? 'selected' : '' ?>>Freezone Warehouse</option>
-                                            <option value="OFF Site" <?= isset($Transfer['warehouse_transfer']) && $Transfer['warehouse_transfer'] === 'OFF Site' ? 'selected' : '' ?>>Offsite Warehouse</option>
-                                            <option value="Transit" <?= isset($Transfer['warehouse_transfer']) && $Transfer['warehouse_transfer'] === 'Transit' ? 'selected' : '' ?>>Transit Warehouse</option>
+                                            <option value="Local Import" <?= isset($Transfer['warehouse_transfer']) && $Transfer['warehouse_transfer'] === 'Local Import' ? 'selected' : '' ?>>Local Import</option>
+                                            <option value="Free Zone Import" <?= isset($Transfer['warehouse_transfer']) && $Transfer['warehouse_transfer'] === 'Free Zone Import' ? 'selected' : '' ?>>Free Zone Import</option>
+                                            <option value="Import Re-Export" <?= isset($Transfer['warehouse_transfer']) && $Transfer['warehouse_transfer'] === 'Import Re Export' ? 'selected' : '' ?>>Import Re-Export</option>
+                                            <option value="Transit" <?= isset($Transfer['warehouse_transfer']) && $Transfer['warehouse_transfer'] === 'Transit' ? 'selected' : '' ?>>Transit</option>
+                                            <option value="Local Export" <?= isset($Transfer['warehouse_transfer']) && $Transfer['warehouse_transfer'] === 'Local Export' ? 'selected' : '' ?>>Local Export</option>
+                                            <option value="Local Market" <?= isset($Transfer['warehouse_transfer']) && $Transfer['warehouse_transfer'] === 'Local Market' ? 'selected' : '' ?>>Local Market</option>
                                         </select>
+
                                     </div>
                                     <div class="col-md-5">
                                         <label for="report" class="form-label">Report</label>
@@ -542,6 +546,7 @@ if ($id > 0) {
                                 ?>
 
                                 <div class="row g-3">
+                                    <input type="hidden" name="goods_json" id="goods_json">
                                     <!-- Goods Name -->
                                     <div class="col-md-2">
                                         <label for="goods_id" class="form-label">Goods Name</label>
@@ -609,6 +614,8 @@ if ($id > 0) {
                                     <div class="col-md-1">
                                         <label for="quantity_no" class="form-label">Qty No</label>
                                         <input type="number" name="quantity_no" value="<?= $Goods['quantity_no']; ?>" id="quantity_no" required class="form-control form-control-sm" step="0.01" onkeyup="autoCalc('#quantity_no', '#gross_weight', '#net_weight', Rate, emptyKgs)">
+                                        <input type="hidden" name="rate" id="rate" value="">
+                                        <input type="hidden" name="empty_kgs" id="empty_kgs" value="">
                                     </div>
 
                                     <!-- Gross Weight -->
@@ -771,6 +778,8 @@ if ($id > 0) {
         $(grossWeight).val(myGrossweight.toFixed(2));
         let myNetWeight = myGrossweight - (parseFloat(emptyKgs) * qty);
         $(netWeight).val(myNetWeight.toFixed(2));
+        $('#rate').val(Rate);
+        $('#empty_kgs').val(emptyKgs);
     }
 
     function populateFields() {
@@ -795,8 +804,11 @@ if ($id > 0) {
                 $('#quantity_no').val(row.data('quantity')).trigger('keyup');
                 $('#gross_weight').val(row.data('gross-kgs'));
                 $('#net_weight').val(row.data('net-kgs'));
+                $('#goods_json').val(JSON.stringify(row.data('goodsjson')));
                 emptyKgs = row.data('empty-kgs');
                 Rate = row.data('rate');
+                $('#rate').val(Rate);
+                $('#empty_kgs').val(emptyKgs);
                 return false;
             }
         });

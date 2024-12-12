@@ -95,7 +95,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
             Agent Payments
         </h1>
         <div class="d-flex gap-2">
-        <nav aria-label="Page navigation example">
+            <nav aria-label="Page navigation example">
                 <ul class="pagination justify-content-center pagination-sm">
                     <?php
                     $current_url = $_SERVER['REQUEST_URI'];
@@ -290,11 +290,14 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                         <th>AGENT ID</th>
                         <th>AGENT NAME</th>
                     <?php endif; ?>
-                    <th>Received Date</th>
-                    <th>Clearing Date</th>
-                    <th>L Truck No</th>
-                    <th>Truck Returning Date</th>
-                    <th>Total Bill Amount</th>
+                    <th>BOE.Date</th>
+                    <th>PickUp.Date</th>
+                    <th>Waiting(YES/NO)</th>
+                    <th>No.of.Days.W</th>
+                    <th>Return.Date</th>
+                    <th>Truck No.</th>
+                    <th>Driver</th>
+                    <th>Transporter</th>
                 </tr>
             </thead>
             <tbody>
@@ -311,7 +314,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                 }
                 foreach ($Loadings as $SingleLoading) {
                     $agentDetails = json_decode($SingleLoading['agent_details'], true);
-                    if (!isset($agentDetails['bill_of_entry_no'])) {
+                    if (!isset($agentDetails['transporter_name'])) {
                         continue;
                     }
                     $loadingId = $SingleLoading['id'];
@@ -326,17 +329,18 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                         <?php if (!SuperAdmin()): ?>
                             <td class="<?= $rowColor; ?>"><?= $row_count + 1; ?></td>
                         <?php endif; ?>
-                        <td class="text-uppercase <?= $SuperCode; ?>"><b><?= SuperAdmin() ? $SingleLoading['type']."#" . $SingleLoading['p_id'] . " ($currentBillNumber)" : $SingleLoading['bl_no']; ?></b></td>
+                        <td class="text-uppercase <?= $SuperCode; ?>"><b><?= SuperAdmin() ? $SingleLoading['type'] . "#" . $SingleLoading['p_id'] . " ($currentBillNumber)" : $SingleLoading['bl_no']; ?></b></td>
                         <td class="<?= $rowColor; ?>"><?= $agentDetails['ag_acc_no']; ?></td>
                         <td class="<?= $rowColor; ?>"><?= $agentDetails['ag_id']; ?></td>
                         <td class="<?= $rowColor; ?>"><?= $agentDetails['ag_name']; ?></td>
-                        <?php if (SuperAdmin()): ?>
-                            <td class="<?= $SuperCode; ?>"><b><?= $agentDetails['bill_of_entry_no']; ?></b></td>
-                        <?php endif; ?>
-                        <td class="<?= $rowColor; ?>"><?= $agentDetails['received_date']; ?></td>
-                        <td class="<?= $rowColor; ?>"><?= $agentDetails['clearing_date']; ?></td>
-                        <td class="<?= $rowColor; ?>"><?= $agentDetails['loading_truck_number']; ?></td>
-                        <td class="<?= $rowColor; ?>"><?= $agentDetails['truck_returning_date']; ?></td>
+                        <td class="<?= $rowColor; ?>"><?= $agentDetails['boe_date'] ?? ''; ?></td>
+                        <td class="<?= $rowColor; ?>"><?= $agentDetails['pick_up_date'] ?? ''; ?></td>
+                        <td class="<?= $rowColor; ?>"><?= $agentDetails['waiting_if_any'] ?? ''; ?></td>
+                        <td class="<?= $rowColor; ?>"><?= $agentDetails['days_waiting'] ?? ''; ?></td>
+                        <td class="<?= $rowColor; ?>"><?= $agentDetails['return_date'] ?? ''; ?></td>
+                        <td class="<?= $rowColor; ?>"><?= $agentDetails['truck_number'] ?? ''; ?></td>
+                        <td class="<?= $rowColor; ?>"><?= $agentDetails['driver_details'] ?? ''; ?></td>
+                        <td class="<?= $rowColor; ?>"><?= $agentDetails['transporter_name'] ?? ''; ?></td>
                         <td class="<?= $rowColor; ?> bill-status fw-bold"><?= $grandTotal; ?></td>
                     </tr>
                 <?php
