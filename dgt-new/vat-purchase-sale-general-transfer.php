@@ -1,7 +1,8 @@
 <?php
-$page_title = 'CUSTOM CLEARING => WAREHOUSE';
-
-// Determine the CCW Page based on GET parameter
+$page_title = 'P/S GENERAL TRANSFER';
+include("header.php");
+$pageURL = "vat-purchase-sale-general-transfer";
+$_GET['CCWpage'] = 'all';
 $CCWPageMapping = [
     'transit' => 'Transit',
     'freezone-import' => 'Free Zone Import',
@@ -11,12 +12,6 @@ $CCWPageMapping = [
     'local-market' => 'Local Market',
     'all' => 'All WareHouses'
 ];
-$CCWPage = $CCWPageMapping[$_GET['CCWpage'] ?? ''] ?? '';
-$page_title .= " ($CCWPage)";
-$pageURL = "custom-clearing-warehouse?CCWpage=" . ($_GET['CCWpage'] ?? '');
-include("header.php");
-
-// Initialize filter variables
 $filters = [
     'size' => '',
     'brand' => '',
@@ -28,19 +23,13 @@ $filters = [
     'qty_no' => ''
 ];
 $is_search = false;
-
-// Pagination setup
 $rows_per_page = 50;
 $current_page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($current_page - 1) * $rows_per_page;
-
 global $connect;
 $conditions = [];
-
-// Handle filters
 if ($_GET) {
     $resetFilters = removeFilter($pageURL);
-
     foreach ($filters as $key => &$value) {
         if (!empty($_GET[$key])) {
             $value = mysqli_real_escape_string($connect, $_GET[$key]);
@@ -67,15 +56,8 @@ if ($_GET) {
         }
     }
 }
-$print_url = '';
-if ($_GET['CCWpage'] !== 'all') {
-    $NotAll = "data_for='$CCWPage' AND";
-} else {
-    $NotAll = '';
-    $print_url = 'print/print-custom-warehouse-general?CCWpage=all';
-}
 $where_clause = !empty($conditions) ? ' AND ' . implode(' AND ', $conditions) : '';
-$sql = "SELECT * FROM data_copies WHERE $NotAll unique_code LIKE 'p%'";
+$sql = "SELECT * FROM data_copies WHERE unique_code LIKE '_l%'";
 $count_sql = "SELECT COUNT(*) AS total FROM ({$sql}) AS subquery";
 $total_rows_result = mysqli_query($connect, $count_sql);
 $total_rows = mysqli_fetch_assoc($total_rows_result)['total'];
@@ -99,46 +81,7 @@ $total_pages = ceil($total_rows / $rows_per_page);
             <!-- 60% Section -->
             <div class="card mb-3">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <h5 class="card-title fw-bold text-success"><?= $CCWPage; ?></h5>
-                        <div class="dropdown hide-on-print">
-                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fa fa-print"></i>
-                            </button>
-                            <ul class="dropdown-menu mt-2" aria-labelledby="dropdownMenuButton">
-                                <li>
-                                    <a class="dropdown-item" href="<?= $print_url; ?>" target="_blank">
-                                        <i class="fas text-secondary fa-eye me-2"></i> Print Preview
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="javascript:void(0);" onclick="openAndPrint('<?= $print_url; ?>')">
-                                        <i class="fas text-secondary fa-print me-2"></i> Print
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="#" onclick="getFileThrough('pdf', '<?= $print_url; ?>')">
-                                        <i id="pdfIcon" class="fas text-secondary fa-file-pdf me-2"></i> Download PDF
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="#" onclick="getFileThrough('word', '<?= $print_url; ?>')">
-                                        <i id="wordIcon" class="fas text-secondary fa-file-word me-2"></i> Download Word File
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="#" onclick="getFileThrough('whatsapp', '<?= $print_url; ?>')">
-                                        <i id="whatsappIcon" class="fa text-secondary fa-whatsapp me-2"></i> Send in WhatsApp
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="#" onclick="getFileThrough('email', '<?= $print_url; ?>')">
-                                        <i id="emailIcon" class="fas text-secondary fa-envelope me-2"></i> Send In Email
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
+                    <h5 class="card-title fw-bold text-success">P/S GENERAL TRANSFER</h5>
                     <div class="row mb-3">
                         <div class="col-md-3">
                             <label for="goods_id" class="form-label">Goods</label>
@@ -360,7 +303,7 @@ $total_pages = ceil($total_rows / $rows_per_page);
                 type: 'post',
                 data: {
                     unique_code: uniqueCode,
-                    page: "custom-clearing-warehouse",
+                    page: "<?= $pageURL; ?>",
                     print_type: printType,
                     CCWpage: "<?= $_GET['CCWpage']; ?>",
                     timestamp: currentFormattedDateTime()
@@ -418,11 +361,7 @@ if (isset($_POST['reSubmit'])) {
                 updateNestedJson($ldata, $key, $value);
             }
         }
-        if (in_array($key, ['boe_no', 'boe_date', 'pick_up_date', 'waiting_days', 'return_date', 'transporter_name', 'truck_number', 'details', 'driver_name', 'driver_number'])) {
-            $ldata['agent'][$key] = $value;
-        }
     }
-
     $data = [
         'data_for' => mysqli_real_escape_string($connect, $_POST['warehouse_transfer']),
         'tdata' => mysqli_real_escape_string($connect, json_encode($tdata)),

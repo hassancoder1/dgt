@@ -428,6 +428,11 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
     });
 </script>
 <?php
+function safeJsonEncode($data)
+{
+    global $connect;
+    return mysqli_real_escape_string($connect, json_encode($data));
+}
 if (isset($_POST['LLoadingSubmit'])) {
     $msg = 'DB Error';
     $msgType = 'danger';
@@ -474,11 +479,11 @@ if (isset($_POST['LLoadingSubmit'])) {
     WHERE uid = '$uid' 
     AND JSON_EXTRACT(lloading_info, '$.child_ids') IS NOT NULL
 "));
-    if ($parent_uid_data && $parent_uid_data['id'] !== $_POST['id']) {
+    if ($parent_uid_data && $parent_uid_data['id'] !== ($_POST['id'] ?? '')) {
         $data = json_decode($parent_uid_data['lloading_info'], true);
         $existing_child_ids = isset($data['child_ids']) ? $data['child_ids'] : '';
         $existing_child_ids_count = isset($data['child_ids_count']) ? $data['child_ids_count'] : 0;
-        if ($_GET['action'] === 'update') {
+        if (($_GET['action'] ?? '') === 'update') {
             $child_ids = $existing_child_ids;
             $child_ids_count = $existing_child_ids_count;
         } else {
@@ -514,7 +519,7 @@ if (isset($_POST['LLoadingSubmit'])) {
         ]);
     }
     $mustUpdateRoute = !(mysqli_num_rows($ActiveUIDQ) > 0) || isset($_POST['updateRoutes']);
-
+    $transfer_details = [];
     if ($route === 'local') {
         $transfer_details = [
             'truck_no' => mysqli_real_escape_string($connect, $_POST['truck_no']) ?? '',
@@ -576,6 +581,75 @@ if (isset($_POST['LLoadingSubmit'])) {
         'attachments' => json_encode($uploadedFiles)
     ];
 
+    $Ttempdata = mysqli_fetch_assoc(fetch('transactions', ['id' => $p_id]));
+    $tdata = array_merge(
+        transactionSingle($p_id),
+        ['sea_road_array' => json_decode($Ttempdata['sea_road'], true)] ?? [],
+        ['notify_party_details' => json_decode($Ttempdata['notify_party_details'], true)] ?? [],
+        ['third_party_bank' => json_decode($Ttempdata['third_party_bank'], true)] ?? [],
+        ['reports' => json_decode($Ttempdata['reports'], true)] ?? []
+    );
+    $Transfer = array_merge($transfer_details, $_POST['warehouse_entry'] ? ['sold_from' => [$_POST['warehouse_entry']]] : []);
+    $query = "
+    
+";
+    $currentLoading = mysqli_fetch_assoc(mysqli_query($connect, "SELECT AUTO_INCREMENT FROM information_schema.TABLES WHERE TABLE_SCHEMA = '$dbname' AND TABLE_NAME = 'local_loading'"))['AUTO_INCREMENT'];
+    $tempG = $goods_details;
+    $tempG['goods_json'] = array_merge(json_decode($_POST['goods_json'], true), [
+        // 'qty_no' => (isset($_POST['warehouse_entry']) ? 0 : $tempG['quantity_no']),
+        'qty_no' => $tempG['quantity_no'],
+        'qty_name' => $tempG['quantity_name'],
+        // 'total_kgs' => (isset($_POST['warehouse_entry']) ? 0 : $tempG['gross_weight']),
+        // 'net_kgs' => (isset($_POST['warehouse_entry']) ? 0 : $tempG['net_weight']),
+        'total_kgs' => $tempG['gross_weight'],
+        'net_kgs' => $tempG['net_weight'],
+        'rate1' => $tempG['rate'],
+        'empty_kgs' => $tempG['empty_kgs'],
+        'size' => $tempG['size'],
+        'brand' => $tempG['brand'],
+        'origin' => $tempG['origin'],
+        'goods_id' => $tempG['goods_id'],
+    ]);
+    $TempData = $data;
+    unset($TempData['goods_details'], $TempData['transfer_details'], $TempData['lloading_info']);
+    $ldata = array_merge($TempData, ['id' => $currentLoading, 'good' => $tempG, 'transfer' => $Transfer, 'info' => $my]);
+    $CCWdata = [
+        'data_for' => $_POST['warehouse_transfer'],
+        'unique_code' => $_POST['unique_code'] . $currentLoading,
+        'tdata' => safeJsonEncode($tdata),
+        'ldata' => safeJsonEncode($ldata),
+    ];
+    if (!recordExists('data_copies', ['unique_code' => $CCWdata['unique_code']])) {
+        insert('data_copies', $CCWdata);
+    } else {
+        update('data_copies', $CCWdata, ['unique_code' => $CCWdata['unique_code']]);
+    }
+    if (isset($_POST['warehouse_entry'])) {
+        $p_unique_code = explode('~', $_POST['warehouse_entry'])[0];
+        $existingLdata = json_decode(
+            mysqli_fetch_assoc(fetch('data_copies', ['unique_code' => $p_unique_code]))['ldata'],
+            true
+        );
+        $qty_no = $existingLdata['good']['goods_json']['qty_no'] -= $tempG['quantity_no'];
+        $qty_kgs = $existingLdata['good']['goods_json']['qty_kgs'] ?? 0;
+        $empty_kgs = $existingLdata['good']['goods_json']['empty_kgs'] ?? 0;
+        $rate1 = $existingLdata['good']['goods_json']['rate1'] ?? 0;
+        $total_kgs = $qty_no * $qty_kgs;
+        $total_qty_kgs = $qty_no * $empty_kgs;
+        $net_kgs = $total_kgs - $total_qty_kgs;
+        $amount = ($net_kgs > 0) ? round($net_kgs * $rate1, 3) : 0;
+        $tax_percent = $existingLdata['good']['goods_json']['tax_percent'] ?? 0;
+        $tax_amount = round($amount * ($tax_percent / 100), 2);
+        $total_with_tax = round($amount + $tax_amount, 2);
+        $existingLdata['good']['goods_json']['total_kgs'] = round($total_kgs, 2);
+        $existingLdata['good']['goods_json']['total_qty_kgs'] = round($total_qty_kgs, 2);
+        $existingLdata['good']['goods_json']['net_kgs'] = round($net_kgs, 2);
+        $existingLdata['good']['goods_json']['amount'] = $amount;
+        $existingLdata['good']['goods_json']['tax_amount'] = $tax_amount;
+        $existingLdata['good']['goods_json']['total_with_tax'] = $total_with_tax;
+        $existingLdata['transfer']['sold_to'][] = $_POST['unique_code'] . $currentLoading . '~' . $tempG['goods_id'] . '~' . goodsName($tempG['goods_id']) . '~' . $tempG['quantity_no'] . '~' . $tempG['quantity_name'] . '~' . $tempG['gross_weight'] . '~' . $tempG['net_weight'] . '~' . $_POST['warehouse_transfer'] . '~' . $sr_no;
+        update('data_copies', ['ldata' => safeJsonEncode($existingLdata)], ['unique_code' => $p_unique_code]);
+    }
     if (isset($_POST['action']) && isset($_POST['id'])) {
         $url_ = "local-loading?p_id=" . $p_id . "&view=1";
         if ($data['attachments'] == '[]') {

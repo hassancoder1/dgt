@@ -296,6 +296,7 @@ if ($id > 0) {
                     <div class="card mt-3 transfer-form d-none">
                         <div class="card-body p-3">
                             <form method="post" class="table-form <?= (isset($_POST['action']) ? $_POST['action'] : '') === 'update' ? 'border border-danger p-2' : ''; ?>" onsubmit="return compareValues()" enctype="multipart/form-data">
+                                <input type="hidden" name="unique_code" value="<?= $record['p_s'] . $record['type'][0] . ($sea_road['route'] === 'local' ? 'ld' : 'wr') . '_' . $record['id'] . '_'; ?>">
                                 <?php
                                 $routeDetails = [
                                     'uid' => $sea_road['uid'] ?? '',
@@ -495,23 +496,85 @@ if ($id > 0) {
                                             value="<?php echo $Transfer['receiving_date']; ?>">
                                     </div>
 
+                                    <?php
+                                    $warehouse = isset($Transfer['warehouse_transfer']) && !empty($Transfer['warehouse_transfer']) ? $Transfer['warehouse_transfer'] : '';
+                                    $warehouseOptions = ['Local Import', 'Free Zone Import', 'Import Re-Export', 'Transit', 'Local Export', 'Local Market'];
+                                    $saleCheck = '';
+                                    if ($record['p_s'] === 's') {
+                                        $saleCheck = 'onchange="currentStock(this)"';
+                                    }
+                                    ?>
+
+                                    <!-- Cargo Transfer Dropdown -->
                                     <div class="col-md-3">
                                         <label for="warehouse_transfer" class="form-label">Cargo Transfer</label>
-                                        <select id="warehouse_transfer" name="warehouse_transfer" class="form-select form-control-sm" required>
-                                            <option disabled <?= empty($Transfer['warehouse_transfer']) ? 'selected' : '' ?>>Select One</option>
-                                            <option value="Local Import" <?= isset($Transfer['warehouse_transfer']) && $Transfer['warehouse_transfer'] === 'Local Import' ? 'selected' : '' ?>>Local Import</option>
-                                            <option value="Free Zone Import" <?= isset($Transfer['warehouse_transfer']) && $Transfer['warehouse_transfer'] === 'Free Zone Import' ? 'selected' : '' ?>>Free Zone Import</option>
-                                            <option value="Import Re-Export" <?= isset($Transfer['warehouse_transfer']) && $Transfer['warehouse_transfer'] === 'Import Re Export' ? 'selected' : '' ?>>Import Re-Export</option>
-                                            <option value="Transit" <?= isset($Transfer['warehouse_transfer']) && $Transfer['warehouse_transfer'] === 'Transit' ? 'selected' : '' ?>>Transit</option>
-                                            <option value="Local Export" <?= isset($Transfer['warehouse_transfer']) && $Transfer['warehouse_transfer'] === 'Local Export' ? 'selected' : '' ?>>Local Export</option>
-                                            <option value="Local Market" <?= isset($Transfer['warehouse_transfer']) && $Transfer['warehouse_transfer'] === 'Local Market' ? 'selected' : '' ?>>Local Market</option>
+                                        <select id="warehouse_transfer" name="warehouse_transfer" class="form-select form-control-sm" <?= $saleCheck; ?> required>
+                                            <option disabled <?= !in_array($warehouse, $warehouseOptions) ? 'selected' : ''; ?>>Select One</option>
+                                            <option value="Local Import" <?= $warehouse === 'Local Import' ? 'selected' : ''; ?>>Local Import</option>
+                                            <option value="Free Zone Import" <?= $warehouse === 'Free Zone Import' ? 'selected' : ''; ?>>Free Zone Import</option>
+                                            <option value="Import Re-Export" <?= $warehouse === 'Import Re-Export' ? 'selected' : ''; ?>>Import Re-Export</option>
+                                            <option value="Transit" <?= $warehouse === 'Transit' ? 'selected' : ''; ?>>Transit</option>
+                                            <option value="Local Export" <?= $warehouse === 'Local Export' ? 'selected' : ''; ?>>Local Export</option>
+                                            <option value="Local Market" <?= $warehouse === 'Local Market' ? 'selected' : ''; ?>>Local Market</option>
                                         </select>
-
                                     </div>
                                     <div class="col-md-5">
                                         <label for="report" class="form-label">Report</label>
                                         <input type="text" name="report" id="report" required value="<?= $last_record['report']; ?>" class="form-control form-control-sm">
                                     </div>
+
+                                    <!-- Modal Popup for Data -->
+                                    <div class="modal fade" id="warehouseModal" tabindex="-1" aria-labelledby="warehouseModalLabel" aria-hidden="true">
+                                        <div class="modal-dialog modal-xl">
+                                            <div class="modal-content border border-primary rounded-2">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title" id="warehouseModalLabel">Select Warehouse Entry</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <div id="loadingSpinner" class="text-center my-4">
+                                                        <div class="spinner-border" role="status">
+                                                            <span class="visually-hidden">Loading...</span>
+                                                        </div>
+                                                    </div>
+                                                    <div id="warehouseEntries" style="display: none;">
+                                                        <!-- Table for Entries -->
+                                                        <table class="table table-bordered">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th><i class="far fa-circle"></i></th>
+                                                                    <th>P#(SR#)</th>
+                                                                    <th>Allot</th>
+                                                                    <th>Goods Name</th>
+                                                                    <th>Size</th>
+                                                                    <th>Brand</th>
+                                                                    <th>Origin</th>
+                                                                    <th>Quantity</th>
+                                                                    <th>Gross Weight</th>
+                                                                    <th>Net Weight</th>
+                                                                    <th>Container No</th>
+                                                                    <th>Container Name</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody id="entriesTableBody">
+                                                                <!-- Data rows will be inserted here dynamically -->
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" id="connectButton" class="btn btn-primary" disabled>Connect</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <?php if ($record['p_s'] === 's') { ?>
+                                        <div class="col-md-5">
+                                            <label for="warehouse_entry" class="form-label">Current Entries In Warehouse</label>
+                                            <select id="warehouse_entry" name="warehouse_entry" class="form-select form-select-sm">
+                                            </select>
+                                        </div>
+                                    <?php } ?>
                                 </div>
 
                                 <!-- Goods Details -->
@@ -700,7 +763,11 @@ if ($id > 0) {
 <?php }
 } ?>
 <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    let selectedEntry = null;
+    let saleQtyValue = null;
+
     function compareValues() {
         let remainingQty = parseInt('<?= $remaining_quantity_no + (isset($updateRow) ? $Goods['quantity_no'] : 0); ?>');
         let remainingGross = parseInt('<?= $remaining_gross_weight + (isset($updateRow) ? $Goods['gross_weight'] : 0); ?>');
@@ -780,6 +847,7 @@ if ($id > 0) {
         $(netWeight).val(myNetWeight.toFixed(2));
         $('#rate').val(Rate);
         $('#empty_kgs').val(emptyKgs);
+        saleQtyValue = qty;
     }
 
     function populateFields() {
@@ -797,8 +865,6 @@ if ($id > 0) {
             const rowSize = row.find('.size').text();
             const rowBrand = row.find('.brand').text();
             const rowOrigin = row.find('.origin').text();
-            console.log(TgoodsId, rowSize, rowBrand, rowOrigin);
-            console.log(goodsId, size, brand, origin);
             if (goodsId === TgoodsId && size === rowSize && brand === rowBrand && origin === rowOrigin) {
                 $('#myquantity_name').val(row.data('quantity-name'));
                 $('#quantity_no').val(row.data('quantity')).trigger('keyup');
@@ -813,4 +879,99 @@ if ($id > 0) {
             }
         });
     }
+
+    function currentStock(event) {
+        if (saleQtyValue !== null) {
+            const selectedWarehouse = $('#warehouse_transfer').val() ?? '';
+            $('#warehouse_entry').html('');
+            $('#entriesTableBody').html('');
+            $('#warehouseModal').modal('show');
+            $('#loadingSpinner').show();
+            $('#connectButton').prop('disabled', true);
+
+            $.ajax({
+                type: 'POST',
+                url: 'ajax/purchase_enteries_in_warehouse.php',
+                data: {
+                    warehouse: selectedWarehouse
+                },
+                success: function(res) {
+                    try {
+                        const data = JSON.parse(res);
+                        if (data && Object.keys(data).length > 0) {
+                            let entriesHtml = '';
+                            Object.entries(data).forEach(([warehouse, entries]) => {
+                                entriesHtml += `
+                                <tr>
+                                    <td colspan="12" class="bg-primary text-white text-center">
+                                        Warehouse: ${warehouse}
+                                    </td>
+                                </tr>`;
+                                entries.forEach(entry => {
+                                    entriesHtml += `
+                                    <tr>
+                                        <td>
+                                            <input type="radio" name="warehouseEntry" 
+                                                value="${entry.unique_code}~${entry.goods_id}~${entry.goods_name}~${entry.quantity_no}~${entry.quantity_name}~${entry.gross_weight}~${entry.net_weight}" />
+                                        </td>
+                                        <td class="d-none">P#${entry.p_id} (${entry.sr_no}) => ${entry.goods_name} (${entry.quantity_no}) ${entry.quantity_name}</td>
+                                        <td>P#${entry.p_id} (${entry.sr_no})</td>
+                                        <td>${entry.allot}</td>
+                                        <td>${entry.goods_name}</td>
+                                        <td>${entry.size}</td>
+                                        <td>${entry.brand}</td>
+                                        <td>${entry.origin}</td>
+                                        <td>
+                                            <span class="ajax-qty">${entry.quantity_no}</span>
+                                            <sub>${entry.quantity_name}</sub>
+                                        </td>
+                                        <td>${entry.gross_weight}</td>
+                                        <td>${entry.net_weight}</td>
+                                        <td>${entry.container_no}</td>
+                                        <td>${entry.container_name}</td>
+                                    </tr>`;
+                                });
+                            });
+                            $('#entriesTableBody').html(entriesHtml);
+                            $('#warehouseEntries').show();
+                        } else {
+                            $('#entriesTableBody').html('<tr><td colspan="12" class="text-center">No entries found.</td></tr>');
+                        }
+                    } catch (error) {
+                        console.error('Error parsing response:', error);
+                    } finally {
+                        $('#loadingSpinner').hide();
+                    }
+                },
+                error: function() {
+                    $('#entriesTableBody').html('<tr><td colspan="12" class="text-danger text-center">Error fetching data.</td></tr>');
+                    $('#loadingSpinner').hide();
+                }
+            });
+        } else {
+            alert("Please Fill Quantity Box First!");
+        }
+    }
+    $(document).on('change', '#warehouseEntries input[type="radio"]', function() {
+        selectedEntry = $(this).val();
+        $('#connectButton').prop('disabled', false);
+    });
+    $('#connectButton').click(function() {
+        if (selectedEntry) {
+            const selectedRadio = $('#warehouseEntries input[type="radio"]:checked');
+            const selectedLabel = selectedRadio.closest('tr').find('td').eq(1).text().trim();
+            let purchasedQtyValue = parseFloat(selectedRadio.closest('tr').find('td').eq(8).find('.ajax-qty').text().trim());
+            if (saleQtyValue <= purchasedQtyValue) {
+                if (selectedLabel) {
+                    const optionHtml = `<option value="${selectedEntry}" selected>${selectedLabel}</option>`;
+                    $('#warehouse_entry').html(optionHtml);
+                    $('#warehouseModal').modal('hide');
+                } else {
+                    alert('Failed to retrieve entry details. Please try again.');
+                }
+            } else {
+                alert('Sale Quantity is greater then purchased');
+            }
+        }
+    });
 </script>

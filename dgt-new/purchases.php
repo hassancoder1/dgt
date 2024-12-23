@@ -343,7 +343,8 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
             background-color: #f8f9fa !important;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
-        #RecordsTable thead th{
+
+        #RecordsTable thead th {
             background-color: #f8f9fa !important;
         }
 
@@ -367,11 +368,17 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
             background-color: #f8f9fa;
             z-index: 3;
         }
-        #RecordsTable .sticky-column:first-child{
+
+        #RecordsTable .sticky-column:first-child {
             left: 0;
         }
-        #RecordsTable .sticky-column:nth-child(2){
-            left: 66px;
+
+        #RecordsTable .sticky-column:nth-child(2) {
+            left: 72px;
+        }
+
+        #RecordsTable .sticky-column:nth-child(3) {
+            left: 149px;
         }
     </style>
     <div class="table-responsive mt-4" id="RecordsTable">
@@ -380,6 +387,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                 <tr class="text-nowrap sticky-row">
                     <th class="sticky-column">Bill#</th>
                     <th class="sticky-column">Type</th>
+                    <th class="sticky-column">Allot</th>
                     <th>BR.</th>
                     <th>Date</th>
                     <th>A/c</th>
@@ -455,6 +463,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                             <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $id;
                             echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?></td>
                         <td class="sticky-column <?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['type']); ?></td>
+                        <td class="sticky-column <?= $rowColor; ?>"><?= $_fields_single['items'][0]['allotment_name'] ?? ''; ?></td>
                         <td class="<?php echo $rowColor; ?> branch"><?php echo branchName($_fields_single['branch_id']); ?></td>
                         <td class="<?php echo $rowColor; ?>"><?php echo my_date($_fields_single['_date']);; ?></td>
                         <td class="acc_no <?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['cr_acc']); ?></td>

@@ -43,7 +43,7 @@ function generateUniqueBillNo($existingBillNumbers)
 <div class="fixed-top">
     <?php require_once('nav-links.php'); ?>
 </div>
-<div class="mx-5 bg-white p-3" style="margin-top:-30px;">
+<div class="bg-white p-3 <?= isset($_GET['editID']) ? 'container mx-auto' : 'mx-5'; ?>" style="margin-top:-30px;">
     <?php if (!isset($_GET['editID']) && !isset($_GET['viewID'])) { ?>
         <div>
             <div class="d-flex justify-content-between align-items-center w-100">
@@ -151,7 +151,7 @@ function generateUniqueBillNo($existingBillNumbers)
         <div>
             <div class="d-flex justify-content-between align-items-center">
                 <h1 class="mb-2" id="formHeading" style="font-size: 2rem; font-weight: 700; color: #333; text-transform: uppercase; letter-spacing: 1.5px; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">
-                    <?= empty($editID) ? 'New' : 'Edit'; ?> Bill
+                    <?= isset($_GET['editID']) && empty($_GET['editID']) ? 'New' : 'Edit'; ?> Bill
                 </h1>
                 <div class="me-2">
                     <a href="<?= $pageURL; ?>" class="btn btn-sm btn-danger"><i class="fa fa-times"></i></a>
@@ -254,18 +254,15 @@ function generateUniqueBillNo($existingBillNumbers)
                 </table>
 
                 <!-- Totals Section -->
-                <div class="d-flex justify-content-end align-items-center">
+                <div class="d-flex justify-content-end align-items-center g-2">
                     <div>
                         <strong>Total Amount:</strong> <span id="totalAmountDisplay"><?= $record['total_amount'] ?? 0; ?></span><br>
                         <strong>Total VAT Amount:</strong> <span id="totalVATDisplay"><?= $record['tax_amount'] ?? 0; ?></span><br>
-                        <strong>Grand Total:</strong> <span id="grandTotalDisplay"><?= $record['final_amount'] ?? 0; ?></span>
+                        <strong>Grand Total:</strong> <span id="grandTotalDisplay"><?= $record['final_amount'] ?? 0; ?></span><br>
+                        <button type="submit" name="SubmitBill" class="btn btn-success mt-3">Submit Bill</button>
                     </div>
                 </div>
-                <div id="hiddenInputsContainer">
-
-                </div>
                 <!-- Submit Button -->
-                <button type="submit" name="SubmitBill" class="btn btn-success mt-3">Submit Bill</button>
             </form>
         </div>
     <?php endif;

@@ -1,80 +1,59 @@
 <?php
+// Include the database connection
 include('../connection.php');
 
-if (isset($_POST["l_id"])) {
-    // Sanitize incoming POST data
-    $goods_id = mysqli_real_escape_string($connect, $_POST['goods_id']);
-    $size = mysqli_real_escape_string($connect, $_POST['size']);
-    $brand = mysqli_real_escape_string($connect, $_POST['brand']);
-    $origin = mysqli_real_escape_string($connect, $_POST['origin']);
-    $quantity_name = mysqli_real_escape_string($connect, $_POST['quantity_name']);
-    $warehouse = mysqli_real_escape_string($connect, $_POST['warehouse']);
-
-    // Construct the query with JSON_SEARCH
+// Check if the request has the "warehouse" parameter
+if (isset($_POST["warehouse"])) {
+    // Query to fetch relevant data
     $query = "
         SELECT unique_code, ldata 
         FROM data_copies 
         WHERE 
-            JSON_SEARCH(ldata, 'one', 'p') IS NOT NULL AND
-            JSON_SEARCH(ldata, 'one', '$goods_id') IS NOT NULL AND
-            JSON_SEARCH(ldata, 'one', '$size') IS NOT NULL AND
-            JSON_SEARCH(ldata, 'one', '$brand') IS NOT NULL AND
-            JSON_SEARCH(ldata, 'one', '$origin') IS NOT NULL AND
-            JSON_SEARCH(ldata, 'one', '$quantity_name') IS NOT NULL AND
-            JSON_SEARCH(ldata, 'one', '$warehouse') IS NOT NULL
+            unique_code LIKE 'p%' AND
+            JSON_EXTRACT(ldata, '$.good.goods_json.qty_no') != 0;
     ";
 
-    $result = mysqli_query($connect, $query);
-
-    // Initialize an array to store the results grouped by unique_code
+    $fetch = mysqli_query($connect, $query);
     $responseData = [];
 
-    if ($result && mysqli_num_rows($result) > 0) {
-        while ($row = mysqli_fetch_assoc($result)) {
-            $ldata = json_decode($row['ldata'], true);
-            $unique_code = $row['unique_code']; // Store unique_code to group by
+    if ($fetch && $fetch->num_rows > 0) {
+        while ($row = $fetch->fetch_assoc()) {
+            $ldata = json_decode($row['ldata'], true); // Decode JSON
+            $unique_code = $row['unique_code']; // Unique code for grouping
 
-            // Initialize the array for the current unique_code if not set
-            if (!isset($responseData[$unique_code])) {
-                $responseData[$unique_code] = [];
-            }
+            // Ensure the warehouse key exists and group by warehouse
+            if (!empty($ldata['transfer']['warehouse_transfer'])) {
+                $warehouse = $ldata['transfer']['warehouse_transfer'];
 
-            // Loop through dynamic keys in ldata
-            foreach ($ldata as $key => $value) {
-                if (preg_match('/^l_(\d+)_goods_id$/', $key, $matches)) {
-                    $dynamic_id = $matches[1];
-                    $sold_to_key = "l_{$dynamic_id}_sold_to";
-                    if (isset($ldata[$sold_to_key])) {
-                        continue;
-                    }
-                    $goods_key = "l_{$dynamic_id}_goods_id";
-                    $size_key = "l_{$dynamic_id}_size";
-                    $brand_key = "l_{$dynamic_id}_brand";
-                    $origin_key = "l_{$dynamic_id}_origin";
-                    $quantity_name_key = "l_{$dynamic_id}_quantity_name";
-                    $quantity_no_key = "l_{$dynamic_id}_quantity_no";
-                    $gross_weight_key = "l_{$dynamic_id}_gross_weight";
-                    $net_weight_key = "l_{$dynamic_id}_net_weight";
-                    $container_no_key = "l_{$dynamic_id}_container_no";
-                    $container_name_key = "l_{$dynamic_id}_container_name";
-                    $goodsValue = goodsName($value);
-                    $responseData[$unique_code][] = [
-                        'loadingID' => $dynamic_id,
-                        'goods_id' => $value,
-                        'goods_name' => $goodsValue,
-                        'size' => $ldata[$size_key],
-                        'brand' => $ldata[$brand_key],
-                        'origin' => $ldata[$origin_key],
-                        'quantity_name' => $ldata[$quantity_name_key],
-                        'quantity_no' => $ldata[$quantity_no_key],
-                        'gross_weight' => $ldata[$gross_weight_key],
-                        'net_weight' => $ldata[$net_weight_key],
-                        'container_no' => $ldata[$container_no_key] ?? '',
-                        'container_name' => $ldata[$container_name_key] ?? '',
+                if (!isset($responseData[$warehouse])) {
+                    $responseData[$warehouse] = [];
+                }
+
+                if (!empty($ldata['good']['goods_json']['allotment_name'])) {
+                    $responseData[$warehouse][] = [
+                        "unique_code" => $row['unique_code'],
+                        "p_id" => $ldata['p_id'],
+                        "sr_no" => $ldata['sr_no'],
+                        "allot" => $ldata['good']['goods_json']['allotment_name'],
+                        'goods_id' => $ldata['good']['goods_id'],
+                        'goods_name' => goodsName($ldata['good']['goods_id']),
+                        'size' => $ldata['good']['size'],
+                        'brand' => $ldata['good']['brand'],
+                        'origin' => $ldata['good']['origin'],
+                        'quantity_name' => $ldata['good']['goods_json']['qty_name'],
+                        'quantity_no' => $ldata['good']['goods_json']['qty_no'],
+                        'rate' => $ldata['good']['goods_json']['rate1'],
+                        'empty_kgs' => $ldata['good']['goods_json']['empty_kgs'],
+                        'net_weight' => $ldata['good']['goods_json']['net_kgs'],
+                        'gross_weight' => $ldata['good']['goods_json']['total_kgs'],
+                        'container_no' => $ldata['good']['container_no'] ?? '',
+                        'container_name' => $ldata['good']['container_name'] ?? ''
                     ];
                 }
             }
         }
     }
-    echo json_encode($responseData);
+
+    // Output the grouped data as JSON
+    echo json_encode($responseData, JSON_PRETTY_PRINT);
 }

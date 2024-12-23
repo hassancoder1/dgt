@@ -184,12 +184,13 @@ if ($id > 0) {
                                             ?>
                                             <th class="bg-dark text-white">BOE.D</th>
                                             <th class="bg-dark text-white">PickUp.D</th>
-                                            <th class="bg-dark text-white">Waiting(YES/NO)</th>
-                                            <th class="bg-dark text-white">No.of.Days.W</th>
+                                            <th class="bg-dark text-white">Waiting Days</th>
                                             <th class="bg-dark text-white">Return.D</th>
-                                            <th class="bg-dark text-white">Truck No.</th>
-                                            <th class="bg-dark text-white">Driver</th>
                                             <th class="bg-dark text-white">Transporter</th>
+                                            <th class="bg-dark text-white">Truck No.</th>
+                                            <th class="bg-dark text-white">Details</th>
+                                            <th class="bg-dark text-white">Driver Name</th>
+                                            <th class="bg-dark text-white">Driver No</th>
                                             <th class="bg-dark text-white">Ag.FILE(S)</th>
                                             <?php // endif; 
                                             ?>
@@ -229,12 +230,13 @@ if ($id > 0) {
                                                     <?php if (isset($Agent['permission_to_edit'])): ?>
                                                         <td class="border border-dark"><?= $Agent['boe_date'] ?? ''; ?></td>
                                                         <td class="border border-dark"><?= $Agent['pick_up_date'] ?? ''; ?></td>
-                                                        <td class="border border-dark"><?= $Agent['waiting_if_any'] ?? ''; ?></td>
-                                                        <td class="border border-dark"><?= $Agent['days_waiting'] ?? ''; ?></td>
+                                                        <td class="border border-dark"><?= $Agent['waiting_days'] ?? ''; ?></td>
                                                         <td class="border border-dark"><?= $Agent['return_date'] ?? ''; ?></td>
-                                                        <td class="border border-dark"><?= $Agent['truck_number'] ?? ''; ?></td>
-                                                        <td class="border border-dark"><?= $Agent['driver_details'] ?? ''; ?></td>
                                                         <td class="border border-dark"><?= $Agent['transporter_name'] ?? ''; ?></td>
+                                                        <td class="border border-dark"><?= $Agent['truck_number'] ?? ''; ?></td>
+                                                        <td class="border border-dark"><?= $Agent['details'] ?? ''; ?></td>
+                                                        <td class="border border-dark"><?= $Agent['driver_name'] ?? ''; ?></td>
+                                                        <td class="border border-dark"><?= $Agent['driver_number'] ?? ''; ?></td>
                                                         <td class="border border-dark text-success" style="position: relative;">
                                                             <?php
                                                             $attachments2 = $Agent['attachments'] ?? [];
@@ -279,7 +281,7 @@ if ($id > 0) {
                                             <input type="hidden" name="id" value="<?= $myrecord['id']; ?>">
                                             <input type="hidden" name="parent_id" value="<?= $parent['id']; ?>">
                                             <input type="hidden" name="existing_data" value='<?= $myrecord['agent_details']; ?>'>
-                                            <?php if (isset($myAgent['received_date'])) {
+                                            <?php if (isset($myAgent['transporter_name'])) {
                                                 echo '<input type="hidden" name="case" value="update">';
                                             } else {
                                                 echo '<input type="hidden" name="case" value="new">';
@@ -287,7 +289,7 @@ if ($id > 0) {
                                             <h5 class="text-primary">Agent Form</h5>
                                             <div class="row g-3">
                                                 <!-- BOE DATE -->
-                                                <div class="col-md-3">
+                                                <div class="col-md-2">
                                                     <label for="boe_date" class="form-label">BOE Date</label>
                                                     <input type="date" name="boe_date" id="boe_date" required
                                                         class="form-control form-control-sm"
@@ -295,7 +297,7 @@ if ($id > 0) {
                                                 </div>
 
                                                 <!-- PICK UP DATE -->
-                                                <div class="col-md-3">
+                                                <div class="col-md-2">
                                                     <label for="pick_up_date" class="form-label">Pick Up Date</label>
                                                     <input type="date" name="pick_up_date" id="pick_up_date" required
                                                         class="form-control form-control-sm"
@@ -303,44 +305,21 @@ if ($id > 0) {
                                                 </div>
 
                                                 <!-- WAITING IF ANY -->
-                                                <div class="col-md-3">
-                                                    <label for="waiting_if_any" class="form-label">Waiting (If Any)</label>
-                                                    <input type="text" name="waiting_if_any" id="waiting_if_any"
+                                                <div class="col-md-2">
+                                                    <label for="waiting_days" class="form-label">Waiting (days)</label>
+                                                    <input type="text" name="waiting_days" id="waiting_days"
                                                         class="form-control form-control-sm"
-                                                        value="<?= isset($myAgent['waiting_if_any']) ? $myAgent['waiting_if_any'] : ''; ?>">
-                                                </div>
-
-                                                <!-- NO. OF DAYS WAITING -->
-                                                <div class="col-md-3">
-                                                    <label for="days_waiting" class="form-label">No. of Days Waiting</label>
-                                                    <input type="number" name="days_waiting" id="days_waiting"
-                                                        class="form-control form-control-sm"
-                                                        value="<?= isset($myAgent['days_waiting']) ? $myAgent['days_waiting'] : ''; ?>">
+                                                        value="<?= isset($myAgent['waiting_days']) ? $myAgent['waiting_days'] : ''; ?>">
                                                 </div>
 
                                                 <!-- RETURN DATE -->
-                                                <div class="col-md-3">
+                                                <div class="col-md-2">
                                                     <label for="return_date" class="form-label">Return Date</label>
                                                     <input type="date" name="return_date" id="return_date" required
                                                         class="form-control form-control-sm"
                                                         value="<?= isset($myAgent['return_date']) ? $myAgent['return_date'] : ''; ?>">
                                                 </div>
 
-                                                <!-- TRUCK NUMBER -->
-                                                <div class="col-md-3">
-                                                    <label for="truck_number" class="form-label">Truck Number</label>
-                                                    <input type="text" name="truck_number" id="truck_number" required
-                                                        class="form-control form-control-sm"
-                                                        value="<?= isset($myAgent['truck_number']) ? $myAgent['truck_number'] : ''; ?>">
-                                                </div>
-
-                                                <!-- DRIVER NAME/DRIVER NUMBER -->
-                                                <div class="col-md-3">
-                                                    <label for="driver_details" class="form-label">Driver Name/Number</label>
-                                                    <input type="text" name="driver_details" id="driver_details" required
-                                                        class="form-control form-control-sm"
-                                                        value="<?= isset($myAgent['driver_details']) ? $myAgent['driver_details'] : ''; ?>">
-                                                </div>
 
                                                 <!-- TRANSPORTER NAME -->
                                                 <div class="col-md-3">
@@ -349,6 +328,38 @@ if ($id > 0) {
                                                         class="form-control form-control-sm"
                                                         value="<?= isset($myAgent['transporter_name']) ? $myAgent['transporter_name'] : ''; ?>">
                                                 </div>
+                                                <!-- TRUCK NUMBER -->
+                                                <div class="col-md-2">
+                                                    <label for="truck_number" class="form-label">Truck Number</label>
+                                                    <input type="text" name="truck_number" id="truck_number" required
+                                                        class="form-control form-control-sm"
+                                                        value="<?= isset($myAgent['truck_number']) ? $myAgent['truck_number'] : ''; ?>">
+                                                </div>
+                                                <!-- Details -->
+                                                <div class="col-md-4">
+                                                    <label for="details" class="form-label">Details</label>
+                                                    <input type="text" name="details" id="details" required
+                                                        class="form-control form-control-sm"
+                                                        value="<?= isset($myAgent['details']) ? $myAgent['details'] : ''; ?>">
+                                                </div>
+
+                                                <!-- DRIVER NAME -->
+                                                <div class="col-md-3">
+                                                    <label for="driver_name" class="form-label">Driver Name</label>
+                                                    <input type="text" name="driver_name" id="driver_name" required
+                                                        class="form-control form-control-sm"
+                                                        value="<?= isset($myAgent['driver_name']) ? $myAgent['driver_name'] : ''; ?>">
+                                                </div>
+
+                                                <!-- DRIVER NUMBER -->
+                                                <div class="col-md-3">
+                                                    <label for="driver_number" class="form-label">Driver Number</label>
+                                                    <input type="number" name="driver_number" id="driver_number" required
+                                                        class="form-control form-control-sm"
+                                                        value="<?= isset($myAgent['driver_number']) ? $myAgent['driver_number'] : ''; ?>">
+                                                </div>
+
+
 
                                                 <!-- Action Buttons -->
                                                 <div class="row mt-4">

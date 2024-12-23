@@ -380,7 +380,11 @@ while ($test = mysqli_fetch_assoc($textQ)) {
         }
 
         #RecordsTable .sticky-column:nth-child(2) {
-            left: 66px;
+            left: 72px;
+        }
+
+        #RecordsTable .sticky-column:nth-child(3) {
+            left: 172px;
         }
     </style>
     <div class="table-responsive mt-4" id="RecordsTable">
@@ -389,6 +393,7 @@ while ($test = mysqli_fetch_assoc($textQ)) {
                 <tr class="text-nowrap sticky-row">
                     <th class="sticky-column">Bill#</th>
                     <th class="sticky-column">Type</th>
+                    <th class="sticky-column">Allot</th>
                     <th>BR.</th>
                     <th>Date</th>
                     <th>A/c</th>
@@ -455,15 +460,15 @@ while ($test = mysqli_fetch_assoc($textQ)) {
                     $p_qty_total += !empty($totals['Qty']) ? $totals['Qty'] : 0;
                     $p_kgs_total += !empty($totals['KGs']) ? $totals['KGs'] : 0;
                     $rowColor = '';
-                    if ($locked == 0) {
-                        $rowColor = $is_doc == 0 ? ' text-danger ' : ' text-warning ';
-                    } ?>
+                    $rowColor = empty($purchase['khaata_tr1']) ? 'text-danger ' : ' text-dark '; ?>
                     <tr class="text-nowrap">
                         <td class="sticky-column pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $id; ?>)"
                             data-bs-toggle="modal" data-bs-target="#KhaataDetails">
                             <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $id;
-                            echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : '';echo $locked == 2 ? '<i class="fa fa-lock text-success"></i><i class="fa fa-lock text-success" style="margin-left:-6px;"></i>' : ''; ?></td>
+                            echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : '';
+                            echo $locked == 2 ? '<i class="fa fa-lock text-success"></i><i class="fa fa-lock text-success" style="margin-left:-6px;"></i>' : ''; ?></td>
                         <td class="sticky-column <?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['type']); ?></td>
+                        <td class="sticky-column <?= $rowColor; ?>"><?= $_fields_single['items'][0]['allotment_name']; ?></td>
                         <td class="<?php echo $rowColor; ?> branch"><?php echo branchName($_fields_single['branch_id']); ?></td>
                         <td class="<?php echo $rowColor; ?>"><?php echo my_date($_fields_single['_date']);; ?></td>
                         <td class="acc_no <?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['cr_acc']); ?></td>

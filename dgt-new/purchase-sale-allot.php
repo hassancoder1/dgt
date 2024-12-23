@@ -12,8 +12,8 @@ $goods_name = isset($_GET['goods_name']) ? trim($_GET['goods_name']) : '';
 $date_from = isset($_GET['date_from']) ? trim($_GET['date_from']) : '';
 $date_to = isset($_GET['date_to']) ? trim($_GET['date_to']) : '';
 $resetFilters = '';
-if($_GET){
-$resetFilters = removeFilter($pageURL);
+if ($_GET) {
+    $resetFilters = removeFilter($pageURL);
 }
 $is_search = false;
 
@@ -83,9 +83,11 @@ while ($entry = mysqli_fetch_assoc($entries)) {
     // Process purchase and sale entries
     if ($entry['p_s'] == 'p') {
         $processed_entries[$allotment_name]['total_purchased_qty'] += $entry['qty_no'];
+        $processed_entries[$allotment_name]['p_id'] = $entry['parent_id'];
         $processed_entries[$allotment_name]['total_purchased_kgs'] += $entry['total_kgs'];
         $processed_entries[$allotment_name]['total_purchased_net_kgs'] += $entry['net_kgs'];
     } elseif ($entry['p_s'] == 's') {
+        $processed_entries[$allotment_name]['s_id'] = $entry['parent_id'];
         $processed_entries[$allotment_name]['total_sold_qty'] += $entry['qty_no'];
         $processed_entries[$allotment_name]['total_sold_kgs'] += $entry['total_kgs'];
         $processed_entries[$allotment_name]['total_sold_net_kgs'] += $entry['net_kgs'];
@@ -113,7 +115,7 @@ $paginated_entries = array_slice($processed_entries, 0, $rows_per_page);
                 </div>
                 <div class="card-body">
                     <div class="row mb-3">
-                    <div class="col-md-3">
+                        <div class="col-md-3">
                             <label for="allot" class="form-label">Allot Name</label>
                             <input type="text" name="allot" value="<?= $allot; ?>" id="allot" class="form-control form-control-sm">
                         </div>
@@ -230,6 +232,7 @@ $paginated_entries = array_slice($processed_entries, 0, $rows_per_page);
                         <thead>
                             <tr class="text-nowrap">
                                 <th>No.</th>
+                                <th>P#. </th>
                                 <th>Allot</th>
                                 <th>Goods (Name / Size / Brand / Origin)</th>
                                 <th>Total Qty</th>
@@ -253,6 +256,7 @@ $paginated_entries = array_slice($processed_entries, 0, $rows_per_page);
                             ?>
                                 <tr class="text-nowrap">
                                     <td><?= htmlspecialchars($i); ?></td>
+                                    <td>P# <?= htmlspecialchars($entry['p_id']); ?></td>
                                     <td class="pointer" onclick="window.location.href = '?view=1&allot=<?= $allotment_name; ?>'"><b><?= htmlspecialchars($allotment_name); ?></b></td>
                                     <td>
                                         <?= goodsName(htmlspecialchars($entry['goods_id'])) . ' / ' .

@@ -1,22 +1,39 @@
 <?php
-$page_title = 'GOODS STOCK => TRANSFER GOODS';
-$pageURL = 'goods-stock-transfer-goods';
+$page_title = 'CUSTOM CLEARING => WAREHOUSE';
+$CCWPage = '';
+switch ($_GET['CCWpage']) {
+    case 'transit':
+        $CCWPage = 'Transit';
+        break;
+    case 'freezone-import':
+        $CCWPage = 'Free Zone Import';
+        break;
+    case 'local-import':
+        $CCWPage = 'Local Import';
+        break;
+    case 'import-re-export':
+        $CCWPage = 'Import Re-Export';
+        break;
+    case 'local-export':
+        $CCWPage = 'Local Export';
+        break;
+    case 'local-market':
+        $CCWPage = 'Local Market';
+        break;
+    default:
+        $CCWPage = '';
+}
+$pageURL = 'custom-clearing-warehouse?CCWpage=' . $_GET['CCWpage'];
 include("header.php");
-
-$resetFilters = $size = $brand = $origin = $goods_id = $goods_name = $date_from = $date_to = $net_kgs = $qty_no = '';
+$resetFilters = $size = $brand = $origin = $goods_id = $date_from = $date_to = $net_kgs = $qty_no = '';
 $is_search = false;
-
 global $connect;
 $rows_per_page = 50;
 $current_page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($current_page - 1) * $rows_per_page;
-
 $conditions = [];
-
-// Handle filters
 if ($_GET) {
     $resetFilters = removeFilter($pageURL);
-
     if (!empty($_GET['size'])) {
         $size = mysqli_real_escape_string($connect, $_GET['size']);
         $conditions[] = "JSON_EXTRACT(goods_details, '$.size') = '$size'";
@@ -50,38 +67,15 @@ if ($_GET) {
         $conditions[] = "JSON_EXTRACT(goods_details, '$.quantity_no') = '$qty_no'";
     }
 }
-
-// Apply conditions separately to each part of the UNION
-$where_clause = !empty($conditions) ? ' AND ' . implode(' AND ', $conditions) : '';
-
-// Main query with the UNION to combine the two sources
-$sql = "SELECT id, MAX(sr_no) AS sr_no, p_id, type, p_type, goods_details, shipping_details AS transfer_details, agent_details, created_at, bl_no, loading_details, receiving_details, gloading_info as info, 'general' AS source 
-        FROM general_loading 
-        WHERE agent_details IS NOT NULL AND JSON_EXTRACT(gloading_info, '$.parent_id') IS NULL {$where_clause}
-        GROUP BY id, p_id, type, p_type, goods_details, shipping_details, agent_details, created_at, bl_no, loading_details, receiving_details 
-
-        UNION 
-
-        SELECT id, MAX(sr_no) AS sr_no, p_id, type, 'local' AS p_type, goods_details, transfer_details, 'dummy_agent' AS agent_details, created_at, uid AS bl_no, 'dummy1' AS dummy1, 'dummy2' AS dummy2, lloading_info as info, 'local' AS source 
-        FROM local_loading 
-        WHERE transfer_details IS NOT NULL AND JSON_EXTRACT(lloading_info, '$.parent_id') IS NULL {$where_clause} 
-        GROUP BY id, p_id, type, goods_details, transfer_details, created_at, uid";
-
-// Count the total number of rows matching the criteria
-$is_search = !empty($conditions);
-$total_rows_result = mysqli_query($connect, "SELECT COUNT(*) AS total FROM ({$sql}) AS subquery");
-$total_rows = mysqli_fetch_assoc($total_rows_result)['total'];
-
-// Add pagination to the query
-$sql .= " ORDER BY p_id, created_at LIMIT $rows_per_page OFFSET $offset";
-
-// Execute the query
-$entries = mysqli_query($connect, $sql);
-
-// Calculate total pages for pagination
+$sql = "SELECT * FROM data_copies WHERE unique_code LIKE 'p%' LIMIT $rows_per_page OFFSET $offset";
+$result = mysqli_query($connect, $sql);
+$data = [];
+while ($row = mysqli_fetch_assoc($result)) {
+    $data[] = $row;
+}
+$total_rows = count($data);
 $total_pages = ceil($total_rows / $rows_per_page);
 ?>
-
 
 <div class="fixed-top">
     <?php require_once('nav-links.php'); ?>
@@ -181,62 +175,80 @@ $total_pages = ceil($total_rows / $rows_per_page);
                         <thead>
                             <tr class="text-nowrap">
                                 <th>No.</th>
-                                <th>P/S# (SR#)</th>
+                                <th>P# (Type) / (Allot)</th>
                                 <th>BL / UID (Count)</th>
-                                <th>Type</th>
                                 <th>WareHouse</th>
-                                <th>Allot</th>
-                                <th>Goods Name / ORIGIN</th>
-                                <th>Quantity</th>
-                                <th>Gross.KGS</th>
-                                <th>Net.KGS</th>
+                                <th>Goods Name</th>
+                                <th>Total Qty</th>
+                                <th>S# </th>
+                                <th>Sold Qty</th>
+                                <th>Rem Qty</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php
-                            $i = $offset + 1;
-                            $entriesPerBlUID = 0;
-                            $BLUIDsPerTID = [];
-                            if (mysqli_num_rows($entries) > 0):
-                                while ($entry = mysqli_fetch_assoc($entries)) {
-                                    $Transfer = json_decode($entry['transfer_details'], true);
-                                    $Agent = json_decode($entry['agent_details'], true);
-                                    $Good = json_decode($entry['goods_details'], true);
-                                    $Info = json_decode($entry['info'], true);
-                                    $entriesPerBlUID = count(explode(', ', $Info['child_ids']));
-                                    $trackerKey = $entry['p_id'];
-                                    $BLUIDsPerTID[$trackerKey] = isset($BLUIDsPerTID[$trackerKey]) ? $BLUIDsPerTID[$trackerKey] + 1 : 1;
-                                    $route = $Transfer['transfer_by'] ?? $Transfer['route'];
-                                    $unique_code = $entry['type'] . $entry['p_type'][0] . (isset($Transfer['route'])
-                                        ? ($Transfer['route'] === 'local' ? 'ld' : 'wr')
-                                        : ($Transfer['transfer_by'] === 'sea' ? 'se' : 'rd'))
-                                        . '_' . $entry['p_id'] . '_' . $entry['bl_no'];
+                            $i = $offset + 1; // Start counting from offset
+                            $total_qty_no = $total_gross_weight_kgs = $total_net_weight_kgs = 0;
+                            $countTracker = []; // Track counts for unique codes
+                            $totalQtyPerGood = $totalSoldPerGood = $totalRemPerGood = 0; // Initialize totals
+                            $SID = null; // Initialize SID
+
+                            if (count($data) > 0) { // Check if there's data
+                                foreach ($data as $entry) { // Loop through each entry
+                                    $ldata = json_decode($entry['ldata'], true); // Decode the JSON
+                                    [$Ttype, $Tcat, $Troute, $TID, $BLUID] = decode_unique_code($entry['unique_code'], 'all');
+                                    $cat = $Tcat === 'l' ? 'Local' : ($Tcat === 'b' ? 'Booking' : 'Commission');
+                                    $trackerKey = $TID;
+                                    $countTracker[$trackerKey] = isset($countTracker[$trackerKey]) ? $countTracker[$trackerKey] + 1 : 1;
+
+                                    foreach ($ldata['goods'] as $l_ID => $Good) {
+                                        // Check if the cargo_transfer_warehouse matches the current page or condition
+                                        if ($Good['agent']['cargo_transfer_warehouse'] !== $CCWPage) {
+                                            continue; // Skip if it doesn't match
+                                        }
+
+                                        $totalRemPerGood = (int)$Good['goods_json']['qty_no']; // Quantity available
+                                        $totalSoldPerGood = 0; // Reset sold total for this good
+
+                                        // Count total sold for the current good
+                                        foreach ($Good['agent']['sold_to'] as $oneSold) {
+                                            $th = explode('~', $oneSold); // Split the sold record
+                                            $totalSoldPerGood += (float)$th[4]; // Add sold quantity (converted to float)
+                                            $SID = decode_unique_code($th[0], 'TID'); // Decode SID
+                                        }
+
+                                        // Total quantity considering sold items
+                                        $totalQtyPerGood = (int)$Good['goods_json']['qty_no'] + $totalSoldPerGood;
                             ?>
-                                    <tr class="text-nowrap">
-                                        <td><?= htmlspecialchars($i); ?></td>
-                                        <td class="pointer"
-                                            onclick="window.location.href = '?view=1&unique_code=<?= $unique_code; ?>&print_type=contract';">
-                                            <b><?= ucfirst($entry['type']); ?>#</b> <?= htmlspecialchars($entry['p_id']); ?> (<?= $entriesPerBlUID; ?>)
-                                        </td>
-                                        <td><?= htmlspecialchars($entry['source'] === 'general' ? 'B/L: ' . $entry['bl_no'] : 'UID: ' . $entry['bl_no']); ?> (<?= $BLUIDsPerTID[$entry['p_id']]; ?>)</td>
-                                        <td><?= ucfirst(htmlspecialchars($entry['p_type'])); ?></td>
-                                        <td><?= htmlspecialchars($entry['source'] === 'general' ? ($Agent['cargo_transfer_warehouse'] ?? 'Not Selected!') : ($Transfer['warehouse_transfer']) ?? 'Not Selected!'); ?></td>
-                                        <td><?= json_decode($Good['goods_json'] ?? '[]', true)['allotment_name'] ?? ''; ?></td>
-                                        <td><?= goodsName(htmlspecialchars($Good['goods_id'])) . ' / ' . htmlspecialchars($Good['origin']); ?></td>
-                                        <td><?= htmlspecialchars($Info['total_quanity_no']); ?> <sub><?= htmlspecialchars($Good['quantity_name']); ?></sub></td>
-                                        <td><?= htmlspecialchars($Info['total_gross_weight']); ?></td>
-                                        <td><?= htmlspecialchars($Info['total_net_weight']); ?></td>
-                                    </tr>
+                                        <tr class="text-nowrap">
+                                            <td><?= htmlspecialchars($i); ?></td> <!-- Entry number -->
+                                            <td class="pointer" onclick="window.location.href = '?CCWpage=<?= $_GET['CCWpage']; ?>&view=1&unique_code=<?= $entry['unique_code']; ?>&l_id=<?= $l_ID; ?>';">
+                                                P#<?= "$TID ($cat) / ({$Good['goods_json']['allotment_name']})"; ?>
+                                            </td>
+                                            <td><?= $BLUID . ' (' . $countTracker[$trackerKey] . ')'; ?></td>
+                                            <td><?= $Good['agent']['cargo_transfer_warehouse']; ?></td>
+                                            <td><?= goodsName($Good['goods_json']['goods_id']); ?></td>
+                                            <td><?= $totalQtyPerGood; ?></td>
+                                            <td>S#<?= $SID; ?></td>
+                                            <td><?= $totalSoldPerGood; ?></td>
+                                            <td><?= $totalRemPerGood; ?></td>
+                                        </tr>
                                 <?php
-                                    $i++;
+                                        $i++; // Increment the counter
+                                    }
                                 }
                                 ?>
-                            <?php else: ?>
+                                <input type="hidden" id="total_qty_no" value="<?= $total_qty_no; ?>">
+                                <input type="hidden" id="total_gross_weight_kgs" value="<?= $total_gross_weight_kgs; ?>">
+                                <input type="hidden" id="total_net_weight_kgs" value="<?= $total_net_weight_kgs; ?>">
+                            <?php } else { ?> <!-- No data case -->
                                 <tr>
                                     <td colspan="10" class="text-center">No records found.</td>
                                 </tr>
-                            <?php endif; ?>
+                            <?php } ?>
                         </tbody>
+
+
 
                     </table>
                 </div>
@@ -267,15 +279,16 @@ $total_pages = ceil($total_rows / $rows_per_page);
     $("#show_total_net_weight_kgs").text($("#total_net_weight_kgs").val());
 
     function viewPurchase(uniqueCode) {
-        let printType = '<?= isset($_GET['print_type']) ? $_GET['print_type'] : 'contract'; ?>';
         if (uniqueCode) {
             $.ajax({
-                url: 'ajax/editGoodsTransfer.php',
+                url: 'ajax/editCustomClearing.php',
                 type: 'post',
                 data: {
                     unique_code: uniqueCode,
-                    page: "<?= $pageURL; ?>",
-                    print_type: printType,
+                    page: "custom-clearing-warehouse",
+                    l_id: <?= $_GET['l_id']; ?>,
+                    CCWpage: "<?= $_GET['CCWpage']; ?>",
+                    print_type: "<?= $_GET['print_type'] ?? 'contract'; ?>",
                     timestamp: currentFormattedDateTime()
                 },
                 success: function(response) {

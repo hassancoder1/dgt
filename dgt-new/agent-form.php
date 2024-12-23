@@ -435,12 +435,13 @@ if (isset($_POST['AgentFormSubmit'])) {
         'ag_billNumber' => $billNumber,
         'boe_date' => mysqli_real_escape_string($connect, $_POST['boe_date']),
         'pick_up_date' => mysqli_real_escape_string($connect, $_POST['pick_up_date']),
-        'waiting_if_any' => mysqli_real_escape_string($connect, $_POST['waiting_if_any']),
-        'days_waiting' => mysqli_real_escape_string($connect, $_POST['days_waiting']),
+        'waiting_days' => mysqli_real_escape_string($connect, $_POST['waiting_days']),
         'return_date' => mysqli_real_escape_string($connect, $_POST['return_date']),
-        'truck_number' => mysqli_real_escape_string($connect, $_POST['truck_number']),
-        'driver_details' => mysqli_real_escape_string($connect, $_POST['driver_details']),
         'transporter_name' => mysqli_real_escape_string($connect, $_POST['transporter_name']),
+        'truck_number' => mysqli_real_escape_string($connect, $_POST['truck_number']),
+        'details' => mysqli_real_escape_string($connect, $_POST['details']),
+        'driver_name' => mysqli_real_escape_string($connect, $_POST['driver_name']),
+        'driver_number' => mysqli_real_escape_string($connect, $_POST['driver_number']),
         'attachments' => empty($uploadedFiles) ? json_decode($f['agent_details'], true)['attachments'] : $uploadedFiles
     ];
     $data = ['agent_details' => json_encode($agentD, JSON_UNESCAPED_UNICODE)];

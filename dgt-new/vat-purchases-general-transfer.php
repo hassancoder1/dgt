@@ -262,19 +262,19 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
         <table class="table table-bordered">
             <thead>
                 <tr class="text-nowrap">
-                    <th><?= SuperAdmin() ? 'P#+Bill#' : '#'; ?></th>
-                    <th>B/L No.</th>
-                    <th>Containers</th>
-                    <th>AG ID</th>
-                    <th>AG NAME</th>
-                    <th>WareHouse</th>
-                    <th>L_DATE</th>
-                    <th>L_PORT</th>
-                    <th>R_DATE</th>
-                    <th>R_PORT</th>
-                    <th>Total QTY</th>
-                    <th>T.G.KGS</th>
-                    <th>T.N.KGS</th>
+                    <th><?= SuperAdmin() ? 'P#' : '#'; ?></th>
+                    <th>P Date.</th>
+                    <th>Acc Details</th><!--  // company name vat number  -->
+                    <th>Allot</th>
+                    <th>Warehouse</th>
+                    <th>Goods Details</th>
+                    <th>Quantity</th>
+                    <th>Net Kgs</th>
+                    <th>Gross Weight</th>
+                    <th>U/P Name</th>
+                    <th>Amount</th>
+                    <th>Tax% amt</th>
+                    <th>Total Amt</th>
                 </tr>
             </thead>
             <tbody>

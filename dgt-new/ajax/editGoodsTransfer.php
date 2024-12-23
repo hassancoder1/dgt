@@ -1,80 +1,153 @@
 <?php
 require_once '../connection.php';
-// Existing variables and code...
+
 $page_title = 'EDIT INFORMATION';
 $back_page_url = $data_for = $pageURL = $_POST['page'];
+$print_url = 'print/' . $data_for;
 $unique_code = $_POST['unique_code'];
 
+// Decode unique code
 [$Ttype, $Tcat, $Troute, $TID, $BLUID] = decode_unique_code($unique_code, 'all');
 
 $LoadingsTable = ($Tcat === 'l' ? 'local' : 'general') . '_loading';
 $searchColumn = ($Tcat === 'l') ? 'uid' : 'bl_no';
+
 $recordExists = recordExists('data_copies', ['unique_code' => $unique_code]);
-$LoadingsData = [];
+$Ldata = [];
+
 if ($recordExists) {
     $dataType = "Copied";
     $data = mysqli_fetch_assoc(fetch('data_copies', ['unique_code' => $unique_code]));
     $Tdata = json_decode($data['tdata'], true);
-    $LoadingsData = json_decode($data['ldata'], true);
+    $Ldata = json_decode($data['ldata'], true);
 } else {
     $dataType = "Original";
     $LoadingsQuery = mysqli_query($connect, "SELECT * FROM $LoadingsTable WHERE $searchColumn = '$BLUID'");
     while ($SL = mysqli_fetch_assoc($LoadingsQuery)) {
-        $LoadingsData[] = $SL;
+        $Ldata[] = $SL;
     }
-    function normalizeEntry($id, $key, $value, &$normalizedEntry)
-    {
-        $decoded = is_string($value) ? json_decode($value, true) : null;
-        if (is_array($decoded)) {
-            foreach ($decoded as $nestedKey => $nestedValue) {
-                normalizeEntry($id, $nestedKey, $nestedValue, $normalizedEntry);
-            }
-        } else {
-            $normalizedEntry["l_{$id}_{$key}"] = $value;
-        }
-    }
-    $flattenedData = [];
-    foreach ($LoadingsData as $loading) {
-        $id = $loading['id'];
-        foreach ($loading as $key => $value) {
-            normalizeEntry($id, $key, $value, $flattenedData);
-        }
-    }
-    $LoadingsData = $flattenedData;
+
+    $firstEntry = $Ldata[0] ?? [];
     $Ttempdata = mysqli_fetch_assoc(fetch('transactions', ['id' => $TID]));
-    $Tdata = array_merge(transactionSingle($TID), json_decode($Ttempdata['sea_road'], true), json_decode($Ttempdata['notify_party_details'], true) ?? []);
-}
+    $Tdata = array_merge(
+        transactionSingle($TID),
+        json_decode($Ttempdata['sea_road'], true),
+        json_decode($Ttempdata['notify_party_details'], true) ?? [],
+        ['third_party_bank' => json_decode($Ttempdata['third_party_bank'], true)] ?? [],
+        ['reports' => json_decode($Ttempdata['reports'], true)] ?? []
+    );
 
-$groupedData = [];
-foreach ($LoadingsData as $key => $value) {
-    preg_match('/l_(\d+)_/', $key, $matches);
-    $l_ID = $matches[1] ?? null;
-    if ($l_ID !== null) {
-        if (!isset($groupedData[$l_ID])) {
-            $groupedData[$l_ID] = [];
-        }
-        $groupedData[$l_ID][$key] = $value;
+    $goodsData = [];
+    foreach ($Ldata as $loading) {
+        $goodsID = $loading['id'];
+        $goods_data = json_decode($loading['goods_details'], true);
+        $goodsData[$goodsID] = [
+            "sr_no" => $loading['sr_no'] ?? '',
+            "goods_id" => $goods_data['goods_id'] ?? '',
+            "quantity_no" => $goods_data['quantity_no'] ?? '',
+            "rate" => $goods_data['rate'] ?? '',
+            "empty_kgs" => $goods_data['empty_kgs'] ?? '',
+            "quantity_name" => $goods_data['quantity_name'] ?? '',
+            "size" => $goods_data['size'] ?? '',
+            "brand" => $goods_data['brand'] ?? '',
+            "origin" => $goods_data['origin'] ?? '',
+            "net_weight" => $goods_data['net_weight'] ?? '',
+            "gross_weight" => $goods_data['gross_weight'] ?? '',
+            "container_no" => $goods_data['container_no'] ?? '',
+            "container_name" => $goods_data['container_name'] ?? '',
+            "goods_json" => json_decode($goods_data['goods_json'] ?? '{}', true),
+            "agent" => json_decode($loading['agent_details'] ?? $loading['transfer_details'], true),
+        ];
+    }
+    $finalData = [
+        "id" => $firstEntry['id'],
+        $searchColumn => $firstEntry[$searchColumn],
+        "goods" => $goodsData,
+        "report" => $firstEntry['report'] ?? '',
+        "attachments" => json_decode($firstEntry['attachments'] ?? '[]', true),
+        "created_at" => $firstEntry['created_at'] ?? '',
+    ];
+    if ($Tcat === 'l') {
+        $Ldata = array_merge($finalData, [
+            "lloading_info" => json_decode($firstEntry['lloading_info'] ?? '[]', true),
+            "transfer_details" => json_decode($firstEntry['transfer_details'] ?? '[]', true),
+        ]);
+    } else {
+        $Ldata = array_merge($finalData, [
+            "transfer_details" => array_merge(json_decode($firstEntry['loading_details'] ?? '[]', true), json_decode($firstEntry['receiving_details'] ?? '[]', true), json_decode($firstEntry['shipping_details'] ?? '[]', true)),
+            "gloading_info" => json_decode($firstEntry['gloading_info'] ?? '[]', true),
+            "importer_details" => json_decode($firstEntry['importer_details'] ?? '[]', true),
+            "notify_party_details" => json_decode($firstEntry['notify_party_details'] ?? '[]', true),
+            "exporter_details" => json_decode($firstEntry['exporter_details'] ?? '[]', true)
+        ]);
     }
 }
 
-if (isset($Ldata['rate'], $Ldata['empty_kgs'])) {
-    echo "<script>";
-    echo "let emptyKgs = " . $Ldata['empty_kgs'] . ";";
-    echo "let Rate = " . $Ldata['rate'] . ";";
-    echo "</script>";
-}
+$_POST['print_type'] = $_POST['print_type'] ?? '';
+$print_url .= '?unique_code=' . $unique_code . '&print_type=' . $_POST['print_type'] . "&timestamp=" . ($_POST['timestamp'] ?? '');
 ?>
 
-<div class="modal-header bg-white mb-2">
+
+<div class="modal-header d-flex justify-content-between bg-white align-items-center mb-2">
     <h5 class="modal-title" id="staticBackdropLabel">EDIT INFORMATION</h5>
-    <a href="<?= $data_for; ?>" class="btn-close"></a>
+    <div class="d-flex align-items-center gap-2">
+        <?php if ($dataType !== 'Original') { ?>
+            <select name="print_type" id="print_type" class="form-select form-select-sm">
+                <option value="contract" <?= $_POST['print_type'] === 'contract' ? 'selected' : ''; ?>>Contract Print</option>
+                <option value="invoice" <?= $_POST['print_type'] === 'invoice' ? 'selected' : ''; ?>>Invoice Print</option>
+            </select>
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fa fa-print"></i>
+                </button>
+                <ul class="dropdown-menu mt-2" aria-labelledby="dropdownMenuButton">
+                    <li>
+                        <a class="dropdown-item" href="<?= $print_url; ?>" target="_blank">
+                            <i class="fas text-secondary fa-eye me-2"></i> Print Preview
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="dropdown-item" href="javascript:void(0);" onclick="openAndPrint('<?= $print_url; ?>')">
+                            <i class="fas text-secondary fa-print me-2"></i> Print
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="getFileThrough('pdf', '<?= $print_url; ?>')">
+                            <i id="pdfIcon" class="fas text-secondary fa-file-pdf me-2"></i> Download PDF
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="getFileThrough('word', '<?= $print_url; ?>')">
+                            <i id="wordIcon" class="fas text-secondary fa-file-word me-2"></i> Download Word File
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="getFileThrough('whatsapp', '<?= $print_url; ?>')">
+                            <i id="whatsappIcon" class="fa text-secondary fa-whatsapp me-2"></i> Send in WhatsApp
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="getFileThrough('email', '<?= $print_url; ?>')">
+                            <i id="emailIcon" class="fas text-secondary fa-envelope me-2"></i> Send In Email
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        <?php } ?>
+        <a href="<?= $data_for; ?>" class="btn-close"></a>
+    </div>
 </div>
 <div class="row">
     <div class="col-md-10">
         <form method="POST">
             <?= $recordExists ? '<input type="hidden" name="updateTrue" value="true">' : ''; ?>
             <input type="hidden" name="tdata" value='<?= json_encode($Tdata); ?>'>
-            <input type="hidden" name="ldata" value='<?= json_encode($LoadingsData); ?>'>
+            <input type="hidden" name="ldata" value='<?= json_encode($Ldata); ?>'>
             <input type="hidden" name="recordEdited" id="recordEdited">
             <?php
             if ($Tcat === 'l') { ?>
@@ -84,13 +157,13 @@ if (isset($Ldata['rate'], $Ldata['empty_kgs'])) {
                             <div class="col-md-<?= $Tcat === 'l' ? '6' : '4'; ?>">
                                 <label for="dr_acc_no" class="form-label fw-bold">Purchaser Details</label>
                                 <div class="input-group">
-                                    <input type="hidden" name="t_dr_acc_id" value="<?= isset($Tdata['dr_acc_id']) ? $Tdata['dr_acc_id'] : ''; ?>" id="dr_acc_id">
-                                    <input type="text" id="dr_acc_no" name="t_dr_acc" class="form-control form-control-sm form-control form-control-sm-sm w-25"
+                                    <input type="hidden" name="dr_acc_id" value="<?= isset($Tdata['dr_acc_id']) ? $Tdata['dr_acc_id'] : ''; ?>" id="dr_acc_id">
+                                    <input type="text" id="dr_acc_no" name="dr_acc" class="form-control form-control-sm form-control form-control-sm-sm w-25"
                                         placeholder="ACC No" value="<?= isset($Tdata['dr_acc']) ? $Tdata['dr_acc'] : ''; ?>">
-                                    <input type="text" id="dr_acc_name" name="t_dr_acc_name" class="form-control form-control-sm form-control form-control-sm-sm w-75"
+                                    <input type="text" id="dr_acc_name" name="dr_acc_name" class="form-control form-control-sm form-control form-control-sm-sm w-75"
                                         placeholder="Importer Name" value="<?= isset($Tdata['dr_acc_name']) ? $Tdata['dr_acc_name'] : ''; ?>">
                                 </div>
-                                <select class="form-select form-select-sm form-select form-select-sm-sm mt-2" name="t_dr_acc_kd_id" id="dr_acc_kd_id">
+                                <select class="form-select form-select-sm form-select form-select-sm-sm mt-2" name="dr_acc_kd_id" id="dr_acc_kd_id">
                                     <option hidden value="">Select Company</option>
                                     <?php $run_query = fetch('khaata_details', array('khaata_id' => isset($Tdata['dr_acc_id']) ? $Tdata['dr_acc_id'] : '', 'type' => 'company'));
                                     while ($row = mysqli_fetch_array($run_query)) {
@@ -99,20 +172,20 @@ if (isset($Ldata['rate'], $Ldata['empty_kgs'])) {
                                         echo '<option ' . $sel_kd2 . ' value=' . $row['id'] . '>' . $row_data->company_name . '</option>';
                                     }  ?>
                                 </select>
-                                <textarea class="form-control form-control-sm form-control form-control-sm-sm mt-2" name="t_dr_acc_details" id="dr_acc_details" rows="5"
+                                <textarea class="form-control form-control-sm form-control form-control-sm-sm mt-2" name="dr_acc_details" id="dr_acc_details" rows="5"
                                     placeholder="Company Details"><?= isset($Tdata['dr_acc_details']) ? $Tdata['dr_acc_details'] : ''; ?></textarea>
                             </div>
 
                             <div class="col-md-<?= $Tcat === 'l' ? '6' : '4'; ?>">
                                 <label for="cr_acc_no" class="form-label fw-bold">Seller Details</label>
                                 <div class="input-group">
-                                    <input type="hidden" name="t_cr_acc_id" value="<?= isset($Tdata['cr_acc_id']) ? $Tdata['cr_acc_id'] : ''; ?>" id="cr_acc_id">
-                                    <input type="text" id="cr_acc_no" name="t_cr_acc" class="form-control form-control-sm form-control form-control-sm-sm w-25"
+                                    <input type="hidden" name="cr_acc_id" value="<?= isset($Tdata['cr_acc_id']) ? $Tdata['cr_acc_id'] : ''; ?>" id="cr_acc_id">
+                                    <input type="text" id="cr_acc_no" name="cr_acc" class="form-control form-control-sm form-control form-control-sm-sm w-25"
                                         placeholder="ACC No" value="<?= isset($Tdata['cr_acc']) ? $Tdata['cr_acc'] : ''; ?>">
-                                    <input type="text" id="cr_acc_name" name="t_cr_acc_name" class="form-control form-control-sm form-control form-control-sm-sm w-75"
+                                    <input type="text" id="cr_acc_name" name="cr_acc_name" class="form-control form-control-sm form-control form-control-sm-sm w-75"
                                         placeholder="Notify Party Name" value="<?= isset($Tdata['cr_acc_name']) ? $Tdata['cr_acc_name'] : ''; ?>">
                                 </div>
-                                <select class="form-select form-select-sm form-select form-select-sm-sm mt-2" name="t_cr_acc_kd_id" id="cr_acc_kd_id">
+                                <select class="form-select form-select-sm form-select form-select-sm-sm mt-2" name="cr_acc_kd_id" id="cr_acc_kd_id">
                                     <option hidden value="">Select Company</option>
                                     <?php $run_query = fetch('khaata_details', array('khaata_id' => isset($Tdata['cr_acc_id']) ? $Tdata['cr_acc_id'] : '', 'type' => 'company'));
                                     while ($row = mysqli_fetch_array($run_query)) {
@@ -121,20 +194,20 @@ if (isset($Ldata['rate'], $Ldata['empty_kgs'])) {
                                         echo '<option ' . $sel_kd2 . ' value=' . $row['id'] . '>' . $row_data->company_name . '</option>';
                                     }  ?>
                                 </select>
-                                <textarea class="form-control form-control-sm form-control form-control-sm-sm mt-2" name="t_cr_acc_details" id="cr_acc_details" rows="5"
+                                <textarea class="form-control form-control-sm form-control form-control-sm-sm mt-2" name="cr_acc_details" id="cr_acc_details" rows="5"
                                     placeholder="Company Details"><?= isset($Tdata['cr_acc_details']) ? $Tdata['cr_acc_details'] : ''; ?></textarea>
                             </div>
                             <?php /* if ($Tcat !== 'l') { ?>
                                     <div class="col-md-4">
                                         <label for="np_acc" class="form-label fw-bold">Transaction Notify Party Details</label>
                                         <div class="input-group">
-                                            <input type="hidden" name="t_np_acc_id" value="<?= isset($Tdata['np_acc_id']) ? $Tdata['np_acc_id'] : ''; ?>" id="np_acc_id">
-                                            <input type="text" id="np_acc" name="t_np_acc" class="form-control form-control-sm form-control form-control-sm-sm w-25"
+                                            <input type="hidden" name="np_acc_id" value="<?= isset($Tdata['np_acc_id']) ? $Tdata['np_acc_id'] : ''; ?>" id="np_acc_id">
+                                            <input type="text" id="np_acc" name="np_acc" class="form-control form-control-sm form-control form-control-sm-sm w-25"
                                                 placeholder="ACC No" value="<?= isset($Tdata['np_acc']) ? $Tdata['np_acc'] : ''; ?>">
-                                            <input type="text" id="np_acc_name" name="t_np_acc_name" class="form-control form-control-sm form-control form-control-sm-sm w-75"
+                                            <input type="text" id="np_acc_name" name="np_acc_name" class="form-control form-control-sm form-control form-control-sm-sm w-75"
                                                 placeholder="Notify Party Name" value="<?= isset($Tdata['np_acc_name']) ? $Tdata['np_acc_name'] : ''; ?>">
                                         </div>
-                                        <select class="form-select form-select-sm form-select form-select-sm-sm mt-2" name="t_np_acc_kd_id" id="np_acc_kd_id">
+                                        <select class="form-select form-select-sm form-select form-select-sm-sm mt-2" name="np_acc_kd_id" id="np_acc_kd_id">
                                             <option hidden value="">Select Company</option>
                                             <?php $run_query = fetch('khaata_details', array('khaata_id' => isset($Tdata['np_acc_id']) ? $Tdata['np_acc_id'] : '', 'type' => 'company'));
                                             while ($row = mysqli_fetch_array($run_query)) {
@@ -143,216 +216,320 @@ if (isset($Ldata['rate'], $Ldata['empty_kgs'])) {
                                                 echo '<option ' . $sel_kd2 . ' value=' . $row['id'] . '>' . $row_data->company_name . '</option>';
                                             }  ?>
                                         </select>
-                                        <textarea class="form-control form-control-sm form-control form-control-sm-sm mt-2" name="t_np_acc_details" id="np_acc_details" rows="5"
+                                        <textarea class="form-control form-control-sm form-control form-control-sm-sm mt-2" name="np_acc_details" id="np_acc_details" rows="5"
                                             placeholder="Company Details"><?= isset($Tdata['np_acc_details']) ? $Tdata['np_acc_details'] : ''; ?></textarea>
                                     </div>
                                 <?php } */ ?>
                         </div>
                     </div>
                 </div>
-            <?php }
-            $processedFirst = false;
-            foreach ($groupedData as $l_ID => $largeEnteries):
-                if ($processedFirst) {
-                    break;
-                }
-                $Ldata = [];
-                foreach ($largeEnteries as $key => $value) {
-                    $Ldata[str_replace("l_{$l_ID}_", "", $key)] = $value;
-                }
-                $processedFirst = true;
-            ?>
-                <div>
-                    <?php
-                    if ($Tcat !== 'l') { ?>
-                        <div class="card mb-2">
-                            <div class="card-body">
-                                <div class="row g-3 mt-1">
-                                    <div class="col-md-4">
-                                        <label for="im_acc_no" class="form-label fw-bold">Importer Details</label>
-                                        <div class="input-group">
-                                            <input type="hidden" name="l_<?= $l_ID; ?>_im_acc_id" value="<?= isset($Ldata['im_acc_id']) ? $Ldata['im_acc_id'] : ''; ?>" id="im_acc_id">
-                                            <input type="text" id="im_acc_no" name="l_<?= $l_ID; ?>_im_acc" class="form-control form-control-sm form-control form-control-sm-sm w-25"
-                                                placeholder="ACC No" value="<?= isset($Ldata['im_acc_no']) ? $Ldata['im_acc_no'] : ''; ?>">
-                                            <input type="text" id="im_acc_name" name="l_<?= $l_ID; ?>_im_acc_name" class="form-control form-control-sm form-control form-control-sm-sm w-75"
-                                                placeholder="Importer Name" value="<?= isset($Ldata['im_acc_name']) ? $Ldata['im_acc_name'] : ''; ?>">
-                                        </div>
-                                        <select class="form-select form-select-sm form-select form-select-sm-sm mt-2" name="l_<?= $l_ID; ?>_im_acc_kd_id" id="im_acc_kd_id">
-                                            <option hidden value="">Select Company</option>
-                                            <?php $run_query = fetch('khaata_details', array('khaata_id' => isset($Ldata['im_acc_id']) ? $Ldata['im_acc_id'] : '', 'type' => 'company'));
-                                            while ($row = mysqli_fetch_array($run_query)) {
-                                                $row_data = json_decode($row['json_data']);
-                                                $sel_kd2 = $row['id'] == $Ldata['im_acc_kd_id'] ? 'selected' : '';
-                                                echo '<option ' . $sel_kd2 . ' value=' . $row['id'] . '>' . $row_data->company_name . '</option>';
-                                            }  ?>
-                                        </select>
-                                        <textarea class="form-control form-control-sm form-control form-control-sm-sm mt-2" name="l_<?= $l_ID; ?>_im_acc_details" id="im_acc_details" rows="5"
-                                            placeholder="Company Details"><?= isset($Ldata['im_acc_details']) ? $Ldata['im_acc_details'] : ''; ?></textarea>
+            <?php } ?>
+            <div>
+                <?php
+                if ($Tcat !== 'l') { ?>
+                    <div class="card mb-2">
+                        <div class="card-body">
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-4">
+                                    <label for="im_acc_no" class="form-label fw-bold">Importer Details</label>
+                                    <div class="input-group">
+                                        <input type="hidden" name="im_acc_id" value="<?= isset($Ldata['importer_details']['im_acc_id']) ? $Ldata['importer_details']['im_acc_id'] : ''; ?>" id="im_acc_id">
+                                        <input type="text" id="im_acc_no" name="im_acc" class="form-control form-control-sm form-control form-control-sm-sm w-25"
+                                            placeholder="ACC No" value="<?= isset($Ldata['importer_details']['im_acc_no']) ? $Ldata['importer_details']['im_acc_no'] : ''; ?>">
+                                        <input type="text" id="im_acc_name" name="im_acc_name" class="form-control form-control-sm form-control form-control-sm-sm w-75"
+                                            placeholder="Importer Name" value="<?= isset($Ldata['importer_details']['im_acc_name']) ? $Ldata['importer_details']['im_acc_name'] : ''; ?>">
                                     </div>
-                                    <div class="col-md-4">
-                                        <label for="xp_acc_no" class="form-label fw-bold">Exporter Details</label>
-                                        <div class="input-group">
-                                            <input type="hidden" name="l_<?= $l_ID; ?>_xp_acc_id" value="<?= isset($Ldata['xp_acc_id']) ? $Ldata['xp_acc_id'] : ''; ?>" id="xp_acc_id">
-                                            <input type="text" id="xp_acc_no" name="l_<?= $l_ID; ?>_xp_acc_no" class="form-control form-control-sm form-control form-control-sm-sm w-25"
-                                                placeholder="ACC No" value="<?= isset($Ldata['xp_acc_no']) ? $Ldata['xp_acc_no'] : ''; ?>">
-                                            <input type="text" id="xp_acc_name" name="l_<?= $l_ID; ?>_xp_acc_name" class="form-control form-control-sm form-control form-control-sm-sm w-75"
-                                                placeholder="Importer Name" value="<?= isset($Ldata['xp_acc_name']) ? $Ldata['xp_acc_name'] : ''; ?>">
-                                        </div>
-                                        <select class="form-select form-select-sm form-select form-select-sm-sm mt-2" name="l_<?= $l_ID; ?>_xp_acc_kd_id" id="xp_acc_kd_id">
-                                            <option hidden value="">Select Company</option>
-                                            <?php $run_query = fetch('khaata_details', array('khaata_id' => isset($Ldata['xp_acc_id']) ? $Ldata['xp_acc_id'] : '', 'type' => 'company'));
-                                            while ($row = mysqli_fetch_array($run_query)) {
-                                                $row_data = json_decode($row['json_data']);
-                                                $sel_kd2 = $row['id'] == $Ldata['xp_acc_kd_id'] ? 'selected' : '';
-                                                echo '<option ' . $sel_kd2 . ' value=' . $row['id'] . '>' . $row_data->company_name . '</option>';
-                                            }  ?>
-                                        </select>
-                                        <textarea class="form-control form-control-sm form-control form-control-sm-sm mt-2" name="l_<?= $l_ID; ?>_xp_acc_details" id="xp_acc_details" rows="5"
-                                            placeholder="Company Details"><?= isset($Ldata['xp_acc_details']) ? $Ldata['xp_acc_details'] : ''; ?></textarea>
+                                    <select class="form-select form-select-sm form-select form-select-sm-sm mt-2" name="im_acc_kd_id" id="im_acc_kd_id">
+                                        <option hidden value="">Select Company</option>
+                                        <?php $run_query = fetch('khaata_details', array('khaata_id' => isset($Ldata['importer_details']['im_acc_id']) ? $Ldata['importer_details']['im_acc_id'] : '', 'type' => 'company'));
+                                        while ($row = mysqli_fetch_array($run_query)) {
+                                            $row_data = json_decode($row['json_data']);
+                                            $sel_kd2 = $row['id'] == $Ldata['importer_details']['im_acc_kd_id'] ? 'selected' : '';
+                                            echo '<option ' . $sel_kd2 . ' value=' . $row['id'] . '>' . $row_data->company_name . '</option>';
+                                        }  ?>
+                                    </select>
+                                    <textarea class="form-control form-control-sm form-control form-control-sm-sm mt-2" name="im_acc_details" id="im_acc_details" rows="5"
+                                        placeholder="Company Details"><?= isset($Ldata['importer_details']['im_acc_details']) ? $Ldata['importer_details']['im_acc_details'] : ''; ?></textarea>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="xp_acc_no" class="form-label fw-bold">Exporter Details</label>
+                                    <div class="input-group">
+                                        <input type="hidden" name="xp_acc_id" value="<?= isset($Ldata['exporter_details']['xp_acc_id']) ? $Ldata['exporter_details']['xp_acc_id'] : ''; ?>" id="xp_acc_id">
+                                        <input type="text" id="xp_acc_no" name="xp_acc_no" class="form-control form-control-sm form-control form-control-sm-sm w-25"
+                                            placeholder="ACC No" value="<?= isset($Ldata['exporter_details']['xp_acc_no']) ? $Ldata['exporter_details']['xp_acc_no'] : ''; ?>">
+                                        <input type="text" id="xp_acc_name" name="xp_acc_name" class="form-control form-control-sm form-control form-control-sm-sm w-75"
+                                            placeholder="Importer Name" value="<?= isset($Ldata['exporter_details']['xp_acc_name']) ? $Ldata['exporter_details']['xp_acc_name'] : ''; ?>">
                                     </div>
+                                    <select class="form-select form-select-sm form-select form-select-sm-sm mt-2" name="xp_acc_kd_id" id="xp_acc_kd_id">
+                                        <option hidden value="">Select Company</option>
+                                        <?php $run_query = fetch('khaata_details', array('khaata_id' => isset($Ldata['exporter_details']['xp_acc_id']) ? $Ldata['exporter_details']['xp_acc_id'] : '', 'type' => 'company'));
+                                        while ($row = mysqli_fetch_array($run_query)) {
+                                            $row_data = json_decode($row['json_data']);
+                                            $sel_kd2 = $row['id'] == $Ldata['exporter_details']['xp_acc_kd_id'] ? 'selected' : '';
+                                            echo '<option ' . $sel_kd2 . ' value=' . $row['id'] . '>' . $row_data->company_name . '</option>';
+                                        }  ?>
+                                    </select>
+                                    <textarea class="form-control form-control-sm form-control form-control-sm-sm mt-2" name="xp_acc_details" id="xp_acc_details" rows="5"
+                                        placeholder="Company Details"><?= isset($Ldata['exporter_details']['xp_acc_details']) ? $Ldata['exporter_details']['xp_acc_details'] : ''; ?></textarea>
+                                </div>
 
-                                    <div class="col-md-4">
-                                        <label for="np_acc_no" class="form-label fw-bold">Notify Party Details</label>
-                                        <div class="input-group">
-                                            <input type="hidden" name="l_<?= $l_ID; ?>_np_acc_id" value="<?= isset($Ldata['np_acc_id']) ? $Ldata['np_acc_id'] : ''; ?>" id="np_acc_id">
-                                            <input type="text" id="np_acc_no" name="l_<?= $l_ID; ?>_np_acc_no" class="form-control form-control-sm form-control form-control-sm-sm w-25"
-                                                placeholder="ACC No" value="<?= isset($Ldata['np_acc_no']) ? $Ldata['np_acc_no'] : ''; ?>">
-                                            <input type="text" id="np_acc_name" name="l_<?= $l_ID; ?>_np_acc_name" class="form-control form-control-sm form-control form-control-sm-sm w-75"
-                                                placeholder="Notify Party Name" value="<?= isset($Ldata['np_acc_name']) ? $Ldata['np_acc_name'] : ''; ?>">
-                                        </div>
-                                        <select class="form-select form-select-sm form-select form-select-sm-sm mt-2" name="l_<?= $l_ID; ?>_np_acc_kd_id" id="np_acc_kd_id">
-                                            <option hidden value="">Select Company</option>
-                                            <?php $run_query = fetch('khaata_details', array('khaata_id' => isset($Ldata['np_acc_id']) ? $Ldata['np_acc_id'] : '', 'type' => 'company'));
-                                            while ($row = mysqli_fetch_array($run_query)) {
-                                                $row_data = json_decode($row['json_data']);
-                                                $sel_kd2 = $row['id'] == $Ldata['np_acc_kd_id'] ? 'selected' : '';
-                                                echo '<option ' . $sel_kd2 . ' value=' . $row['id'] . '>' . $row_data->company_name . '</option>';
-                                            }  ?>
-                                        </select>
-                                        <textarea class="form-control form-control-sm form-control form-control-sm-sm mt-2" name="l_<?= $l_ID; ?>_np_acc_details" id="np_acc_details" rows="5"
-                                            placeholder="Company Details"><?= isset($Ldata['np_acc_details']) ? $Ldata['np_acc_details'] : ''; ?></textarea>
+                                <div class="col-md-4">
+                                    <label for="np_acc_no" class="form-label fw-bold">Notify Party Details</label>
+                                    <div class="input-group">
+                                        <input type="hidden" name="np_acc_id" value="<?= isset($Ldata['notify_party_details']['np_acc_id']) ? $Ldata['notify_party_details']['np_acc_id'] : ''; ?>" id="np_acc_id">
+                                        <input type="text" id="np_acc_no" name="np_acc_no" class="form-control form-control-sm form-control form-control-sm-sm w-25"
+                                            placeholder="ACC No" value="<?= isset($Ldata['notify_party_details']['np_acc_no']) ? $Ldata['notify_party_details']['np_acc_no'] : ''; ?>">
+                                        <input type="text" id="np_acc_name" name="np_acc_name" class="form-control form-control-sm form-control form-control-sm-sm w-75"
+                                            placeholder="Notify Party Name" value="<?= isset($Ldata['notify_party_details']['np_acc_name']) ? $Ldata['notify_party_details']['np_acc_name'] : ''; ?>">
                                     </div>
+                                    <select class="form-select form-select-sm form-select form-select-sm-sm mt-2" name="np_acc_kd_id" id="np_acc_kd_id">
+                                        <option hidden value="">Select Company</option>
+                                        <?php $run_query = fetch('khaata_details', array('khaata_id' => isset($Ldata['notify_party_details']['np_acc_id']) ? $Ldata['notify_party_details']['np_acc_id'] : '', 'type' => 'company'));
+                                        while ($row = mysqli_fetch_array($run_query)) {
+                                            $row_data = json_decode($row['json_data']);
+                                            $sel_kd2 = $row['id'] == $Ldata['notify_party_details']['np_acc_kd_id'] ? 'selected' : '';
+                                            echo '<option ' . $sel_kd2 . ' value=' . $row['id'] . '>' . $row_data->company_name . '</option>';
+                                        }  ?>
+                                    </select>
+                                    <textarea class="form-control form-control-sm form-control form-control-sm-sm mt-2" name="np_acc_details" id="np_acc_details" rows="5"
+                                        placeholder="Company Details"><?= isset($Ldata['notify_party_details']['np_acc_details']) ? $Ldata['notify_party_details']['np_acc_details'] : ''; ?></textarea>
                                 </div>
                             </div>
                         </div>
-                    <?php } ?>
+                    </div>
+                <?php } ?>
+                <!-- Summary Section (Initially Visible) -->
+                <?php
+                $warehouse = '';
+                if (!empty($Ldata['goods'])) {
+                    $firstGoods = reset($Ldata['goods']);
+                    $warehouse = $firstGoods['agent']['cargo_transfer_warehouse'] ?? $firstGoods['agent']['warehouse_transfer'] ?? '';
+                }
+                $saleCheck = $Ttype === 's' ? 'onchange="currentStock(this)"' : '';
+                ?>
+                <div id="summarySection">
                     <div class="card mb-2">
                         <div class="card-body">
                             <div class="row gy-3">
-                                <?php
-                                if ($Tcat === 'l') {
-                                    if ($Ldata['route'] === 'local') { ?>
+                                <?php if ($Tcat === 'l') {
+                                    if ($Ldata['transfer_details']['route'] === 'local') { ?>
+                                        <div class="col-md-2">
+                                            <span>
+                                                <b>Truck Number</b><br>
+                                                <?php echo $Ldata['transfer_details']['truck_no']; ?>
+                                            </span>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <span>
+                                                <b>Truck Name</b><br>
+                                                <?php echo $Ldata['transfer_details']['truck_name']; ?>
+                                            </span>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <span>
+                                                <b>Loading Warehouse</b><br>
+                                                <?php echo $Ldata['transfer_details']['loading_warehouse']; ?>
+                                            </span>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <span>
+                                                <b>Receiving Warehouse</b><br>
+                                                <?php echo $Ldata['transfer_details']['receiving_warehouse']; ?>
+                                            </span>
+                                        </div>
+                                    <?php } ?>
+                                    <div class="col-md-3">
+                                        <span>
+                                            <b>Loading Company</b><br>
+                                            <?php echo $Ldata['transfer_details']['loading_company_name']; ?>
+                                        </span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <span>
+                                            <b>Receiving Company Name</b><br>
+                                            <?php echo $Ldata['transfer_details']['receiving_company_name']; ?>
+                                        </span>
+                                    </div>
+                                <?php } else { ?>
+                                    <div class="col-md-2">
+                                        <span>
+                                            <b>Loading Country</b><br>
+                                            <?php echo $Ldata['transfer_details']['loading_country']; ?>
+                                        </span>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <span>
+                                            <b>L <?= $Tdata['sea_road'] === 'sea' ? 'PORT' : 'BORDER'; ?> Name</b><br>
+                                            <?php echo $Ldata['transfer_details']['loading_port_name']; ?>
+                                        </span>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <span>
+                                            <b>Receiving Country</b><br>
+                                            <?php echo $Ldata['transfer_details']['receiving_country']; ?>
+                                        </span>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <span>
+                                            <b>R <?= $Tdata['sea_road'] === 'sea' ? 'PORT' : 'BORDER'; ?> Name</b><br>
+                                            <?php echo $Ldata['transfer_details']['receiving_port_name']; ?>
+                                        </span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <span>
+                                            <b><?= $Tdata['sea_road'] === 'sea' ? 'Shipping' : 'Transporter'; ?> Name</b><br>
+                                            <?php echo $Ldata['transfer_details']['shipping_name']; ?>
+                                        </span>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <span>
+                                            <b><?= $Tdata['sea_road'] === 'sea' ? 'Shipping' : 'Transporter'; ?> Address</b><br>
+                                            <?php echo $Ldata['transfer_details']['shipping_address']; ?>
+                                        </span>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <span>
+                                            <b><?= $Tdata['sea_road'] === 'sea' ? 'Shipping' : 'Transporter'; ?> Phone</b><br>
+                                            <?php echo $Ldata['transfer_details']['shipping_phone']; ?>
+                                        </span>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <span>
+                                            <b><?= $Tdata['sea_road'] === 'sea' ? 'Shipping' : 'Transporter'; ?> WhatsApp</b><br>
+                                            <?php echo $Ldata['transfer_details']['shipping_whatsapp']; ?>
+                                        </span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <span>
+                                            <b><?= $Tdata['sea_road'] === 'sea' ? 'Shipping' : 'Transporter'; ?> Email</b><br>
+                                            <?php echo $Ldata['transfer_details']['shipping_email']; ?>
+                                        </span>
+                                    </div>
+                                <?php } ?>
+                                <div class="col-md-2">
+                                    <span>
+                                        <b>Loading Date</b><br>
+                                        <?php echo $Ldata['transfer_details']['loading_date']; ?>
+                                    </span>
+                                </div>
+                                <div class="col-md-2">
+                                    <span>
+                                        <b>Receiving Date</b><br>
+                                        <?php echo $Ldata['transfer_details']['receiving_date']; ?>
+                                    </span>
+                                </div>
+                                <div class="col-md-3">
+                                    <span>
+                                        <b>Cargo Transfer</b><br>
+                                        <?php echo $warehouse; ?>
+                                    </span>
+                                </div>
+                                <div class="col-md-3">
+                                    <button type="button" id="editButton" class="btn btn-sm btn-primary" style="position: absolute; top: 5px; right: 5px;">
+                                        <i class="fas fa-pencil-alt"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- Editable Form Section (Initially Hidden) -->
+                <div id="formSection" style="display: none;">
+                    <div class="card mb-2">
+                        <div class="card-body">
+                            <div class="row gy-3">
+                                <!-- Form Fields (Same as in the Summary Section) -->
+                                <?php if ($Tcat === 'l') {
+                                    if ($Ldata['transfer_details']['route'] === 'local') { ?>
                                         <div class="col-md-2">
                                             <label for="truck_no" class="form-label">Truck Number</label>
-                                            <input id="truck_no" name="l_<?= $l_ID; ?>_truck_no"
-                                                value="<?php echo $Ldata['truck_no']; ?>" type="text"
-                                                class="form-control form-control-sm">
+                                            <input id="truck_no" name="truck_no" value="<?php echo $Ldata['transfer_details']['truck_no']; ?>" type="text" class="form-control form-control-sm">
                                         </div>
-
                                         <div class="col-md-2">
                                             <label for="truck_name" class="form-label">Truck Name</label>
-                                            <input id="truck_name" name="l_<?= $l_ID; ?>_truck_name"
-                                                value="<?php echo $Ldata['truck_name']; ?>" type="text"
-                                                class="form-control form-control-sm">
+                                            <input id="truck_name" name="truck_name" value="<?php echo $Ldata['transfer_details']['truck_name']; ?>" type="text" class="form-control form-control-sm">
                                         </div>
                                         <div class="col-md-3">
                                             <label for="loading_warehouse" class="form-label">Loading Warehouse</label>
-                                            <input id="loading_warehouse" name="l_<?= $l_ID; ?>_loading_warehouse"
-                                                value="<?php echo $Ldata['loading_warehouse']; ?>" type="text"
-                                                class="form-control form-control-sm">
+                                            <input id="loading_warehouse" name="loading_warehouse" value="<?php echo $Ldata['transfer_details']['loading_warehouse']; ?>" type="text" class="form-control form-control-sm">
                                         </div>
                                         <div class="col-md-3">
                                             <label for="receiving_warehouse" class="form-label">Receiving Warehouse</label>
-                                            <input id="receiving_warehouse" name="l_<?= $l_ID; ?>_receiving_warehouse"
-                                                value="<?php echo $Ldata['receiving_warehouse']; ?>" type="text"
-                                                class="form-control form-control-sm">
+                                            <input id="receiving_warehouse" name="receiving_warehouse" value="<?php echo $Ldata['transfer_details']['receiving_warehouse']; ?>" type="text" class="form-control form-control-sm">
                                         </div>
                                     <?php } ?>
                                     <div class="col-md-3">
                                         <label for="loading_company_name" class="form-label">Loading Company</label>
-                                        <input id="loading_company_name" name="l_<?= $l_ID; ?>_loading_company_name"
-                                            value="<?php echo $Ldata['loading_company_name']; ?>" type="text"
-                                            class="form-control form-control-sm">
+                                        <input id="loading_company_name" name="loading_company_name" value="<?php echo $Ldata['transfer_details']['loading_company_name']; ?>" type="text" class="form-control form-control-sm">
                                     </div>
-
                                     <div class="col-md-3">
                                         <label for="receiving_company_name" class="form-label">Receiving Company Name</label>
-                                        <input id="receiving_company_name" name="l_<?= $l_ID; ?>_receiving_company_name"
-                                            value="<?php echo $Ldata['receiving_company_name']; ?>" type="text"
-                                            class="form-control form-control-sm">
+                                        <input id="receiving_company_name" name="receiving_company_name" value="<?php echo $Ldata['transfer_details']['receiving_company_name']; ?>" type="text" class="form-control form-control-sm">
                                     </div>
                                 <?php } else { ?>
+                                    <!-- Form Fields for Sea/Road -->
                                     <div class="col-md-2">
                                         <label for="loading_country" class="form-label">Loading Country</label>
-                                        <input type="text" name="l_<?= $l_ID; ?>_loading_country" id="loading_country" value="<?= $Ldata['loading_country']; ?>" required class="form-control form-control-sm">
+                                        <input type="text" name="loading_country" id="loading_country" value="<?= $Ldata['transfer_details']['loading_country']; ?>" class="form-control form-control-sm">
                                     </div>
-
                                     <div class="col-md-2">
                                         <label for="loading_port_name" class="form-label">L <?= $Tdata['sea_road'] === 'sea' ? 'PORT' : 'BORDER'; ?> Name</label>
-                                        <input type="text" name="l_<?= $l_ID; ?>_loading_port_name" id="loading_port_name" value="<?= $Ldata['loading_port_name']; ?>" required class="form-control form-control-sm">
+                                        <input type="text" name="loading_port_name" id="loading_port_name" value="<?= $Ldata['transfer_details']['loading_port_name']; ?>" class="form-control form-control-sm">
                                     </div>
-
                                     <div class="col-md-2">
                                         <label for="receiving_country" class="form-label">Receiving Country</label>
-                                        <input type="text" name="l_<?= $l_ID; ?>_receiving_country" id="receiving_country" value="<?= $Ldata['receiving_country']; ?>" required class="form-control form-control-sm">
+                                        <input type="text" name="receiving_country" id="receiving_country" value="<?= $Ldata['transfer_details']['receiving_country']; ?>" class="form-control form-control-sm">
                                     </div>
-
                                     <div class="col-md-2">
                                         <label for="receiving_port_name" class="form-label">R <?= $Tdata['sea_road'] === 'sea' ? 'PORT' : 'BORDER'; ?> Name</label>
-                                        <input type="text" name="l_<?= $l_ID; ?>_receiving_port_name" id="receiving_port_name" value="<?= $Ldata['receiving_port_name']; ?>" required class="form-control form-control-sm">
+                                        <input type="text" name="receiving_port_name" id="receiving_port_name" value="<?= $Ldata['transfer_details']['receiving_port_name']; ?>" class="form-control form-control-sm">
                                     </div>
-                                    <!-- Shipping Name -->
                                     <div class="col-md-3">
                                         <label for="shipping_name" class="form-label"><?= $Tdata['sea_road'] === 'sea' ? 'Shipping' : 'Transporter'; ?> Name</label>
-                                        <input type="text" name="l_<?= $l_ID; ?>_shipping_name" value="<?= $Ldata['shipping_name']; ?>" id="shipping_name" required class="form-control form-control-sm">
+                                        <input type="text" name="shipping_name" id="shipping_name" value="<?= $Ldata['transfer_details']['shipping_name']; ?>" class="form-control form-control-sm">
                                     </div>
-                                    <!-- Shipping Address -->
                                     <div class="col-md-4">
                                         <label for="shipping_address" class="form-label"><?= $Tdata['sea_road'] === 'sea' ? 'Shipping' : 'Transporter'; ?> Address</label>
-                                        <input type="text" name="l_<?= $l_ID; ?>_shipping_address" value="<?= $Ldata['shipping_address']; ?>" id="shipping_address" required class="form-control form-control-sm">
+                                        <input type="text" name="shipping_address" id="shipping_address" value="<?= $Ldata['transfer_details']['shipping_address']; ?>" class="form-control form-control-sm">
                                     </div>
-                                    <!-- Shipping Phone -->
                                     <div class="col-md-2">
                                         <label for="shipping_phone" class="form-label"><?= $Tdata['sea_road'] === 'sea' ? 'Shipping' : 'Transporter'; ?> Phone</label>
-                                        <input type="tel" name="l_<?= $l_ID; ?>_shipping_phone" value="<?= $Ldata['shipping_phone']; ?>" id="shipping_phone" required class="form-control form-control-sm">
+                                        <input type="text" name="shipping_phone" id="shipping_phone" value="<?= $Ldata['transfer_details']['shipping_phone']; ?>" class="form-control form-control-sm">
                                     </div>
-                                    <!-- Shipping WhatsApp -->
                                     <div class="col-md-2">
                                         <label for="shipping_whatsapp" class="form-label"><?= $Tdata['sea_road'] === 'sea' ? 'Shipping' : 'Transporter'; ?> WhatsApp</label>
-                                        <input type="tel" name="l_<?= $l_ID; ?>_shipping_whatsapp" value="<?= $Ldata['shipping_whatsapp']; ?>" id="shipping_whatsapp" required class="form-control form-control-sm">
+                                        <input type="text" name="shipping_whatsapp" id="shipping_whatsapp" value="<?= $Ldata['transfer_details']['shipping_whatsapp']; ?>" class="form-control form-control-sm">
                                     </div>
-                                    <!-- Shipping Email -->
                                     <div class="col-md-3">
                                         <label for="shipping_email" class="form-label"><?= $Tdata['sea_road'] === 'sea' ? 'Shipping' : 'Transporter'; ?> Email</label>
-                                        <input type="email" name="l_<?= $l_ID; ?>_shipping_email" value="<?= $Ldata['shipping_email']; ?>" id="shipping_email" required class="form-control form-control-sm">
+                                        <input type="text" name="shipping_email" id="shipping_email" value="<?= $Ldata['transfer_details']['shipping_email']; ?>" class="form-control form-control-sm">
                                     </div>
                                 <?php } ?>
                                 <div class="col-md-2">
                                     <label for="loading_date" class="form-label">Loading Date</label>
-                                    <input type="date" class="form-control form-control-sm" id="loading_date" name="l_<?= $l_ID; ?>_loading_date"
-                                        value="<?php echo $Ldata['loading_date']; ?>">
+                                    <input type="text" name="loading_date" id="loading_date" value="<?= $Ldata['transfer_details']['loading_date']; ?>" class="form-control form-control-sm">
                                 </div>
                                 <div class="col-md-2">
                                     <label for="receiving_date" class="form-label">Receiving Date</label>
-                                    <input type="date" class="form-control form-control-sm" id="receiving_date" name="l_<?= $l_ID; ?>_receiving_date"
-                                        value="<?php echo $Ldata['receiving_date']; ?>">
+                                    <input type="text" name="receiving_date" id="receiving_date" value="<?= $Ldata['transfer_details']['receiving_date']; ?>" class="form-control form-control-sm">
                                 </div>
-
-                                <?php $warehouse = isset($Ldata['warehouse_transfer']) ? ($Ldata['warehouse_transfer'] ?? '') : ($Ldata['cargo_transfer_warehouse'] ?? '');
-                                $saleCheck = $Ttype === 's' ? 'onchange="currentStock(this,\'' . $l_ID . '\',\'' . $Ldata['goods_id'] . '\',\'' . $Ldata['size'] . '\',\'' . $Ldata['brand'] . '\',\'' . $Ldata['origin'] . '\',\'' . $Ldata['quantity_name'] . '\')"' : ''; ?>
-                                <!-- Warehouse Transfer Field -->
+                                <!-- Edit Section (when in edit mode) -->
                                 <div class="col-md-3">
-                                    <label for="l_<?= $l_ID; ?>_warehouse_transfer" class="form-label">Cargo Transfer</label>
-                                    <select id="l_<?= $l_ID; ?>_warehouse_transfer" name="l_<?= $l_ID; ?>_warehouse_transfer" class="form-select form-select-sm" <?= $saleCheck; ?> required>
+                                    <label for="warehouse_transfer" class="form-label">Cargo Transfer</label>
+                                    <select id="warehouse_transfer" name="warehouse_transfer" class="form-select form-select-sm" <?= $saleCheck; ?>>
                                         <option disabled <?= empty($warehouse) ? 'selected' : '' ?>>Select One</option>
-                                        <option value="Local Import" <?= isset($warehouse) && $warehouse === 'Local Import' ? 'selected' : '' ?>>Local Import</option>
-                                        <option value="Free Zone Import" <?= isset($warehouse) && $warehouse === 'Free Zone Import' ? 'selected' : '' ?>>Free Zone Import</option>
-                                        <option value="Import Re-Export" <?= isset($warehouse) && $warehouse === 'Import Re-Export' ? 'selected' : '' ?>>Import Re-Export</option>
-                                        <option value="Transit" <?= isset($warehouse) && $warehouse === 'Transit' ? 'selected' : '' ?>>Transit</option>
-                                        <option value="Local Export" <?= isset($warehouse) && $warehouse === 'Local Export' ? 'selected' : '' ?>>Local Export</option>
-                                        <option value="Local Market" <?= isset($warehouse) && $warehouse === 'Local Market' ? 'selected' : '' ?>>Local Market</option>
+                                        <option value="Local Import" <?= $warehouse === 'Local Import' ? 'selected' : '' ?>>Local Import</option>
+                                        <option value="Free Zone Import" <?= $warehouse === 'Free Zone Import' ? 'selected' : '' ?>>Free Zone Import</option>
+                                        <option value="Import Re-Export" <?= $warehouse === 'Import Re-Export' ? 'selected' : '' ?>>Import Re-Export</option>
+                                        <option value="Transit" <?= $warehouse === 'Transit' ? 'selected' : '' ?>>Transit</option>
+                                        <option value="Local Export" <?= $warehouse === 'Local Export' ? 'selected' : '' ?>>Local Export</option>
+                                        <option value="Local Market" <?= $warehouse === 'Local Market' ? 'selected' : '' ?>>Local Market</option>
                                     </select>
                                 </div>
+
+                                <input type="hidden" name="transfer_to_warehouse_ids" id="transfer_to_warehouse_ids">
 
                                 <!-- Modal Popup for Data -->
                                 <div class="modal fade" id="warehouseModal" tabindex="-1" aria-labelledby="warehouseModalLabel" aria-hidden="true">
@@ -374,6 +551,8 @@ if (isset($Ldata['rate'], $Ldata['empty_kgs'])) {
                                                         <thead>
                                                             <tr>
                                                                 <th><i class="far fa-circle"></i></th>
+                                                                <th>P#(SR#)</th>
+                                                                <th>Allot</th>
                                                                 <th>Goods Name</th>
                                                                 <th>Size</th>
                                                                 <th>Brand</th>
@@ -400,72 +579,81 @@ if (isset($Ldata['rate'], $Ldata['empty_kgs'])) {
 
                                 <?php if ($Ttype === 's') { ?>
                                     <div class="col-md-5">
-                                        <label for="l_<?= $l_ID; ?>_warehouse_entry" class="form-label">Current Enteries In Selected WareHouse</label>
-                                        <select
-                                            id="l_<?= $l_ID; ?>_warehouse_entry"
-                                            name="l_<?= $l_ID; ?>_warehouse_entry"
-                                            class="form-select form-select-sm"
-                                            <?= $saleCheck; ?>
-                                            required>
-                                            <?php if (!empty($Ldata['warehouse_entry'])) {
-                                                $againstEntry = explode('~', $Ldata['warehouse_entry']); ?>
-                                                <option value="<?= $Ldata['warehouse_entry']; ?>">
-                                                    <?= ucfirst(decode_unique_code($againstEntry['0'], 'Ttype')) . '#' . decode_unique_code($againstEntry['0'], 'TID') . ' => ' . $againstEntry[3]; ?>
-                                                </option>
+                                        <label for="warehouse_entry" class="form-label">Current Entries In Selected Warehouse</label>
+                                        <select id="warehouse_entry" name="warehouse_entry" class="form-select form-select-sm" <?= $saleCheck; ?>>
+                                            <?php if (!empty($Ldata['goods'][0]['agent']['sold_to'])) {
+                                                // $soldToEntry = explode('~', $Ldata['sold_to'][0]); 
+                                            ?>
+                                                <!-- <option value="<?= $Ldata['sold_to'][0]; ?>"> -->
+                                                <!--     <?= 'P#' . decode_unique_code($againstEntry[0], 'TID') . ' => ' . $againstEntry[3]; ?> -->
+                                                <!-- </option> -->
                                             <?php } ?>
                                         </select>
                                     </div>
                                 <?php } else {
                                     if (!empty($Ldata['sold_to'])) {
-                                        $soldToEntry = explode('~', $Ldata['sold_to']);
-                                        echo '<span class="fw-bold text-danger"> SOLD IN ' . ucfirst(decode_unique_code($soldToEntry['0'], 'Ttype')) . '#' . decode_unique_code($soldToEntry['0'], 'TID') . ' => ' . $soldToEntry[2], '</span>';
+                                        $soldToEntry = explode('~', $Ldata['sold_to'][0]);
+                                        echo '<span class="fw-bold text-danger"> SOLD IN P#' . decode_unique_code($soldToEntry[0], 'TID') . ' => ' . $soldToEntry[2], '</span>';
                                     }
                                 }
                                 ?>
+
+                                <!-- Cross Button -->
+                                <div class="col-md-3">
+                                    <button type="button" id="closeButton" class="btn btn-sm btn-danger" style="position: absolute; top: 5px; right: 5px;">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            <?php
-            endforeach; ?>
+            </div>
             <div>
                 <table class="table mt-2 table-hover table-sm">
                     <thead>
                         <tr>
+                            <th class="bg-dark text-white"><i class="fa fa-check-square"></i></th>
                             <th class="bg-dark text-white">Sr#</th>
-                            <th class="bg-dark text-white">Container No</th>
-                            <th class="bg-dark text-white">B/L | UID</th>
+                            <?php if ($Tcat !== 'l') { ?>
+                                <th class="bg-dark text-white">Container No</th>
+                                <th class="bg-dark text-white">Container Name</th>
+                            <?php } ?>
+                            <th class="bg-dark text-white">Warehouse</th>
                             <th class="bg-dark text-white">Goods Name</th>
+                            <th class="bg-dark text-white">Size</th>
+                            <th class="bg-dark text-white">Brand</th>
+                            <th class="bg-dark text-white">Origin</th>
                             <th class="bg-dark text-white">Quantity</th>
                             <th class="bg-dark text-white">G.W.KGS</th>
                             <th class="bg-dark text-white">N.W.KGS</th>
-                            <th class="bg-dark text-white">L.DATE</th>
-                            <th class="bg-dark text-white">L.<?= $Tdata['sea_road'] === 'sea' ? 'PORT' : 'BORDER'; ?></th>
-                            <th class="bg-dark text-white">R.DATE</th>
-                            <th class="bg-dark text-white">R.<?= $Tdata['sea_road'] === 'sea' ? 'PORT' : 'BORDER'; ?></th>
                             <th class="bg-dark text-white">Edit</th>
                         </tr>
                     </thead>
                     <tbody class="loadingsTable">
                         <?php
                         $quantity_no = $gross_weight = $net_weight = 0;
-                        foreach ($groupedData as $l_ID => $row) {
+                        foreach ($Ldata['goods'] as $l_ID => $row) {
                         ?>
                             <tr>
-                                <td class="border border-dark"><?= $row["l_{$l_ID}_sr_no"] ?? 'N/A'; ?></td>
-                                <td class="border border-dark"><?= $row["l_{$l_ID}_container_no"] ?? 'N/A'; ?></td>
-                                <td class="border border-dark"><?= $row["l_{$l_ID}_bl_no"] ?? $row["l_{$l_ID}_uid"]; ?></td>
-                                <td class="border border-dark"><?= goodsName($row["l_{$l_ID}_goods_id"]); ?></td>
-                                <td class="border border-dark"><?= $row["l_{$l_ID}_quantity_no"] ?? 'N/A'; ?> <sub><?= $row["l_{$l_ID}_quantity_name"] ?? 'N/A'; ?></sub></td>
-                                <td class="border border-dark"><?= $row["l_{$l_ID}_gross_weight"] ?? 'N/A'; ?></td>
-                                <td class="border border-dark"><?= $row["l_{$l_ID}_net_weight"] ?? 'N/A'; ?></td>
-                                <td class="border border-dark"><?= $row["l_{$l_ID}_loading_date"] ?? 'N/A'; ?></td>
-                                <td class="border border-dark"><?= $row["l_{$l_ID}_loading_port_name"] ?? 'N/A'; ?></td>
-                                <td class="border border-dark"><?= $row["l_{$l_ID}_receiving_date"] ?? 'N/A'; ?></td>
-                                <td class="border border-dark"><?= $row["l_{$l_ID}_receiving_port_name"] ?? 'N/A'; ?></td>
+                                <td class="border border-dark text-center">
+                                    <input type="checkbox" class="row-checkbox" value="<?= $l_ID; ?>">
+                                </td>
+                                <td class="border border-dark"><?= $row["sr_no"] ?? 'N/A'; ?></td>
+                                <?php if ($Tcat !== 'l') { ?>
+                                    <td class="border border-dark"><?= $row["container_no"] ?? 'N/A'; ?></td>
+                                    <td class="border border-dark"><?= $row["container_name"] ?? 'N/A'; ?></td>
+                                <?php } ?>
+                                <td class="border border-dark"><?= $row["agent"]['cargo_transfer_warehouse'] ?? $row['agent']['warehouse_transfer'] ?? ''; ?></td>
+                                <td class="border border-dark"><?= goodsName($row["goods_id"]); ?></td>
+                                <td class="border border-dark"><?= $row["size"]; ?></td>
+                                <td class="border border-dark"><?= $row["brand"]; ?></td>
+                                <td class="border border-dark"><?= $row["origin"]; ?></td>
+                                <td class="border border-dark"><?= !isset($row['edited']) ? $row["quantity_no"] : $row['goods_json']['qty_no'] ?? 'N/A'; ?> <sub><?= $row["quantity_name"] ?? 'N/A'; ?></sub></td>
+                                <td class="border border-dark"><?= !isset($row['edited']) ? $row["gross_weight"] : $row['goods_json']['total_kgs'] ?? 'N/A'; ?></td>
+                                <td class="border border-dark"><?= !isset($row['edited']) ? $row["net_weight"] : $row['goods_json']['net_kgs'] ?? 'N/A'; ?></td>
                                 <td>
-                                    <i class="fa fa-pencil fs-5 text-primary pointer toggle-icon"
-                                        data-id="<?= $l_ID; ?>"></i>
+                                    <i class="fa fa-pencil fs-5 text-primary pointer toggle-icon" data-id="<?= $l_ID; ?>"></i>
                                 </td>
                             </tr>
                         <?php
@@ -475,207 +663,172 @@ if (isset($Ldata['rate'], $Ldata['empty_kgs'])) {
                 </table>
 
             </div>
-            <?php
-            foreach ($groupedData as $l_ID => $largeEnteries):
-                $Ldata = [];
-                foreach ($largeEnteries as $key => $value) {
-                    $Ldata[str_replace("l_{$l_ID}_", "", $key)] = $value;
-                }
-            ?>
-                <div class="d-none entryform<?= $l_ID; ?>">
-                    <div class="card mb-2">
-                        <div class="card-body">
-                            <div class="row gy-3">
-                                <div class="col-md-3">
-                                    <div class="input-group my-2">
-                                        <label for="allotment_name" class="col-form-label text-nowrap">Allotment Name</label>
-                                        <input value="<?= isset($Ldata['allotment_name']) ? $Ldata['allotment_name'] : ''; ?>" id="allotment_name"
-                                            name="allotment_name" class="form-control form-control-sm" required>
-                                    </div>
+            <div id="goodsDiv">
+                <?php
+                foreach ($Ldata['goods'] as $l_ID => $row):
+                ?>
+                    <div class="d-none entryform entryform<?= $l_ID; ?>">
+                        <div class=" card mb-2">
+                            <div class="card-body">
+                                <div class="row gy-3">
+                                    <div class="col-md-3">
+                                        <div class="input-group my-2">
+                                            <label class="col-form-label text-nowrap">Allotment Name</label>
+                                            <input value="<?= isset($row['goods_json']['allotment_name']) ? $row['goods_json']['allotment_name'] : ''; ?>" name="<?= $l_ID ?>_allotment_name" class="allotment_name form-control form-control-sm">
+                                        </div>
 
-                                    <div class="input-group my-2">
-                                        <label for="goods_id">GOODS</label>
-                                        <select id="<?= $l_ID; ?>goods_id" name="goods_id" class="form-select form-select-sm" required>
-                                            <option hidden value="">Select</option>
-                                            <?php
-                                            $goods = fetch('goods');
-                                            while ($good = mysqli_fetch_assoc($goods)) {
-                                                $g_selected = $good['id'] == $Ldata['goods_id'] ? 'selected' : '';
-                                                echo '<option ' . $g_selected . ' value="' . $good['id'] . '">' . $good['name'] . '</option>';
-                                            }
-                                            ?>
-                                        </select>
-                                    </div>
+                                        <div class="input-group my-2">
+                                            <label>GOODS</label>
+                                            <select name="<?= $l_ID ?>_goods_id" class="goods_id form-select form-select-sm">
+                                                <option hidden value="">Select</option>
+                                                <?php
+                                                $goods = fetch('goods');
+                                                while ($good = mysqli_fetch_assoc($goods)) {
+                                                    $g_selected = $good['id'] == $row['goods_id'] ? 'selected' : '';
+                                                    echo '<option ' . $g_selected . ' value="' . $good['id'] . '">' . $good['name'] . '</option>';
+                                                }
+                                                ?>
+                                            </select>
+                                        </div>
 
-                                    <div class="input-group my-2">
-                                        <label for="size">SIZE</label>
-                                        <select class="form-select form-select-sm" name="size" id="<?= $l_ID; ?>size" required>
-                                            <option hidden value="">Select</option>
-                                            <?php
-                                            $goods_sizes = mysqli_query($connect, "SELECT DISTINCT size FROM good_details WHERE goods_id = " . $Ldata['goods_id']);
-                                            while ($size_s = mysqli_fetch_assoc($goods_sizes)) {
-                                                $size_selected = $size_s['size'] == $Ldata['size'] ? 'selected' : '';
-                                                echo '<option ' . $size_selected . ' value="' . $size_s['size'] . '">' . $size_s['size'] . '</option>';
-                                            }
-                                            ?>
-                                        </select>
-                                    </div>
+                                        <div class="input-group my-2">
+                                            <label for="size">SIZE</label>
+                                            <select class="size form-select form-select-sm" name="<?= $l_ID ?>_size">
+                                                <option hidden value="">Select</option>
+                                                <?php
+                                                $goods_sizes = mysqli_query($connect, "SELECT DISTINCT size FROM good_details WHERE goods_id = " . $row['goods_id']);
+                                                while ($size_s = mysqli_fetch_assoc($goods_sizes)) {
+                                                    $size_selected = $size_s['size'] == $row['size'] ? 'selected' : '';
+                                                    echo '<option ' . $size_selected . ' value="' . $size_s['size'] . '">' . $size_s['size'] . '</option>';
+                                                }
+                                                ?>
+                                            </select>
+                                        </div>
 
-                                    <div class="input-group my-2">
-                                        <label for="origin">ORIGIN</label>
-                                        <select class="form-select form-select-sm" name="origin" id="<?= $l_ID; ?>origin" required>
-                                            <option hidden value="">Select</option>
-                                            <?php
-                                            $goods_sizes = mysqli_query($connect, "SELECT DISTINCT origin FROM good_details WHERE goods_id = " . $Ldata['goods_id']);
-                                            while ($size_s = mysqli_fetch_assoc($goods_sizes)) {
-                                                $size_selected = $size_s['origin'] == $Ldata['origin'] ? 'selected' : '';
-                                                echo '<option ' . $size_selected . ' value="' . $size_s['origin'] . '">' . $size_s['origin'] . '</option>';
-                                            }
-                                            ?>
-                                        </select>
-                                    </div>
+                                        <div class="input-group my-2">
+                                            <label for="origin">ORIGIN</label>
+                                            <select class="form-select form-select-sm origin" name="<?= $l_ID ?>_origin">
+                                                <option hidden value="">Select</option>
+                                                <?php
+                                                $goods_sizes = mysqli_query($connect, "SELECT DISTINCT origin FROM good_details WHERE goods_id = " . $row['goods_id']);
+                                                while ($size_s = mysqli_fetch_assoc($goods_sizes)) {
+                                                    $size_selected = $size_s['origin'] == $row['origin'] ? 'selected' : '';
+                                                    echo '<option ' . $size_selected . ' value="' . $size_s['origin'] . '">' . $size_s['origin'] . '</option>';
+                                                }
+                                                ?>
+                                            </select>
+                                        </div>
 
-                                    <div class="input-group my-2">
-                                        <label for="brand">BRAND</label>
-                                        <select class="form-select form-select-sm" name="brand" id="<?= $l_ID; ?>brand" required>
-                                            <option hidden value="">Select</option>
-                                            <?php
-                                            $goods_sizes = mysqli_query($connect, "SELECT DISTINCT brand FROM good_details WHERE goods_id = " . $Ldata['goods_id']);
-                                            while ($size_s = mysqli_fetch_assoc($goods_sizes)) {
-                                                $size_selected = $size_s['brand'] == $Ldata['brand'] ? 'selected' : '';
-                                                echo '<option ' . $size_selected . ' value="' . $size_s['brand'] . '">' . $size_s['brand'] . '</option>';
-                                            }
-                                            ?>
-                                        </select>
+                                        <div class="input-group my-2">
+                                            <label for="brand">BRAND</label>
+                                            <select class="form-select form-select-sm brand" name="<?= $l_ID ?>_brand">
+                                                <option hidden value="">Select</option>
+                                                <?php
+                                                $goods_sizes = mysqli_query($connect, "SELECT DISTINCT brand FROM good_details WHERE goods_id = " . $row['goods_id']);
+                                                while ($size_s = mysqli_fetch_assoc($goods_sizes)) {
+                                                    $size_selected = $size_s['brand'] == $row['brand'] ? 'selected' : '';
+                                                    echo '<option ' . $size_selected . ' value="' . $size_s['brand'] . '">' . $size_s['brand'] . '</option>';
+                                                }
+                                                ?>
+                                            </select>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="col-md-7 border-end">
-                                    <div class="row gx-1 gy-3">
-                                        <div class="col-md-4">
-                                            <div class="row g-0">
-                                                <label for="qty_name" class="col-sm-4 col-form-label text-nowrap">Qty
-                                                    Name</label>
-                                                <div class="col-sm">
-                                                    <input value="<?php echo $Ldata['qty_name']; ?>" id="<?= $l_ID; ?>qty_name"
-                                                        name="qty_name" class="form-control form-control-sm" required>
+                                    <div class="col-md-7 border-end">
+                                        <div class="row gx-1 gy-3">
+                                            <div class="col-md-4">
+                                                <div class="row g-0">
+                                                    <label for="qty_name" class="col-sm-4 col-form-label text-nowrap">Qty
+                                                        Name</label>
+                                                    <div class="col-sm">
+                                                        <input value="<?php echo $row['quantity_name']; ?>"
+                                                            name="<?= $l_ID ?>_qty_name" class="qty_name form-control form-control-sm">
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="row g-0">
-                                                <label class="col-sm-4 col-form-label text-nowrap"
-                                                    for="qty_no">Qty#</label>
-                                                <div class="col-sm">
-                                                    <input value="<?php echo $Ldata['qty_no']; ?>" id="<?= $l_ID; ?>qty_no"
-                                                        name="qty_no"
-                                                        class="form-control form-control-sm currency" required>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="row g-0">
-                                                <label class="col-sm-4 col-form-label text-nowrap" for="qty_kgs">Qty
-                                                    KGs</label>
-                                                <div class="col-sm">
-                                                    <input value="<?php echo $Ldata['qty_kgs']; ?>" id="<?= $l_ID; ?>qty_kgs"
-                                                        name="qty_kgs"
-                                                        class="form-control form-control-sm currency" required>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="row g-0">
-                                                <label class="col-sm-4 col-form-label text-nowrap" for="empty_kgs">Empty
-                                                    KGs</label>
-                                                <div class="col-sm">
-                                                    <input value="<?php echo $Ldata['empty_kgs']; ?>"
-                                                        id="<?= $l_ID; ?>empty_kgs"
-                                                        name="empty_kgs" class="form-control form-control-sm currency" required>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="row g-0">
-                                                <label class="col-sm-4 col-form-label text-nowrap"
-                                                    for="divide">DIVIDE</label>
-                                                <div class="col-sm">
-                                                    <select id="<?= $l_ID; ?>divide" name="divide" class="form-select">
-                                                        <?php $divides = array('TON' => 'TON', 'KGs' => 'KG', 'CARTON' => 'CARTON');
-                                                        foreach ($divides as $item => $val) {
-                                                            $d_sel = $Ldata['divide'] == $val ? 'selected' : '';
-                                                            echo '<option ' . $d_sel . ' value="' . $val . '">' . $item . '</option>';
-                                                        } ?>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="row g-0">
-                                                <label class="col-sm-4 col-form-label text-nowrap"
-                                                    for="weight">WEIGHT</label>
-                                                <div class="col-sm">
-                                                    <input value="<?php echo $Ldata['weight']; ?>" id="<?= $l_ID; ?>weight"
-                                                        name="weight"
-                                                        class="form-control form-control-sm currency" required>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="row g-0">
-                                                <label class="col-sm-4 col-form-label text-nowrap"
-                                                    for="price">PRICE</label>
-                                                <div class="col-sm">
-                                                    <select id="<?= $l_ID; ?>price" name="price" class="form-select form-select-sm">
-                                                        <?php $prices = array('TON PRICE' => 'TON', 'KGs PRICE' => 'KG', 'CARTON PRICE' => 'CARTON');
-                                                        foreach ($prices as $item => $val) {
-                                                            $pr_sel = $Ldata['price'] == $val ? 'selected' : '';
-                                                            echo '<option ' . $pr_sel . ' value="' . $val . '">' . $item . '</option>';
-                                                        } ?>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="row g-0">
-                                                <label class="col-sm-4 col-form-label text-nowrap"
-                                                    for="currency1">Currency</label>
-                                                <div class="col-sm">
-                                                    <select id="<?= $l_ID; ?>currency1" name="currency1" class="form-select form-select-sm"
-                                                        required>
-                                                        <option selected hidden disabled value="">Select</option>
-                                                        <?php $currencies = fetch('currencies');
-                                                        while ($crr = mysqli_fetch_assoc($currencies)) {
-                                                            $crr_sel = $crr['name'] == $Ldata['currency1'] ? 'selected' : '';
-                                                            echo '<option ' . $crr_sel . ' value="' . $crr['name'] . '">' . $crr['name'] . ' - ' . $crr['symbol'] . '</option>';
-                                                        } ?>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="row g-0">
-                                                <label class="col-sm-4 col-form-label text-nowrap"
-                                                    for="rate1">RATE</label>
-                                                <div class="col-sm">
-                                                    <input value="<?php echo $Ldata['rate1']; ?>" id="<?= $l_ID; ?>rate1"
-                                                        name="rate1"
-                                                        class="form-control form-control-sm currency" required>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <?php if (decode_unique_code($unique_code, 'Tcat') !== 'l'): ?>
                                             <div class="col-md-4">
                                                 <div class="row g-0">
                                                     <label class="col-sm-4 col-form-label text-nowrap"
-                                                        for="currency2">Currency</label>
+                                                        for="qty_no">Qty#</label>
                                                     <div class="col-sm">
-                                                        <select id="<?= $l_ID; ?>currency2" name="currency2" class="form-select form-select-sm"
-                                                            required>
+                                                        <input value="<?= !isset($row['edited']) ? $row["quantity_no"] : $row['goods_json']['qty_no']; ?>"
+                                                            name="<?= $l_ID ?>_qty_no"
+                                                            class="form-control qty_no form-control-sm currency">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="row g-0">
+                                                    <label class="col-sm-4 col-form-label text-nowrap" for="qty_kgs">Qty
+                                                        KGs</label>
+                                                    <div class="col-sm">
+                                                        <input value="<?php echo $row['goods_json']['qty_kgs']; ?>"
+                                                            name="<?= $l_ID ?>_qty_kgs"
+                                                            class="form-control qty_kgs form-control-sm currency">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="row g-0">
+                                                    <label class="col-sm-4 col-form-label text-nowrap" for="empty_kgs">Empty
+                                                        KGs</label>
+                                                    <div class="col-sm">
+                                                        <input value="<?php echo $row['goods_json']['empty_kgs']; ?>"
+                                                            name="<?= $l_ID ?>_empty_kgs" class="empty_kgs form-control form-control-sm currency">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="row g-0">
+                                                    <label class="col-sm-4 col-form-label text-nowrap"
+                                                        for="divide">DIVIDE</label>
+                                                    <div class="col-sm">
+                                                        <select name="<?= $l_ID ?>_divide" class="divide form-select">
+                                                            <?php $divides = array('TON' => 'TON', 'KGs' => 'KG', 'CARTON' => 'CARTON');
+                                                            foreach ($divides as $item => $val) {
+                                                                $d_sel = ($row['goods_json']['divide'] ?? '') == $val ? 'selected' : '';
+                                                                echo '<option ' . $d_sel . ' value="' . $val . '">' . $item . '</option>';
+                                                            } ?>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="row g-0">
+                                                    <label class="col-sm-4 col-form-label text-nowrap"
+                                                        for="weight">WEIGHT</label>
+                                                    <div class="col-sm">
+                                                        <input value="<?php echo $row['goods_json']['weight']; ?>"
+                                                            name="<?= $l_ID ?>_weight"
+                                                            class="form-control weight form-control-sm currency">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="row g-0">
+                                                    <label class="col-sm-4 col-form-label text-nowrap"
+                                                        for="price">PRICE</label>
+                                                    <div class="col-sm">
+                                                        <select name="<?= $l_ID ?>_price" class="price form-select form-select-sm">
+                                                            <?php $prices = array('TON PRICE' => 'TON', 'KGs PRICE' => 'KG', 'CARTON PRICE' => 'CARTON');
+                                                            foreach ($prices as $item => $val) {
+                                                                $pr_sel = ($row['goods_json']['price'] ?? '') == $val ? 'selected' : '';
+                                                                echo '<option ' . $pr_sel . ' value="' . $val . '">' . $item . '</option>';
+                                                            } ?>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="row g-0">
+                                                    <label class="col-sm-4 col-form-label text-nowrap"
+                                                        for="currency1">Currency</label>
+                                                    <div class="col-sm">
+                                                        <select name="<?= $l_ID ?>_currency1" class="currency1 form-select form-select-sm">
                                                             <option selected hidden disabled value="">Select</option>
                                                             <?php $currencies = fetch('currencies');
                                                             while ($crr = mysqli_fetch_assoc($currencies)) {
-                                                                $crr_sel2 = $crr['name'] == $Ldata['currency2'] ? 'selected' : '';
-                                                                echo '<option ' . $crr_sel2 . ' value="' . $crr['name'] . '">' . $crr['name'] . ' - ' . $crr['symbol'] . '</option>';
+                                                                $crr_sel = $crr['name'] == ($row['goods_json']['currency1'] ?? '') ? 'selected' : '';
+                                                                echo '<option ' . $crr_sel . ' value="' . $crr['name'] . '">' . $crr['name'] . ' - ' . $crr['symbol'] . '</option>';
                                                             } ?>
                                                         </select>
                                                     </div>
@@ -684,222 +837,229 @@ if (isset($Ldata['rate'], $Ldata['empty_kgs'])) {
                                             <div class="col-md-4">
                                                 <div class="row g-0">
                                                     <label class="col-sm-4 col-form-label text-nowrap"
-                                                        for="rate2">Rate</label>
+                                                        for="rate1">RATE</label>
                                                     <div class="col-sm">
-                                                        <input value="<?php echo $Ldata['rate2']; ?>" id="<?= $l_ID; ?>rate2"
-                                                            name="rate2"
-                                                            class="form-control form-control-sm currency" required>
+                                                        <input value="<?php echo $row['goods_json']['rate1']; ?>"
+                                                            name="<?= $l_ID ?>_rate1"
+                                                            class="rate1 form-control form-control-sm currency">
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div class="col-md-4">
-                                                <div class="row g-0">
-                                                    <label class="col-sm-4 col-form-label text-nowrap" for="opr">Opr</label>
-                                                    <div class="col-sm">
-                                                        <select id="<?= $l_ID; ?>opr" name="opr" class="form-select form-select-sm" required>
-                                                            <?php $ops = array('[*]' => '*', '[/]' => '/');
-                                                            foreach ($ops as $opName => $op) {
-                                                                $op_sel = $Ldata['opr'] == $op ? 'selected' : '';
-                                                                echo '<option ' . $op_sel . ' value="' . $op . '">' . $opName . '</option>';
-                                                            } ?>
-                                                        </select>
+                                            <?php if (decode_unique_code($unique_code, 'Tcat') !== 'l'): ?>
+                                                <div class="col-md-4">
+                                                    <div class="row g-0">
+                                                        <label class="col-sm-4 col-form-label text-nowrap"
+                                                            for="currency2">Currency</label>
+                                                        <div class="col-sm">
+                                                            <select name="<?= $l_ID ?>_currency2" class="form-select form-select-sm currency2">
+                                                                <option selected hidden disabled value="">Select</option>
+                                                                <?php $currencies = fetch('currencies');
+                                                                while ($crr = mysqli_fetch_assoc($currencies)) {
+                                                                    $crr_sel2 = $crr['name'] == ($row['goods_json']['currency2'] ?? '') ? 'selected' : '';
+                                                                    echo '<option ' . $crr_sel2 . ' value="' . $crr['name'] . '">' . $crr['name'] . ' - ' . $crr['symbol'] . '</option>';
+                                                                } ?>
+                                                            </select>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        <?php else: ?>
-                                            <div class="col-md-4">
-                                                <div class="row g-0">
-                                                    <label class="col-sm-4 col-form-label text-nowrap"
-                                                        for="tax_percent">Tax %</label>
-                                                    <div class="col-sm">
-                                                        <input type="text" value="<?php echo $Ldata['tax_percent']; ?>" id="<?= $l_ID; ?>tax_percent"
-                                                            name="tax_percent"
-                                                            class="form-control form-control-sm">
+                                                <div class="col-md-4">
+                                                    <div class="row g-0">
+                                                        <label class="col-sm-4 col-form-label text-nowrap"
+                                                            for="rate2">Rate</label>
+                                                        <div class="col-sm">
+                                                            <input value="<?php echo $row['goods_json']['rate2']; ?>"
+                                                                name="<?= $l_ID ?>_rate2"
+                                                                class="form-control rate2 form-control-sm currency">
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
+                                                <div class="col-md-4">
+                                                    <div class="row g-0">
+                                                        <label class="col-sm-4 col-form-label text-nowrap" for="opr">Opr</label>
+                                                        <div class="col-sm">
+                                                            <select name="<?= $l_ID ?>_opr" class="opr form-select form-select-sm">
+                                                                <?php $ops = array('[*]' => '*', '[/]' => '/');
+                                                                foreach ($ops as $opName => $op) {
+                                                                    $op_sel = ($row['goods_json']['opr'] ?? '') == $op ? 'selected' : '';
+                                                                    echo '<option ' . $op_sel . ' value="' . $op . '">' . $opName . '</option>';
+                                                                } ?>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            <?php else: ?>
+                                                <div class="col-md-4">
+                                                    <div class="row g-0">
+                                                        <label class="col-sm-4 col-form-label text-nowrap"
+                                                            for="tax_percent">Tax %</label>
+                                                        <div class="col-sm">
+                                                            <input type="text" value="<?php echo $row['goods_json']['tax_percent']; ?>"
+                                                                name="<?= $l_ID ?>_tax_percent"
+                                                                class="form-control tax_percent form-control-sm">
+                                                        </div>
+                                                    </div>
+                                                </div>
 
-                                            <div class="col-md-4">
-                                                <div class="row g-0">
-                                                    <label class="col-sm-4 col-form-label text-nowrap"
-                                                        for="tax_amount">Tax.Amt</label>
-                                                    <div class="col-sm">
-                                                        <input type="text" value="<?php echo $Ldata['tax_amount']; ?>" id="<?= $l_ID; ?>tax_amount"
-                                                            name="tax_amount"
-                                                            class="form-control form-control-sm" readonly>
+                                                <div class="col-md-4">
+                                                    <div class="row g-0">
+                                                        <label class="col-sm-4 col-form-label text-nowrap"
+                                                            for="tax_amount">Tax.Amt</label>
+                                                        <div class="col-sm">
+                                                            <input type="text" value="<?php echo $row['goods_json']['tax_amount']; ?>"
+                                                                name="<?= $l_ID ?>_tax_amount"
+                                                                class="form-control tax_amount form-control-sm" readonly>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
 
-                                            <div class="col-md-4">
-                                                <div class="row g-0">
-                                                    <!-- <label class="col-sm-4 col-form-label text-nowrap"
+                                                <div class="col-md-4">
+                                                    <div class="row g-0">
+                                                        <!-- <label class="col-sm-4 col-form-label text-nowrap"
                                                     for="total_with_tax">Amt+Tax</label> -->
-                                                    <div class="col-sm">
-                                                        <input type="hidden" value="<?php echo $Ldata['total_with_tax']; ?>" id="<?= $l_ID; ?>total_with_tax"
-                                                            name="total_with_tax">
+                                                        <div class="col-sm">
+                                                            <input type="hidden" value="<?php echo $row['goods_json']['total_with_tax']; ?>"
+                                                                name="<?= $l_ID ?>_total_with_tax" class="total_with_tax">
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        <?php endif; ?>
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="col-md-2">
-                                    <table class="table table-sm">
-                                        <tbody class="text-nowrap">
-                                            <?php
-                                            echo '<tr><th class="fw-normal">TOTAL KGs </th><th><span id="<?= $l_ID; ?>total_kgs_span"></span></th></tr>';
-                                            echo '<tr><th class="fw-normal">TOTAL QTY KGs </th><th><span id="<?= $l_ID; ?>total_qty_kgs_span"></span></th></tr>';
-                                            echo '<tr><th class="fw-normal">NET KGs </th><th><span id="<?= $l_ID; ?>net_kgs_span"></span></th></tr>';
-                                            echo '<tr><th class="fw-normal">TOTAL </th><th><span id="<?= $l_ID; ?>total_span"></span></th></tr>';
-                                            echo '<tr><th class="fw-normal">AMOUNT  </th><th><span id="<?= $l_ID; ?>amount_span"></span></th></tr>';
-                                            if (decode_unique_code($unique_code, 'Tcat') !== 'l') {
-                                                echo '<tr><th class="fw-normal text-danger">FINAL  </th><th><span id="<?= $l_ID; ?>final_amount_span"></span></th></tr>';
-                                            } else {
-                                                echo '<tr><th class="fw-normal text-danger">Amt+Tax  </th><th><span id="<?= $l_ID; ?>total_with_tax_span">0</span></th></tr>';
-                                            };
-                                            ?>
-                                        </tbody>
-                                    </table>
-                                    <input value="<?php echo $Ldata['total_kgs']; ?>" id="<?= $l_ID; ?>total_kgs"
-                                        name="total_kgs" type="hidden">
-                                    <input value="<?php echo $Ldata['total_qty_kgs']; ?>" id="<?= $l_ID; ?>total_qty_kgs"
-                                        name="total_qty_kgs"
-                                        type="hidden">
-                                    <input value="<?php echo $Ldata['net_kgs']; ?>" id="<?= $l_ID; ?>net_kgs" name="net_kgs"
-                                        type="hidden">
-                                    <input value="<?php echo $Ldata['total']; ?>" id="<?= $l_ID; ?>total" name="total"
-                                        type="hidden">
-                                    <input value="<?php echo $Ldata['amount']; ?>" id="<?= $l_ID; ?>amount" name="amount"
-                                        type="hidden">
-                                    <input value="<?php echo $Ldata['final_amount']; ?>" id="<?= $l_ID; ?>final_amount"
-                                        name="final_amount" type="hidden">
+                                    <div class="col-md-2">
+                                        <table class="table table-sm">
+                                            <tbody class="text-nowrap">
+                                                <?php
+                                                echo '<tr><th class="fw-normal">TOTAL KGs </th><th><span class="total_kgs_span">' . ($dataType === 'Original' ? $row["quantity_no"] : $row['goods_json']['total_kgs']) . '</span></th></tr>';
+                                                echo '<tr><th class="fw-normal">TOTAL QTY KGs </th><th><span class="total_qty_kgs_span"></span></th></tr>';
+                                                echo '<tr><th class="fw-normal">NET KGs </th><th><span class="net_kgs_span">' . ($dataType === 'Original' ? $row["quantity_no"] : $row['goods_json']['net_kgs']) . '</span></th></tr>';
+                                                echo '<tr><th class="fw-normal">TOTAL </th><th><span class="total_span"></span></th></tr>';
+                                                echo '<tr><th class="fw-normal">AMOUNT  </th><th><span class="amount_span"></span></th></tr>';
+                                                if (decode_unique_code($unique_code, 'Tcat') !== 'l') {
+                                                    echo '<tr><th class="fw-normal text-danger">FINAL  </th><th><span class="final_amount_span"></span></th></tr>';
+                                                } else {
+                                                    echo '<tr><th class="fw-normal text-danger">Amt+Tax  </th><th><span class="total_with_tax_span">0</span></th></tr>';
+                                                };
+                                                ?>
+                                            </tbody>
+                                        </table>
+                                        <input value="<?= !isset($row['edited']) ? $row["quantity_no"] : $row['goods_json']['total_kgs'] ?>" class="total_kgs"
+                                            name="<?= $l_ID ?>_total_kgs" type="hidden">
+                                        <input value="<?php echo $row['goods_json']['total_qty_kgs']; ?>"
+                                            name="<?= $l_ID ?>_total_qty_kgs" class="total_qty_kgs"
+                                            type="hidden">
+                                        <input value="<?= !isset($row['edited']) ? $row["quantity_no"] : $row['goods_json']['net_kgs'] ?>" name="<?= $l_ID ?>_net_kgs"
+                                            type="hidden" class="net_kgs">
+                                        <input value="<?php echo $row['goods_json']['total']; ?>" name="<?= $l_ID ?>_total"
+                                            type="hidden" class="total">
+                                        <input value="<?php echo $row['goods_json']['amount']; ?>" name="<?= $l_ID ?>_amount"
+                                            type="hidden" class="amount">
+                                        <input value="<?php echo $row['goods_json']['final_amount']; ?>"
+                                            name="<?= $l_ID ?>_final_amount" type="hidden" class="final_amount">
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                        <div class="bg-white p-3">
+                            <strong>
+                                <?php
+                                $needle = '';
+                                if (isset($row['agent']['purchased_in'])) {
+                                    $needle = 'purchased_in';
+                                } elseif (isset($row['agent']['sold_to'])) {
+                                    $needle = 'sold_to';
+                                }
+                                if (!empty($needle)) {
+                                    foreach ($row['agent'][$needle] as $p) {
+                                        $data = explode('~', $p);
+                                        echo 'P#' . decode_unique_code($data[0], 'TID') . ' => ' . $data[3] . '(' . $data[4] . ') ' . $data[5] . ' ' . $data[6] . ' ' . $data[7] . "<br>";
+                                    }
+                                }
+                                ?>
+                            </strong>
+                        </div>
+                        <?php $myAgent = $row['agent']; ?>
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="text-primary">Agent Form ( <small style="font-size: 14px;"><b>Agent: </b> <?= $myAgent['ag_name'] ?? 'Not Set'; ?> | <b>Acc: </b> <?= $myAgent['ag_acc_no'] ?? 'Not Set'; ?> </small> )</h5>
+                                <div class="row g-3">
+                                    <!-- BOE DATE -->
+                                    <div class="col-md-2">
+                                        <label for="boe_date" class="form-label">BOE Date</label>
+                                        <input type="date" name="<?= $l_ID ?>_boe_date" id="boe_date"
+                                            class="form-control form-control-sm"
+                                            value="<?= isset($myAgent['boe_date']) ? $myAgent['boe_date'] : ''; ?>">
+                                    </div>
+
+                                    <!-- PICK UP DATE -->
+                                    <div class="col-md-2">
+                                        <label for="pick_up_date" class="form-label">Pick Up Date</label>
+                                        <input type="date" name="<?= $l_ID ?>_pick_up_date" id="pick_up_date"
+                                            class="form-control form-control-sm"
+                                            value="<?= isset($myAgent['pick_up_date']) ? $myAgent['pick_up_date'] : ''; ?>">
+                                    </div>
+
+                                    <!-- WAITING IF ANY -->
+                                    <div class="col-md-2">
+                                        <label for="waiting_days" class="form-label">Waiting (days)</label>
+                                        <input type="text" name="<?= $l_ID ?>_waiting_days" id="waiting_days"
+                                            class="form-control form-control-sm"
+                                            value="<?= isset($myAgent['waiting_days']) ? $myAgent['waiting_days'] : ''; ?>">
+                                    </div>
+
+                                    <!-- RETURN DATE -->
+                                    <div class="col-md-2">
+                                        <label for="return_date" class="form-label">Return Date</label>
+                                        <input type="date" name="<?= $l_ID ?>_return_date" id="return_date"
+                                            class="form-control form-control-sm"
+                                            value="<?= isset($myAgent['return_date']) ? $myAgent['return_date'] : ''; ?>">
+                                    </div>
+
+                                    <!-- TRANSPORTER NAME -->
+                                    <div class="col-md-3">
+                                        <label for="transporter_name" class="form-label">Transporter Name</label>
+                                        <input type="text" name="<?= $l_ID ?>_transporter_name" id="transporter_name"
+                                            class="form-control form-control-sm"
+                                            value="<?= isset($myAgent['transporter_name']) ? $myAgent['transporter_name'] : ''; ?>">
+                                    </div>
+
+                                    <!-- TRUCK NUMBER -->
+                                    <div class="col-md-2">
+                                        <label for="truck_number" class="form-label">Truck Number</label>
+                                        <input type="text" name="<?= $l_ID ?>_truck_number" id="truck_number"
+                                            class="form-control form-control-sm"
+                                            value="<?= isset($myAgent['truck_number']) ? $myAgent['truck_number'] : ''; ?>">
+                                    </div>
+
+                                    <!-- DETAILS -->
+                                    <div class="col-md-4">
+                                        <label for="details" class="form-label">Details</label>
+                                        <input type="text" name="<?= $l_ID ?>_details" id="details"
+                                            class="form-control form-control-sm"
+                                            value="<?= isset($myAgent['details']) ? $myAgent['details'] : ''; ?>">
+                                    </div>
+
+                                    <!-- DRIVER NAME -->
+                                    <div class="col-md-3">
+                                        <label for="driver_name" class="form-label">Driver Name</label>
+                                        <input type="text" name="<?= $l_ID ?>_driver_name" id="driver_name"
+                                            class="form-control form-control-sm"
+                                            value="<?= isset($myAgent['driver_name']) ? $myAgent['driver_name'] : ''; ?>">
+                                    </div>
+
+                                    <!-- DRIVER NUMBER -->
+                                    <div class="col-md-3">
+                                        <label for="driver_number" class="form-label">Driver Number</label>
+                                        <input type="number" name="<?= $l_ID ?>_driver_number" id="driver_number"
+                                            class="form-control form-control-sm"
+                                            value="<?= isset($myAgent['driver_number']) ? $myAgent['driver_number'] : ''; ?>">
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <script type="text/javascript">
-                    $(document).ready(function() {
-                        finalAmount<?= $l_ID; ?>();
-                        $('#<?= $l_ID ?>qty_no,#<?= $l_ID ?>qty_kgs,#<?= $l_ID ?>empty_kgs,#<?= $l_ID ?>weight,#<?= $l_ID ?>rate1,#<?= $l_ID ?>rate2,#<?= $l_ID ?>opr').on('keyup', function() {
-                            finalAmount<?= $l_ID; ?>();
-                        });
-                        $("#<?= $l_ID ?>goods_id").change(function() {
-                            var <?= $l_ID; ?>goods_id = $(this).val();
-                            goodDetails<?= $l_ID; ?>(<?= $l_ID; ?>goods_id);
-                        });
-                        $("#<?= $l_ID ?>type").change(function() {
-                            $('#<?= $l_ID ?>bookingForm').toggleClass('d-none row');
-                            $('#<?= $l_ID ?>localForm').toggleClass('d-none row');
-                        });
-                    });
-
-                    function goodDetails<?= $l_ID; ?>(goods_id) {
-                        if (goods_id > 0) {
-                            $.ajax({
-                                type: 'POST',
-                                url: 'ajax/fetch_good_sizes.php',
-                                data: 'goods_id=' + goods_id,
-                                success: function(html) {
-                                    $('#<?= $l_ID ?>size').html(html);
-                                }
-                            });
-                            $.ajax({
-                                type: 'POST',
-                                url: 'ajax/fetch_good_brands.php',
-                                data: 'goods_id=' + goods_id,
-                                success: function(html) {
-                                    $('#<?= $l_ID ?>brand').html(html);
-                                }
-                            });
-                            $.ajax({
-                                type: 'POST',
-                                url: 'ajax/fetch_good_origins.php',
-                                data: 'goods_id=' + goods_id,
-                                success: function(html) {
-                                    $('#<?= $l_ID ?>origin').html(html);
-                                }
-                            });
-                        } else {
-                            $('#<?= $l_ID ?>size').html('<option value="">Select</option>');
-                            $('#<?= $l_ID ?>brand').html('<option value="">Select</option>');
-                            $('#<?= $l_ID ?>origin').html('<option value="">Select</option>');
-                        }
-                    }
-
-                    function finalAmount<?= $l_ID; ?>() {
-                        var <?= $l_ID; ?>qty_no = parseFloat($("#<?= $l_ID ?>qty_no").val()) || 0;
-                        var <?= $l_ID; ?>qty_kgs = parseFloat($("#<?= $l_ID ?>qty_kgs").val()) || 0;
-
-                        var <?= $l_ID; ?>total_kgs = qty_no * qty_kgs;
-                        $("#<?= $l_ID ?>total_kgs").val(total_kgs);
-                        $("#<?= $l_ID ?>total_kgs_span").text(total_kgs);
-
-                        var <?= $l_ID; ?>empty_kgs = parseFloat($("#<?= $l_ID ?>empty_kgs").val()) || 0;
-                        var <?= $l_ID; ?>total_qty_kgs = qty_no * empty_kgs;
-                        $("#<?= $l_ID ?>total_qty_kgs").val(total_qty_kgs);
-                        $("#<?= $l_ID ?>total_qty_kgs_span").text(total_qty_kgs);
-
-                        var <?= $l_ID; ?>net_kgs = total_kgs - total_qty_kgs;
-                        $("#<?= $l_ID ?>net_kgs").val(net_kgs);
-                        $("#<?= $l_ID ?>net_kgs_span").text(net_kgs);
-
-                        var <?= $l_ID; ?>weight = parseFloat($("#<?= $l_ID ?>weight").val()) || 0;
-                        var <?= $l_ID; ?>total = 0;
-
-                        if (!isNaN(weight) && weight !== 0 && !isNaN(net_kgs)) {
-                            total = net_kgs / weight;
-                            total = total.toFixed(3);
-                        }
-
-                        $("#<?= $l_ID ?>total").val(isNaN(total) ? '' : total);
-                        $("#<?= $l_ID ?>total_span").text(isNaN(total) ? '' : total);
-
-                        var <?= $l_ID; ?>rate1 = parseFloat($("#<?= $l_ID ?>rate1").val()) || 0;
-                        var <?= $l_ID; ?>final_amount = 0;
-                        var <?= $l_ID; ?>amount = 0;
-
-                        if (!isNaN(rate1) && rate1 !== 0 && !isNaN(total)) {
-                            amount = total * rate1;
-                            amount = amount.toFixed(3);
-                            final_amount = amount;
-                        }
-
-                        $("#<?= $l_ID ?>amount").val(isNaN(amount) ? '' : amount);
-                        $("#<?= $l_ID ?>amount_span").text(isNaN(amount) ? '' : amount);
-                        updateTaxAndTotal<?= $l_ID; ?>();
-                        //if ($("#<?= $l_ID ?>is_qty").prop('checked') == true) {
-                        var <?= $l_ID; ?>rate2 = parseFloat($("#<?= $l_ID ?>rate2").val()) || 0;
-                        let <?= $l_ID; ?>operator = $('#<?= $l_ID ?>opr').find(":selected").val();
-
-                        if (!isNaN(rate2) && rate2 !== 0 && !isNaN(amount)) {
-                            final_amount = (operator === '/') ? amount / rate2 : rate2 * amount;
-                            final_amount = final_amount.toFixed(3);
-                        }
-                        //}
-
-                        $("#<?= $l_ID ?>final_amount").val(isFinite(final_amount) ? final_amount : '');
-                        $("#<?= $l_ID ?>final_amount_span").text(isFinite(final_amount) ? final_amount : '');
-
-                        if (final_amount <= 0 || isNaN(final_amount) || !isFinite(final_amount)) {
-                            disableButton('recordSubmit');
-                        } else {
-                            enableButton('recordSubmit');
-                        }
-                    }
-
-                    function updateTaxAndTotal<?= $l_ID; ?>() {
-                        let <?= $l_ID; ?>amount = parseFloat($('#<?= $l_ID ?>amount_span').text()) || 0;
-                        let <?= $l_ID; ?>taxPercent = parseFloat($('#<?= $l_ID ?>tax_percent').val()) || 0;
-                        let <?= $l_ID; ?>taxAmount = (amount * (taxPercent / 100)).toFixed(2);
-                        let <?= $l_ID; ?>totalWithTax = (amount + parseFloat(taxAmount)).toFixed(2);
-                        $('#<?= $l_ID ?>tax_amount').val(taxAmount != 0 ? taxAmount : '');
-                        $('#<?= $l_ID ?>total_with_tax').val(totalWithTax);
-                        $('#<?= $l_ID ?>total_with_tax_span').text(totalWithTax);
-                    }
-                </script>
-            <?php endforeach; ?>
+                <?php endforeach; ?>
+            </div>
 
             <div class="row bg-white p-3 mt-4">
                 <div class="col-md-12 text-end">
@@ -932,6 +1092,7 @@ if (isset($Ldata['rate'], $Ldata['empty_kgs'])) {
             <button class="btn btn-warning btn-sm mt-2" onclick="document.querySelector('.transfer-form').classList.toggle('d-none');">Toggle Form</button>
             <?= $dataType === 'Copied' ? '<span class="fw-bold text-success my-1">Transferred</span>' : '<span class="fw-bold text-danger my-1">Not Transferred</span>'; ?>
             <div class="info-text position-absolute bottom-0 start-50 translate-middle-x">
+                <small><a href="?delete=<?= base64_encode('DELETE ME!'); ?>&unique_code=<?= $unique_code; ?>" class="fw-bold text-danger"><i class="fa fa-trash-alt"></i> Delete</a></small><br>
                 <small style="font-size: 9px;font-weight:500;"><?= $dataType; ?> Info</small>
             </div>
         </div>
@@ -1146,82 +1307,76 @@ if (isset($Ldata['rate'], $Ldata['empty_kgs'])) {
             }
         });
     }
+    $('#print_type').change(function() {
+        window.location.href = '?view=1&unique_code=<?= $unique_code; ?>&print_type=' + $(this).val();
+    });
 </script>
 <!-- JavaScript -->
 <script>
     let selectedEntry = null;
-    let SLID = null;
+    let saleQtyValue = null;
 
-    function currentStock(event, LID, goodsID, size, brand, origin, qtyName) {
-        SLID = LID;
-        const targetPrefix = '#l_' + LID + '_';
-        const selectedWarehouse = $(targetPrefix + 'warehouse_transfer').val() ?? '';
-        $(targetPrefix + 'warehouse_entry').html('');
+    function currentStock(event) {
+        if (saleQtyValue !== null) {
+            const selectedWarehouse = $('#warehouse_transfer').val() ?? '';
+            $('#warehouse_entry').html('');
+            $('#entriesTableBody').html('');
+            $('#warehouseModal').modal('show');
+            $('#loadingSpinner').show();
+            $('#connectButton').prop('disabled', true);
+            $.ajax({
+                type: 'POST',
+                url: 'ajax/purchase_enteries_in_warehouse.php',
+                data: {
+                    warehouse: selectedWarehouse
+                },
+                success: function(res) {
+                    try {
+                        const data = JSON.parse(res);
+                        if (data && Object.keys(data).length > 0) {
+                            let entriesHtml = '';
+                            Object.entries(data).forEach(([uniqueCode, entries]) => {
+                                Object.entries(entries).forEach(([randomId, entry]) => {
+                                    entriesHtml += `
+                            <tr>
+                                <td>
+                                    <input type="radio" name="warehouseEntry" value="${uniqueCode}~${randomId}~${entry.goods_id}~${entry.goods_name}~${entry.quantity_no}~${entry.quantity_name}~${entry.gross_weight}~${entry.net_weight}" />
+                                </td>
+                                <td class="d-none">P#${entry.p_id} (${entry.sr_no}) => ${entry.goods_name} (${entry.quantity_no}) ${entry.quantity_name}</sub></td>
+                                <td>P#${entry.p_id} (${entry.sr_no})</td>
+                                <td>${entry.allot}</td>
+                                <td>${entry.goods_name}</td>
+                                <td>${entry.size}</td>
+                                <td>${entry.brand}</td>
+                                <td>${entry.origin}</td>
+                                <td><span class="ajax-qty">${entry.quantity_no}</span> <sub>${entry.quantity_name}</sub></td>
+                                <td>${entry.gross_weight}</td>
+                                <td>${entry.net_weight}</td>
+                                <td>${entry.container_no}</td>
+                                <td>${entry.container_name}</td>
+                            </tr>`;
+                                });
+                            });
 
-        // Show the modal and display the loading spinner
-        $('#warehouseModal').modal('show');
-        $('#loadingSpinner').show();
-        // $('#warehouseEntries').hide().html('');
-        $('#connectButton').prop('disabled', true);
-
-        $.ajax({
-            type: 'POST',
-            url: 'ajax/purchase_enteries_in_warehouse.php',
-            data: {
-                l_id: LID,
-                goods_id: goodsID,
-                size: size,
-                brand: brand,
-                origin: origin,
-                quantity_name: qtyName,
-                warehouse: selectedWarehouse
-            },
-            success: function(res) {
-                const data = JSON.parse(res);
-
-                // Check if data is not empty and contains entries
-                if (data && Object.keys(data).length > 0) {
-                    let entriesHtml = '';
-
-                    // Iterate over the unique codes and their corresponding entries
-                    Object.keys(data).forEach((uniqueCode) => {
-                        const entries = data[uniqueCode];
-                        entries.forEach((entry, index) => {
-                            entriesHtml += `
-                        <tr>
-                            <td><input class="form-check-input" type="radio" name="warehouseEntry" id="entry_${uniqueCode}_${index}" value="${uniqueCode}~${entry.loadingID}~${entry.goods_id}~${entry.goods_name}~${entry.size}~${entry.brand}~${entry.origin}~${entry.quantity_no}~${entry.quantity_name}~${entry.gross_weight}~${entry.net_weight}~${entry.container_no}~${entry.container_name}"></td>
-                            <td>${entry.goods_name}</td>
-                            <td>${entry.size}</td>
-                            <td>${entry.brand}</td>
-                            <td>${entry.origin}</td>
-                            <td>${entry.quantity_no} <sub>${entry.quantity_name}</sub></td>
-                            <td>${entry.gross_weight}</td>
-                            <td>${entry.net_weight}</td>
-                            <td>${entry.container_no}</td>
-                            <td>${entry.container_name}</td>
-                        </tr>`;
-                        });
-                    });
-
-                    // Populate the modal with entries
-                    $('#entriesTableBody').html(entriesHtml);
-                    $('#warehouseEntries').show();
-                } else {
-                    $('#warehouseEntries').html('<p class="text-center text-muted">No entries found.</p>').show();
+                            $('#entriesTableBody').html(entriesHtml);
+                            $('#warehouseEntries').show();
+                        } else {
+                            $('#entriesTableBody').html('<tr><td colspan="12" class="text-center">No entries found.</td></tr>');
+                        }
+                    } catch (error) {
+                        console.error('Error parsing response:', error);
+                    } finally {
+                        $('#loadingSpinner').hide();
+                    }
+                },
+                error: function() {
+                    $('#entriesTableBody').html('<tr><td colspan="12" class="text-danger text-center">Error fetching data.</td></tr>');
+                    $('#loadingSpinner').hide();
                 }
-
-                // Hide the spinner
-                $('#loadingSpinner').hide();
-
-                // Enable the connect button if there's at least one radio input
-                $('#connectButton').prop('disabled', !$('#warehouseEntries input[type="radio"]').length);
-            },
-            error: function(error) {
-                console.error(error);
-                $('#loadingSpinner').hide();
-                $('#warehouseEntries').html('<p class="text-danger text-center">Failed to fetch data.</p>').show();
-            }
-        });
+            });
+        } else {
+            alert("Please Select a entry first!");
+        }
     }
 
     // Handle entry selection
@@ -1232,20 +1387,24 @@ if (isset($Ldata['rate'], $Ldata['empty_kgs'])) {
 
     // Handle connect button click
     $('#connectButton').click(function() {
-        const targetField = '#l_' + SLID + '_warehouse_entry';
         if (selectedEntry) {
             const selectedRadio = $('#warehouseEntries input[type="radio"]:checked');
-            const selectedLabel = selectedRadio.closest('tr').find('td').eq(1).text().trim(); // Goods Name column
-
-            if (selectedLabel) {
-                const optionHtml = `<option value="${selectedEntry}" selected>${selectedLabel}</option>`;
-                $(targetField).html(optionHtml);
-                $('#warehouseModal').modal('hide');
+            const selectedLabel = selectedRadio.closest('tr').find('td').eq(1).text().trim();
+            let purchasedQtyValue = parseFloat(selectedRadio.closest('tr').find('td').eq(8).find('.ajax-qty').text().trim());
+            if (saleQtyValue <= purchasedQtyValue) {
+                if (selectedLabel) {
+                    const optionHtml = `<option value="${selectedEntry}" selected>${selectedLabel}</option>`;
+                    $('#warehouse_entry').html(optionHtml);
+                    $('#warehouseModal').modal('hide');
+                } else {
+                    alert('Failed to retrieve entry details. Please try again.');
+                }
             } else {
-                alert('Failed to retrieve entry details. Please try again.');
+                alert('Sale Quantity is greater then purchased');
             }
         }
     });
+
 
 
     $(document).ready(function() {
@@ -1263,9 +1422,114 @@ if (isset($Ldata['rate'], $Ldata['empty_kgs'])) {
                 entryForm.removeClass('d-none');
                 $(this).removeClass('text-primary').addClass('text-danger');
                 activeId = id;
+                finalAmount(entryForm);
             } else {
                 activeId = null;
             }
+        });
+    });
+
+    $(document).ready(function() {
+        $(document).on('keyup', '#goodsDiv input', function() {
+            finalAmount($(this).closest('.entryform'));
+        });
+
+        $(document).on('change', '#goodsDiv select', function() {
+            finalAmount($(this).closest('.entryform'));
+        });
+        $('.row-checkbox').change(function() {
+            let selectedValues = [];
+            $('.row-checkbox:checked').each(function() {
+                let checkbox = $(this);
+                selectedValues.push(checkbox.val());
+                saleQtyValue = parseFloat($('.entryform' + checkbox.val() + ' .qty_no').val());
+            });
+            $('#transfer_to_warehouse_ids').val(selectedValues.join(','));
+        });
+
+    });
+
+    function finalAmount(entryForm) {
+        var qty_no = parseFloat(entryForm.find(".qty_no").val()) || 0;
+        var qty_kgs = parseFloat(entryForm.find(".qty_kgs").val()) || 0;
+
+        var total_kgs = qty_no * qty_kgs;
+        entryForm.find(".total_kgs").val(total_kgs.toFixed(2));
+        entryForm.find(".total_kgs_span").text(total_kgs.toFixed(2));
+
+        var empty_kgs = parseFloat(entryForm.find(".empty_kgs").val()) || 0;
+        var total_qty_kgs = qty_no * empty_kgs;
+        entryForm.find(".total_qty_kgs").val(total_qty_kgs.toFixed(2));
+        entryForm.find(".total_qty_kgs_span").text(total_qty_kgs.toFixed(2));
+
+        var net_kgs = total_kgs - total_qty_kgs;
+        entryForm.find(".net_kgs").val(net_kgs.toFixed(2));
+        entryForm.find(".net_kgs_span").text(net_kgs.toFixed(2));
+
+        var weight = parseFloat(entryForm.find(".weight").val()) || 0;
+        var total = 0;
+
+        if (!isNaN(weight) && weight !== 0 && !isNaN(net_kgs)) {
+            total = net_kgs / weight;
+            total = total.toFixed(3);
+        }
+
+        entryForm.find(".total").val(isNaN(total) ? '' : total);
+        entryForm.find(".total_span").text(isNaN(total) ? '' : total);
+
+        var rate1 = parseFloat(entryForm.find(".rate1").val()) || 0;
+        // var amount = (isNaN(total) || total === 0) ? 0 : (total * rate1).toFixed(3);
+        var final_amount = 0;
+        var amount = 0;
+        if (!isNaN(rate1) && rate1 !== 0 && !isNaN(total)) {
+            amount = total * rate1;
+            amount = amount.toFixed(3);
+            final_amount = amount;
+        }
+
+        entryForm.find(".amount").val(isNaN(amount) ? '' : amount);
+        entryForm.find(".amount_span").text(isNaN(amount) ? '' : amount);
+
+        updateTaxAndTotal(entryForm);
+
+        var rate2 = parseFloat(entryForm.find(".rate2").val()) || 0;
+        let operator = entryForm.find('.opr').find(":selected").val();
+        if (!isNaN(rate2) && rate2 !== 0 && !isNaN(amount)) {
+            final_amount = (operator === '/') ? amount / rate2 : rate2 * amount;
+            final_amount = parseFloat(final_amount.toFixed(3));
+        }
+
+        entryForm.find(".final_amount").val(isFinite(final_amount) ? final_amount : '');
+        entryForm.find(".final_amount_span").text(isFinite(final_amount) ? final_amount : '');
+
+        if (isNaN(final_amount) || !isFinite(final_amount)) {
+            disableButton('reSubmit');
+        } else {
+            enableButton('reSubmit');
+        }
+    }
+
+
+    function updateTaxAndTotal(entryForm) {
+        let amount = parseFloat(entryForm.find('.amount_span').text()) || 0;
+        let taxPercent = parseFloat(entryForm.find('.tax_percent').val()) || 0;
+        let taxAmount = (amount * (taxPercent / 100)).toFixed(2);
+        let totalWithTax = (amount + parseFloat(taxAmount)).toFixed(2);
+        entryForm.find('.tax_amount').val(taxAmount != 0 ? taxAmount : '');
+        entryForm.find('.total_with_tax').val(totalWithTax);
+        entryForm.find('.total_with_tax_span').text(totalWithTax);
+    }
+    $(document).ready(function() {
+        // Show form section on pencil icon click
+        $('#editButton').click(function() {
+            $('#summarySection').hide(); // Hide summary
+            $('#formSection').show(); // Show form section
+        });
+
+        // Show summary section on cross icon click
+        $('#closeButton').click(function() {
+            $('#formSection').hide(); // Hide form section
+            $('#summarySection').show(); // Show summary
         });
     });
 </script>
