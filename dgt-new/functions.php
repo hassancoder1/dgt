@@ -113,7 +113,8 @@ function fetch($table, $where = null)
 function decode_unique_code($unique_code, $keys = 'all')
 {
     $data = [];
-    if (preg_match('/^([ps])([blc]{1})(se|rd|ld|wr)_(\d+)_(\d+)$/', $unique_code, $matches)) {
+    if (empty($unique_code)) {
+    } else if (preg_match('/^([ps])([blc]{1})(se|rd|ld|wr)_(\d+)_(\d+)$/', $unique_code, $matches)) {
         // if (preg_match('/^([ps])([blc]{1})(se|rd|ld|wr)_(\d+)_([a-zA-Z0-9]+)$/', $unique_code, $matches)) {
         $data = [
             'Ttype' => $matches[1],
@@ -128,7 +129,9 @@ function decode_unique_code($unique_code, $keys = 'all')
         exit;
     }
     if ($keys === 'all') {
-        return array_values($data);
+        if (!empty($unique_code)):
+            return array_values($data);
+        endif;
     }
     if (is_string($keys)) {
         return $data[$keys] ?? null;
@@ -143,6 +146,94 @@ function decode_unique_code($unique_code, $keys = 'all')
     echo "Invalid keys parameter.";
     exit;
 }
+
+function calcNewValues($quantity, $goodsDetails, $type)
+{
+    $updatedGoodsDetails = $goodsDetails;
+    function calculateValues($qtyNo, $qtyKgs, $emptyKgs, $weight, $rate1, $rate2, $operator, $taxPercent = null)
+    {
+        $totalKgs = $qtyNo * $qtyKgs;
+        $totalQtyKgs = $qtyNo * $emptyKgs;
+        $netKgs = $totalKgs - $totalQtyKgs;
+        $total = $weight != 0 ? round($netKgs / $weight, 3) : 0;
+        $amount = round($total * $rate1, 3);
+        $finalAmount = $amount;
+        if ($rate2 > 0) {
+            $finalAmount = ($operator === '/') ? ($rate2 != 0 ? round($amount / $rate2, 3) : 0) : round($rate2 * $amount, 3);
+        } elseif (!is_null($taxPercent)) {
+            $taxAmount = round(($amount * $taxPercent) / 100, 2);
+            $finalAmount = $amount + $taxAmount;
+            return [
+                'qty_no' => $qtyNo,
+                'total_kgs' => $totalKgs,
+                'total_qty_kgs' => $totalQtyKgs,
+                'net_kgs' => $netKgs,
+                'total' => $total,
+                'amount' => $amount,
+                'tax_amount' => $taxAmount,
+                'total_with_tax' => $finalAmount,
+                'final_amount' => $finalAmount
+            ];
+        }
+        return [
+            'qty_no' => $qtyNo,
+            'total_kgs' => $totalKgs,
+            'total_qty_kgs' => $totalQtyKgs,
+            'net_kgs' => $netKgs,
+            'total' => $total,
+            'amount' => $amount,
+            'tax_amount' => 0,
+            'total_with_tax' => 0,
+            'final_amount' => $finalAmount
+        ];
+    }
+    $goodsJson = isset($updatedGoodsDetails['goods_json']) ? $updatedGoodsDetails['goods_json'] : [];
+    if (empty($goodsJson)) {
+        throw new Exception('Invalid goods_json structure.');
+    }
+    $qtyKgs = floatval($goodsJson['qty_kgs'] ?? 0);
+    $emptyKgs = floatval($goodsJson['empty_kgs'] ?? 0);
+    $weight = floatval($goodsJson['weight'] ?? 0);
+    $rate1 = floatval($goodsJson['rate1'] ?? 0);
+    $rate2 = floatval($goodsJson['rate2'] ?? 0);
+    $taxPercent = isset($goodsJson['tax_percent']) ? floatval($goodsJson['tax_percent']) : null;
+    $operator = $goodsJson['opr'] ?? '*';
+    if ($type === 'totals') {
+        $qtyNo = floatval($quantity);
+        $results = calculateValues($qtyNo, $qtyKgs, $emptyKgs, $weight, $rate1, $rate2, $operator, $taxPercent);
+        $updatedGoodsDetails['quantity_no'] = $qtyNo;
+        $updatedGoodsDetails['net_weight'] = $results['net_kgs'];
+        $updatedGoodsDetails['gross_weight'] = $results['total_kgs'];
+        $updatedGoodsDetails['amount'] = $results['amount'];
+        $updatedGoodsDetails['tax_amount'] = $results['tax_amount'];
+        $updatedGoodsDetails['total_with_tax'] = $results['total_with_tax'];
+        $updatedGoodsDetails['final_amount'] = $results['final_amount'];
+        $updatedGoodsDetails['goods_json'] = array_merge($goodsJson, $results);
+    } elseif ($type === 'rems') {
+        $qtyNo = floatval($quantity);
+        $results = calculateValues($qtyNo, $qtyKgs, $emptyKgs, $weight, $rate1, $rate2, $operator, $taxPercent);
+        $updatedGoodsDetails['goods_json'] = array_merge($goodsJson, $results);
+    } elseif ($type === 'both') {
+        if (!is_array($quantity) || count($quantity) !== 2) {
+            throw new Exception('Invalid quantity structure for type "both".');
+        }
+        [$totalQty, $remQty] = $quantity;
+        $totalResults = calculateValues(floatval($totalQty), $qtyKgs, $emptyKgs, $weight, $rate1, $rate2, $operator, $taxPercent);
+        $updatedGoodsDetails['quantity_no'] = floatval($totalQty);
+        $updatedGoodsDetails['net_weight'] = $totalResults['net_kgs'];
+        $updatedGoodsDetails['gross_weight'] = $totalResults['total_kgs'];
+        $updatedGoodsDetails['amount'] = $totalResults['amount'];
+        $updatedGoodsDetails['tax_amount'] = $totalResults['tax_amount'];
+        $updatedGoodsDetails['total_with_tax'] = $totalResults['total_with_tax'];
+        $updatedGoodsDetails['final_amount'] = $totalResults['final_amount'];
+        $remResults = calculateValues(floatval($remQty), $qtyKgs, $emptyKgs, $weight, $rate1, $rate2, $operator, $taxPercent);
+        $updatedGoodsDetails['goods_json'] = array_merge($goodsJson, $remResults);
+    }
+
+    return $updatedGoodsDetails;
+}
+
+
 
 
 function recordExists($table, $conditions)

@@ -417,6 +417,9 @@ if (isset($_POST['TransferToAgent'])) {
     $ag_transfer_ids = mysqli_real_escape_string($connect, $_POST['ag_transfer_ids']);
     $ag_id = mysqli_real_escape_string($connect, $_POST['ag_id']);
     $transferPairs = explode(',', $ag_transfer_ids);
+    if (isset($_POST['AgentNotExist'])) {
+        $_POST['ag_acc_no'] = $_POST['ag_name'] = $_POST['ag_id'] = $_POST['ag_row_id'] = '~~NOT-EXIST~~';
+    }
 
     $idConditions = [];
     foreach ($transferPairs as $pair) {
@@ -473,16 +476,16 @@ if (isset($_POST['TransferToAgent'])) {
                 $tempG,
                 [
                     'goods_json' => array_merge(
-                        json_decode($tempG['goods_json'], true),
+                        $tempG['goods_json'],
                         [
                             'qty_no' => (isset($_POST['warehouse_entry']) ? 0 : $tempG['quantity_no']),
                             // 'qty_no' => $tempG['quantity_no'],
 
-                            // 'qty_name' => $tempG['quantity_name'],
+                            'qty_name' => $tempG['quantity_name'],
                             'total_kgs' => (isset($_POST['warehouse_entry']) ? 0 : $tempG['gross_weight']),
                             'net_kgs' => (isset($_POST['warehouse_entry']) ? 0 : $tempG['net_weight']),
-                            'total_kgs' => $tempG['gross_weight'],
-                            'net_kgs' => $tempG['net_weight'],
+                            // 'total_kgs' => $tempG['gross_weight'],
+                            // 'net_kgs' => $tempG['net_weight'],
                             'rate1' => $tempG['rate'],
                             'empty_kgs' => $tempG['empty_kgs'],
                             'size' => $tempG['size'],
@@ -504,8 +507,6 @@ if (isset($_POST['TransferToAgent'])) {
     ];
     if (!recordExists('data_copies', ['unique_code' => $CCWdata['unique_code']])) {
         insert('data_copies', $CCWdata);
-    } else {
-        update('data_copies', $CCWdata, ['unique_code' => $CCWdata['unique_code']]);
     }
     if (isset($_POST['warehouse_entry'])) {
         $p_unique_code = explode('~', $_POST['warehouse_entry'])[0];
@@ -513,42 +514,13 @@ if (isset($_POST['TransferToAgent'])) {
             mysqli_fetch_assoc(fetch('data_copies', ['unique_code' => $p_unique_code]))['ldata'],
             true
         );
-    
-        // Add to sold_to field
         $existingLdata['transfer']['sold_to'][] = $_POST['unique_code'] . $_POST['currentLoading'] . '~' . $tempG['goods_id'] . '~' . goodsName($tempG['goods_id']) . '~' . $tempG['quantity_no'] . '~' . $tempG['quantity_name'] . '~' . $tempG['gross_weight'] . '~' . $tempG['net_weight'] . '~' . $transferData['warehouse_transfer'] . '~' . $sr_no;
-    
-        // Recalculate quantities and financial details
         $tempQtyNo = $tempG['quantity_no'];
-        $tempEmptyKgs = $existingLdata['good']['goods_json']['empty_kgs'];
-        $tempQtyKgs = $existingLdata['good']['goods_json']['qty_kgs'];
-        $tempRate1 = $existingLdata['good']['goods_json']['rate1'];
-    
         $existingLdata['good']['goods_json']['qty_no'] -= $tempQtyNo;
-        $qty_no = $existingLdata['good']['goods_json']['qty_no'];
-        $total_kgs = $qty_no * $tempQtyKgs;
-        $total_qty_kgs = $qty_no * $tempEmptyKgs;
-        $net_kgs = $total_kgs - $total_qty_kgs;
-        $amount = ($net_kgs > 0) ? round($net_kgs * $tempRate1, 3) : 0;
-    
-        $existingLdata['good']['goods_json']['total_kgs'] = round($total_kgs, 2);
-        $existingLdata['good']['goods_json']['total_qty_kgs'] = round($total_qty_kgs, 2);
-        $existingLdata['good']['goods_json']['net_kgs'] = round($net_kgs, 2);
-        $existingLdata['good']['goods_json']['amount'] = $amount;
-    
-        if (isset($existingLdata['good']['goods_json']['tax_percent'])) {
-            $taxPercent = $existingLdata['good']['goods_json']['tax_percent'];
-            $taxAmount = round($amount * ((float)$taxPercent / 100), 2);
-            $totalWithTax = round($amount + $taxAmount, 2);
-    
-            $existingLdata['good']['goods_json']['tax_amount'] = $taxAmount;
-            $existingLdata['good']['goods_json']['total_with_tax'] = $totalWithTax;
-        }
-    
-        // Update the database
+        $updatedGood = calcNewValues($existingLdata['good']['goods_json']['qty_no'], $existingLdata['good'], 'rems');
+        $existingLdata['good'] = $updatedGood;
         update('data_copies', ['ldata' => safeJsonEncode($existingLdata)], ['unique_code' => $p_unique_code]);
     }
-    
-
 
     $parentCheckQuery = "
         SELECT id, gloading_info, JSON_EXTRACT(gloading_info, '$.child_ids') AS child_ids
@@ -598,7 +570,7 @@ if (isset($_POST['TransferToAgent'])) {
         $type = 'success';
         $msg = 'Agent Details Added!';
     }
-    message($type, $url, $msg);
+    // message($type, $url, $msg);
 }
 if (isset($_GET['id']) && is_numeric($_GET['id']) && isset($_GET['view']) && $_GET['view'] == 1) {
     $id = mysqli_real_escape_string($connect, $_GET['id']);

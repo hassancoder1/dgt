@@ -507,9 +507,6 @@ if (isset($_POST['LLoadingSubmit'])) {
             'uid_entry_no' => 1,
         ];
     }
-
-
-
     if ($sr_no == 1) {
         $my = array_merge($my, [
             'total_quanity_no' => $_POST['total_quantity_no'],
@@ -546,11 +543,6 @@ if (isset($_POST['LLoadingSubmit'])) {
         $data = ['sea_road' => json_encode($routeDetails)];
         update('transactions', $data, ['id' => $p_id]);
     }
-    $_POST['goods_json'] = json_decode($_POST['goods_json'], true);
-    if (isset($_POST['goods_json']['sr_no'])) {
-        unset($_POST['goods_json']['sr_no']);
-    }
-    $_POST['goods_json'] = json_encode($_POST['goods_json']);
     $goods_details = [
         'goods_id' => mysqli_real_escape_string($connect, $_POST['goods_id']),
         'quantity_no' => mysqli_real_escape_string($connect, $_POST['quantity_no']),
@@ -562,8 +554,10 @@ if (isset($_POST['LLoadingSubmit'])) {
         'origin' => mysqli_real_escape_string($connect, $_POST['origin']),
         'net_weight' => mysqli_real_escape_string($connect, $_POST['net_weight']),
         'gross_weight' => mysqli_real_escape_string($connect, $_POST['gross_weight']),
-        'goods_json' => mysqli_real_escape_string($connect, $_POST['goods_json'])
+        'goods_json' => json_decode($_POST['goods_json'], true)
     ];
+    $goods_details = calcNewValues([$_POST['quantity_no'], $_POST['quantity_no']], $goods_details, 'both');
+    $goods_details['goods_json'] = mysqli_real_escape_string($connect, json_encode($goods_details['goods_json']));
 
     $data = [
         'sr_no' => $sr_no,
@@ -589,20 +583,17 @@ if (isset($_POST['LLoadingSubmit'])) {
         ['third_party_bank' => json_decode($Ttempdata['third_party_bank'], true)] ?? [],
         ['reports' => json_decode($Ttempdata['reports'], true)] ?? []
     );
-    $Transfer = array_merge($transfer_details, $_POST['warehouse_entry'] ? ['sold_from' => [$_POST['warehouse_entry']]] : []);
-    $query = "
-    
-";
+    $Transfer = array_merge($transfer_details, isset($_POST['warehouse_entry']) ? ['sold_from' => [$_POST['warehouse_entry']]] : []);
     $currentLoading = mysqli_fetch_assoc(mysqli_query($connect, "SELECT AUTO_INCREMENT FROM information_schema.TABLES WHERE TABLE_SCHEMA = '$dbname' AND TABLE_NAME = 'local_loading'"))['AUTO_INCREMENT'];
     $tempG = $goods_details;
     $tempG['goods_json'] = array_merge(json_decode($_POST['goods_json'], true), [
-        // 'qty_no' => (isset($_POST['warehouse_entry']) ? 0 : $tempG['quantity_no']),
-        'qty_no' => $tempG['quantity_no'],
+        'qty_no' => (isset($_POST['warehouse_entry']) ? 0 : $tempG['quantity_no']),
+        // 'qty_no' => $tempG['quantity_no'],
         'qty_name' => $tempG['quantity_name'],
-        // 'total_kgs' => (isset($_POST['warehouse_entry']) ? 0 : $tempG['gross_weight']),
-        // 'net_kgs' => (isset($_POST['warehouse_entry']) ? 0 : $tempG['net_weight']),
-        'total_kgs' => $tempG['gross_weight'],
-        'net_kgs' => $tempG['net_weight'],
+        'total_kgs' => (isset($_POST['warehouse_entry']) ? 0 : $tempG['gross_weight']),
+        'net_kgs' => (isset($_POST['warehouse_entry']) ? 0 : $tempG['net_weight']),
+        // 'total_kgs' => $tempG['gross_weight'],
+        // 'net_kgs' => $tempG['net_weight'],
         'rate1' => $tempG['rate'],
         'empty_kgs' => $tempG['empty_kgs'],
         'size' => $tempG['size'],
@@ -621,8 +612,9 @@ if (isset($_POST['LLoadingSubmit'])) {
     ];
     if (!recordExists('data_copies', ['unique_code' => $CCWdata['unique_code']])) {
         insert('data_copies', $CCWdata);
-    } else {
-        update('data_copies', $CCWdata, ['unique_code' => $CCWdata['unique_code']]);
+    }
+    if (!recordExists('vat_copies', ['unique_code' => $CCWdata['unique_code']])) {
+        insert('vat_copies', $CCWdata);
     }
     if (isset($_POST['warehouse_entry'])) {
         $p_unique_code = explode('~', $_POST['warehouse_entry'])[0];
@@ -630,26 +622,16 @@ if (isset($_POST['LLoadingSubmit'])) {
             mysqli_fetch_assoc(fetch('data_copies', ['unique_code' => $p_unique_code]))['ldata'],
             true
         );
-        $qty_no = $existingLdata['good']['goods_json']['qty_no'] -= $tempG['quantity_no'];
-        $qty_kgs = $existingLdata['good']['goods_json']['qty_kgs'] ?? 0;
-        $empty_kgs = $existingLdata['good']['goods_json']['empty_kgs'] ?? 0;
-        $rate1 = $existingLdata['good']['goods_json']['rate1'] ?? 0;
-        $total_kgs = $qty_no * $qty_kgs;
-        $total_qty_kgs = $qty_no * $empty_kgs;
-        $net_kgs = $total_kgs - $total_qty_kgs;
-        $amount = ($net_kgs > 0) ? round($net_kgs * $rate1, 3) : 0;
-        $tax_percent = $existingLdata['good']['goods_json']['tax_percent'] ?? 0;
-        $tax_amount = round($amount * ($tax_percent / 100), 2);
-        $total_with_tax = round($amount + $tax_amount, 2);
-        $existingLdata['good']['goods_json']['total_kgs'] = round($total_kgs, 2);
-        $existingLdata['good']['goods_json']['total_qty_kgs'] = round($total_qty_kgs, 2);
-        $existingLdata['good']['goods_json']['net_kgs'] = round($net_kgs, 2);
-        $existingLdata['good']['goods_json']['amount'] = $amount;
-        $existingLdata['good']['goods_json']['tax_amount'] = $tax_amount;
-        $existingLdata['good']['goods_json']['total_with_tax'] = $total_with_tax;
+        $good = $existingLdata['good'];
+        $goods_json = $good['goods_json'];
+        $qty_no = $goods_json['qty_no'] -= $tempG['quantity_no'];
+        $updatedGood = calcNewValues($qty_no, $existingLdata['good'], 'rems');
+        $existingLdata['good'] = $updatedGood;
         $existingLdata['transfer']['sold_to'][] = $_POST['unique_code'] . $currentLoading . '~' . $tempG['goods_id'] . '~' . goodsName($tempG['goods_id']) . '~' . $tempG['quantity_no'] . '~' . $tempG['quantity_name'] . '~' . $tempG['gross_weight'] . '~' . $tempG['net_weight'] . '~' . $_POST['warehouse_transfer'] . '~' . $sr_no;
         update('data_copies', ['ldata' => safeJsonEncode($existingLdata)], ['unique_code' => $p_unique_code]);
+        update('vat_copies', ['ldata' => safeJsonEncode($existingLdata)], ['unique_code' => $p_unique_code]);
     }
+
     if (isset($_POST['action']) && isset($_POST['id'])) {
         $url_ = "local-loading?p_id=" . $p_id . "&view=1";
         if ($data['attachments'] == '[]') {
@@ -671,7 +653,7 @@ if (isset($_POST['LLoadingSubmit'])) {
             $msg = 'New Goods Loading Added!';
         }
     }
-    // messageNew($type, $url_, $msg);
+    messageNew($type, $url_, $msg);
 }
 
 if (isset($_GET['deleteLoadingEntry']) && isset($_GET['lp_id']) && !empty($_GET['lp_id'])) {

@@ -267,6 +267,7 @@ $total_pages = ceil($total_rows / $rows_per_page);
                                 <?php } ?>
                                 <th>Allot</th>
                                 <th>Goods Name / ORIGIN</th>
+                                <th>Amount</th>
                                 <th>Total Qty</th>
                                 <th>Sold Qty</th>
                                 <th>Rem Qty</th>
@@ -314,6 +315,7 @@ $total_pages = ceil($total_rows / $rows_per_page);
                                     <?php } ?>
                                     <td class="<?= $rowColor; ?>"><?= $ldata['good']['goods_json']['allotment_name']; ?></td>
                                     <td class="<?= $rowColor; ?>"><?= goodsName(htmlspecialchars($ldata['good']['goods_id'])) . ' / ' . htmlspecialchars($ldata['good']['origin']); ?></td>
+                                    <td class="fw-bold text-dark"><?= round($ldata['good']['final_amount'], 2) ?></td>
                                     <td class="fw-bold text-success"><?= htmlspecialchars($TotalQty); ?> <sub><?= htmlspecialchars($ldata['good']['goods_json']['qty_name']); ?></sub></td>
                                     <td class="fw-bold text-danger"><?= htmlspecialchars($SoldQty); ?></td>
                                     <td class="fw-bold text-primary"><?= htmlspecialchars($RemQty); ?></td>

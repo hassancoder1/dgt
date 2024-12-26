@@ -529,11 +529,6 @@ if (isset($_POST['GLoadingSubmit'])) {
         'xp_acc_kd_id' => mysqli_real_escape_string($connect, $_POST['xp_acc_kd_id']),
         'xp_acc_details' => mysqli_real_escape_string($connect, $_POST['xp_acc_details'])
     ];
-    $_POST['goods_json'] = json_decode($_POST['goods_json'], true);
-    if (isset($_POST['goods_json']['sr_no'])) {
-        unset($_POST['goods_json']['sr_no']);
-    }
-    $_POST['goods_json'] = json_encode($_POST['goods_json']);
     $goods_details = [
         'goods_id' => mysqli_real_escape_string($connect, $_POST['goods_id']),
         'quantity_no' => mysqli_real_escape_string($connect, $_POST['quantity_no']),
@@ -547,8 +542,10 @@ if (isset($_POST['GLoadingSubmit'])) {
         'gross_weight' => mysqli_real_escape_string($connect, $_POST['gross_weight']),
         'container_no' => mysqli_real_escape_string($connect, $_POST['container_no']),
         'container_name' => mysqli_real_escape_string($connect, $_POST['container_name']),
-        'goods_json' => mysqli_real_escape_string($connect, $_POST['goods_json'])
+        'goods_json' => json_decode($_POST['goods_json'], true)
     ];
+    $goods_details = calcNewValues([$_POST['quantity_no'], $_POST['quantity_no']], $goods_details, 'both');
+
     $shipping_details = [
         'shipping_name' => mysqli_real_escape_string($connect, $_POST['shipping_name']),
         'shipping_phone' => mysqli_real_escape_string($connect, $_POST['shipping_phone']),

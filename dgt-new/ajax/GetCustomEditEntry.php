@@ -2,7 +2,7 @@
 require_once '../connection.php';
 $unique_code = $_POST['unique_code'];
 [$Ttype, $Tcat, $Troute, $TID, $LID] = decode_unique_code($unique_code, 'all');
-$data = mysqli_fetch_assoc(fetch('data_copies', ['unique_code' => $unique_code]));
+$data = mysqli_fetch_assoc(fetch($_POST['fetch_from'], ['unique_code' => $unique_code]));
 $Tdata = json_decode($data['tdata'], true);
 $Ldata = json_decode($data['ldata'], true);
 $Good = $Ldata['good'];
@@ -13,10 +13,12 @@ echo '<script>let printUrl = "' . $print_url . '";</script>';
 <div class="modal-header d-flex justify-content-between bg-white align-items-center mb-2">
     <h5 class="modal-title fw-bold" id="staticBackdropLabel">EDIT => <?= ucfirst($Ttype) . '# ' . $TID . ' (' . $_POST['sr_no'] . ') (' . ucwords(str_replace('-', ' ', $_POST['warehouse_type'])) . ')'; ?></h5>
     <div class="d-flex align-items-center gap-2">
-        <select name="print_type" id="print_type" class="form-select form-select-sm">
-            <option value="invoice" <?= $_POST['print_type'] === 'invoice' ? 'selected' : ''; ?>>Invoice Print</option>
-            <option value="packing-list" <?= $_POST['print_type'] === 'packing-list' ? 'selected' : ''; ?>>Packing List Print</option>
-        </select>
+        <?php if ($_POST['fetch_from'] !== 'vat_copies') { ?>
+            <select name="print_type" id="print_type" class="form-select form-select-sm">
+                <option value="invoice" <?= $_POST['print_type'] === 'invoice' ? 'selected' : ''; ?>>Invoice Print</option>
+                <option value="packing-list" <?= $_POST['print_type'] === 'packing-list' ? 'selected' : ''; ?>>Packing List Print</option>
+            </select>
+        <?php } ?>
         <script>
             let fullPrintURL = printUrl + '&print_type=<?= $_POST['print_type'] ?>';
             // document.querySelector('#printPreviewBtn').setAttribute('href', fullPrintURL);

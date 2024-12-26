@@ -41,22 +41,315 @@ while ($row = $res->fetch_assoc()) {
     $row['ldata'] = json_decode($row['ldata'], true);
     $p2Data[] = $row;
 }
-[$p2Ttype, $p2Tcat, $p2Troute, $p2TID, $p2LID] = decode_unique_code($p2Data[0]['unique_code'], 'all');
+$p2Data[0] = $p2Data[0] ?? [];
+$p2Data[0]['tdata'] = $p2Data[0]['tdata'] ?? [];
+$p2Data[0]['ldata'] = $p2Data[0]['ldata'] ?? [];
+[$p2Ttype, $p2Tcat, $p2Troute, $p2TID, $p2LID] = decode_unique_code($p2Data[0]['unique_code'] ?? '', 'all');
 [$PONE0T, $PONE0L, $PTWO0T, $PTWO0L]  = [$p1Data[0]['tdata'], $p1Data[0]['ldata'], $p2Data[0]['tdata'], $p2Data[0]['ldata']];
 function printDesign($WarehouseType, $printType)
 {
     global $PONE0T, $PONE0L, $PTWO0T, $PTWO0L, $p2Ttype, $p2Tcat, $p2Troute, $p2TID, $p2LID, $p1Ttype, $p1Tcat, $p1Troute, $p1TID, $p1LID, $print_type, $warehouse_type, $p1Data, $p2Data, $connect;
+    if ($WarehouseType === 'General') {
+?><div class="row">
+            <div class="col-6">
+                <img src="logo.jpg" style="border-radius: 100%; width: 110px; margin-bottom: 10px;" alt="">
+                <h6 class="text-primary fw-bold text-nowrap"><?= $warehouse_type . ' ' . $print_type; ?></h6>
+            </div>
+            <div class="col-6">
+                <span><b> <?= $PONE0T['p_s'] === 'p' ? 'Purchase' : 'Sale'; ?> #: </b><?= $p1TID; ?></span><br>
+                <span><b>Date:</b> <?= $PONE0T['_date']; ?></span><br>
+                <span><b>Country:</b> <?= $PONE0T['country']; ?></span><br>
+                <span><b>Branch:</b> <?= branchName($PONE0T['branch_id']) ?? ''; ?></span><br>
+            </div>
+        </div>
 
-    if ($WarehouseType === 'transit') {
+        <div class="row my-2 py-2 border-top">
+            <div class="col-6">
+                <h5>Sale</h5>
+                <div class="hide-on-print">
+                    <span><strong>Acc Name: </strong> <?= $PONE0T['cr_acc_name']; ?> | <strong>Acc No: </strong> <?= $PONE0T['cr_acc']; ?></span><br>
+                </div>
+                <span><strong>Company:</strong> <?= getCompanyName($PONE0T['cr_acc_kd_id']) ?? 'Not Found!'; ?></span><br>
+                <span><?= str_replace(getCompanyName($PONE0T['cr_acc_kd_id']), '', $PONE0T['cr_acc_details']); ?></span>
+            </div>
+            <div class="col-6">
+                <h5>Purchase</h5>
+                <div class="hide-on-print">
+                    <span><strong>Acc Name: </strong> <?= $PONE0T['dr_acc_name']; ?> | <strong>Acc No: </strong> <?= $PONE0T['dr_acc']; ?></span><br>
+                </div>
+                <span><strong>Company:</strong> <?= getCompanyName($PONE0T['dr_acc_kd_id']) ?? 'Not Found!'; ?></span><br>
+                <span><?= str_replace(getCompanyName($PONE0T['dr_acc_kd_id']), '', $PONE0T['dr_acc_details']); ?></span>
+            </div>
+        </div>
+        <div class="row py-2 my-2 border-top">
+            <div class="col-2 my-2">
+                <span><b>Loading Date:</b> <?= $PONE0L['transfer']['loading_date'] ?? ''; ?></span>
+            </div>
+            <div class="col-2 my-2">
+                <span><b>Receiving Date:</b> <?= $PONE0L['transfer']['receiving_date'] ?? ''; ?></span>
+            </div>
+            <div class="col-2 my-2">
+                <span><b>UID: No:</b> <?= $PONE0L['uid'] ?? ''; ?></span>
+            </div>
+        </div>
+
+        <div class="table-responsive my-2 py-2 border-top">
+            <table class="table table-bordered border-dark">
+                <thead>
+                    <tr>
+                        <th class="bg-dark text-white">ORIGIN</th>
+                        <?php
+                        if ($PONE0T['type'] !== 'local') {
+                            echo '<th class="bg-dark text-white">SHIP</th>';
+                        } else {
+                            echo '<th class="bg-dark text-white">LOCAL Transfer</th>';
+                        }
+                        ?>
+                        <th class="bg-dark text-white">Loading</th>
+                        <th class="bg-dark text-white">Receiving</th>
+                        <th class="bg-dark text-white">Delivery Terms</th>
+                        <th class="bg-dark text-white">Payment Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><?= $PONE0L['good']['origin']; ?></td>
+                        <?php
+                        if ($PONE0T['type'] !== 'local') {
+                            echo '<td>' . strtoupper($PONE0T['sea_road']) . '</td>';
+                            echo '<td>' . strtoupper($PONE0T['sea_road_array']['l_port']) . '</td>';
+                            echo '<td>' . strtoupper($PONE0T['sea_road_array']['r_port']) . '</td>';
+                        } else {
+                            echo '<td>' . strtoupper($PONE0T['sea_road_array']['route']) . ' Transfer</td>';
+                            echo '<td>' . strtoupper(($PONE0T['sea_road_array']['loading_company_name'] ?? '')) . '</td>';
+                            echo '<td>' . strtoupper(($PONE0T['sea_road_array']['receiving_company_name'] ?? '')) . '</td>';
+                        }
+                        echo '<td>' . strtoupper($PONE0T['delivery_terms'] ?? 'Not Set!') . '</td>';
+                        echo '<td>' . strtoupper($PONE0T['payment_details']['full_advance']) . '</td>';
+                        ?>
+            </table>
+        </div>
+
+        <table class="table table-hover table-bordered border-dark my-2 py-2 mt-3">
+            <thead>
+                <tr class="text-nowrap">
+                    <th class="bg-dark text-white">#</th>
+                    <th class="bg-dark text-white">GOODS Details</th>
+                    <th class="bg-dark text-white">QTY</th>
+                    <th class="bg-dark text-white">KGs</th>
+                    <th class="bg-dark text-white">NET KGs</th>
+                    <th class="bg-dark text-white">TOTAL</th>
+                    <th class="bg-dark text-white">DIVIDE</th>
+                    <th class="bg-dark text-white">PRICE</th>
+                    <th class="bg-dark text-white">AMT</th>
+                    <?php if ($PONE0T['type'] !== 'local') { ?>
+                        <!-- <th class="bg-dark text-white" class="text-end">FINAL</th> -->
+                    <?php } else { ?>
+                        <th class="bg-dark text-white">Tax%</th>
+                        <th class="bg-dark text-white">Tax.Amt</th>
+                        <th class="bg-dark text-white">Final Amt</th>
+                    <?php } ?>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                $totalQty = $totalKgs = $totalNetKgs = $totalAmount = $totalTaxAmt = $totalFinalAmt = 0;
+                foreach ($p1Data as $loading) {
+                    $details = $loading['ldata']['good']['goods_json'];
+                    echo '<tr>';
+                    echo '<td>' . $details['sr'] . '</td>';
+                    echo '<td><a class="text-dark">' . goodsName($details['goods_id']) . '</a> / ' . $details['size'] . ' / ' . $details['brand'] . ' / ' . $details['origin'] . '</td>';
+                    echo '<td>' . $loading['ldata']['good']['quantity_no'] . '<sub>' . $details['qty_name'] . '</sub></td>';
+                    echo '<td>' . round($details['total_kgs'], 2) . '</td>';
+                    echo '<td>' . round($details['net_kgs'], 2) . '<sub>' . $details['divide'] . '</sub></td>';
+                    echo '<td>' . $details['total'] . '</td>';
+                    echo '<td>' . $details['divide'] . '</td>';
+                    echo '<td>' . $details['rate1'] . '<sub>' . $details['currency1'] . '</sub></td>';
+                    echo '<td>' . round($details['amount'], 2) . '</td>';
+
+                    // Accumulate totals
+                    $totalQty += $loading['ldata']['good']['quantity_no'];
+                    $totalKgs += $details['total_kgs'];
+                    $totalNetKgs += $details['net_kgs'];
+                    $totalAmount += $details['amount'];
+
+                    if ($PONE0T['type'] === 'local') {
+                        echo '<td>' . $details['tax_percent'] . "%</td>";
+                        echo '<td>' . $details['tax_amount'] . '</td>';
+                        echo '<td>' . $details['total_with_tax'] . '</td>';
+                        $totalTaxAmt += $details['tax_amount'];
+                        $totalFinalAmt += $details['total_with_tax'];
+                    }
+                    echo '</tr>';
+                }
+                ?>
+            </tbody>
+            <tfoot>
+                <tr class="fw-bold bg-light">
+                    <td colspan="2">Totals</td>
+                    <td><?= $totalQty; ?></td>
+                    <td><?= round($totalKgs, 2); ?></td>
+                    <td><?= round($totalNetKgs, 2); ?></td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td><?= round($totalAmount, 2); ?></td>
+                    <?php if ($PONE0T['type'] === 'local') { ?>
+                        <td>-</td>
+                        <td><?= round($totalTaxAmt, 2); ?></td>
+                        <td><?= round($totalFinalAmt, 2); ?></td>
+                    <?php } ?>
+                </tr>
+            </tfoot>
+        </table>
+        <!-- <----------- SALE START  -->
+        <div style="margin: 2px; color:transparent;user-select:none;border-top:2px dashed #222;">!</div>
+        <div class="row border-top border-dashed my-2 mt-0 py-2">
+            <?php $PB =  'BORDER';  ?>
+            <div class="col-3">
+                <span><b>Loading Date:</b> <?= $PTWO0L['transfer']['loading_date'] ?? ''; ?></span><br>
+                <span><b>Recieving Date:</b> <?= $PTWO0L['transfer']['receiving_date'] ?? ''; ?></span><br>
+                <span><b>L <?= $PB; ?> Name:</b> <?= $PTWO0L['transfer']['loading_port_name'] ?? ''; ?></span><br>
+                <span><b>R <?= $PB; ?> Name:</b> <?= $PTWO0L['transfer']['receiving_port_name'] ?? ''; ?></span><br>
+            </div>
+            <div class="col-3">
+                <span><b>BOE Date:</b> <?= $PTWO0L['agent']['boe_date'] ?? ''; ?></span><br>
+                <span><b>Pick Up Date:</b> <?= $PTWO0L['agent']['pick_up_date'] ?? ''; ?></span><br>
+                <span><b>Waiting (days):</b> <?= $PTWO0L['agent']['waiting_days'] ?? ''; ?></span><br>
+                <span><b>Return Date:</b> <?= $PTWO0L['agent']['return_date'] ?? ''; ?></span><br>
+                <span><b>Transporter Name:</b> <?= $PTWO0L['agent']['transporter_name'] ?? ''; ?></span><br>
+            </div>
+            <div class="col-4">
+                <span><b>Truck Number:</b> <?= $PTWO0L['agent']['truck_number'] ?? ''; ?></span><br>
+                <span><b>Details:</b> <?= $PTWO0L['agent']['details'] ?? ''; ?></span><br>
+                <span><b>Driver Name:</b> <?= $PTWO0L['agent']['driver_name'] ?? ''; ?></span><br>
+                <span><b>Driver Number:</b> <?= $PTWO0L['agent']['driver_number'] ?? ''; ?></span><br>
+            </div>
+            <div class="col-2 border-bottom-2 border-dark text-end">
+                <span><b> <?= $PTWO0T['p_s'] === 'p' ? 'Purchase' : 'Sale'; ?> #: </b><?= $p2TID; ?></span><br>
+                <span><b> Date: </b><?= $PTWO0T['_date']; ?></span><br>
+                <span><b> Country: </b><?= $PTWO0T['country']; ?></span><br>
+                <span><b> Branch: </b><?= branchName($PTWO0T['branch_id']) ?? ''; ?></span><br>
+            </div>
+        </div>
+
+        <div class="table-responsive my-2 py-2 border-top">
+            <table class="table table-bordered border-dark">
+                <thead>
+                    <tr>
+                        <th class="bg-dark text-white">ORIGIN</th>
+                        <?php
+                        if ($PTWO0T['type'] !== 'local') {
+                            echo '<th class="bg-dark text-white">SHIP</th>';
+                        } else {
+                            echo '<th class="bg-dark text-white">LOCAL Transfer</th>';
+                        }
+                        ?>
+                        <th class="bg-dark text-white">Loading</th>
+                        <th class="bg-dark text-white">Receiving</th>
+                        <th class="bg-dark text-white">Delivery Terms</th>
+                        <th class="bg-dark text-white">Payment Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><?= $PTWO0L['good']['origin']; ?></td>
+                        <?php
+                        if ($PTWO0T['type'] !== 'local') {
+                            echo '<td>' . strtoupper($PTWO0T['sea_road']) . '</td>';
+                            echo '<td>' . strtoupper($PTWO0T['sea_road_array']['l_port']) . '</td>';
+                            echo '<td>' . strtoupper($PTWO0T['sea_road_array']['r_port']) . '</td>';
+                        } else {
+                            echo '<td>' . strtoupper($PTWO0T['sea_road_array']['route']) . ' Transfer</td>';
+                            echo '<td>' . strtoupper(($PTWO0T['sea_road_array']['loading_company_name'] ?? '')) . '</td>';
+                            echo '<td>' . strtoupper(($PTWO0T['sea_road_array']['receiving_company_name'] ?? '')) . '</td>';
+                        }
+                        echo '<td>' . strtoupper($PTWO0T['delivery_terms'] ?? 'Not Set!') . '</td>';
+                        echo '<td>' . strtoupper($PTWO0T['payment_details']['full_advance']) . '</td>';
+                        ?>
+            </table>
+        </div>
+
+        <table class="table table-hover table-bordered border-dark my-2 py-2 mt-3">
+            <thead>
+                <tr class="text-nowrap">
+                    <th class="bg-dark text-white">#</th>
+                    <th class="bg-dark text-white">GOODS Details</th>
+                    <th class="bg-dark text-white">QTY</th>
+                    <th class="bg-dark text-white">KGs</th>
+                    <th class="bg-dark text-white">NET KGs</th>
+                    <th class="bg-dark text-white">TOTAL</th>
+                    <th class="bg-dark text-white">DIVIDE</th>
+                    <th class="bg-dark text-white">PRICE</th>
+                    <th class="bg-dark text-white">AMT</th>
+                    <?php if ($PTWO0T['type'] !== 'local') { ?>
+                        <!-- <th class="bg-dark text-white" class="text-end">FINAL</th> -->
+                    <?php } else { ?>
+                        <th class="bg-dark text-white">Tax%</th>
+                        <th class="bg-dark text-white">Tax.Amt</th>
+                        <th class="bg-dark text-white">Final Amt</th>
+                    <?php } ?>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                $totalQty = $totalKgs = $totalNetKgs = $totalAmount = $totalTaxAmt = $totalFinalAmt = 0;
+                foreach ($p2Data as $loading) {
+                    $details = $loading['ldata']['good']['goods_json'];
+                    echo '<tr>';
+                    echo '<td>' . $details['sr'] . '</td>';
+                    echo '<td><a class="text-dark">' . goodsName($details['goods_id']) . '</a> / ' . $details['size'] . ' / ' . $details['brand'] . ' / ' . $details['origin'] . '</td>';
+                    echo '<td>' . $loading['ldata']['good']['quantity_no'] . '<sub>' . $details['qty_name'] . '</sub></td>';
+                    echo '<td>' . round($details['total_kgs'], 2) . '</td>';
+                    echo '<td>' . round($details['net_kgs'], 2) . '<sub>' . $details['divide'] . '</sub></td>';
+                    echo '<td>' . $details['total'] . '</td>';
+                    echo '<td>' . $details['divide'] . '</td>';
+                    echo '<td>' . $details['rate1'] . '<sub>' . $details['currency1'] . '</sub></td>';
+                    echo '<td>' . round($details['amount'], 2) . '</td>';
+
+                    // Accumulate totals
+                    $totalQty += $loading['ldata']['good']['quantity_no'];
+                    $totalKgs += $details['total_kgs'];
+                    $totalNetKgs += $details['net_kgs'];
+                    $totalAmount += $details['amount'];
+
+                    if ($PTWO0T['type'] === 'local') {
+                        echo '<td>' . $details['tax_percent'] . "%</td>";
+                        echo '<td>' . $details['tax_amount'] . '</td>';
+                        echo '<td>' . $details['total_with_tax'] . '</td>';
+                        $totalTaxAmt += $details['tax_amount'];
+                        $totalFinalAmt += $details['total_with_tax'];
+                    }
+                    echo '</tr>';
+                }
+                ?>
+            </tbody>
+            <tfoot>
+                <tr class="fw-bold bg-light">
+                    <td colspan="2">Totals</td>
+                    <td><?= $totalQty; ?></td>
+                    <td><?= round($totalKgs, 2); ?></td>
+                    <td><?= round($totalNetKgs, 2); ?></td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td><?= round($totalAmount, 2); ?></td>
+                    <?php if ($PTWO0T['type'] === 'local') { ?>
+                        <td>-</td>
+                        <td><?= round($totalTaxAmt, 2); ?></td>
+                        <td><?= round($totalFinalAmt, 2); ?></td>
+                    <?php } ?>
+                </tr>
+            </tfoot>
+        </table>
+        <?php
+    } elseif ($WarehouseType === 'transit') {
         if ($printType === 'invoice') {
-?>
+        ?>
             <div class="row">
                 <div class="col-7">
-                    <h6 class="text-primary fw-bold text-nowrap">DAMAAN GENERAL TRADING LLC.</h6>
-                    <p class="mb-0 text-nowrap"><b>Web:</b> www.dgt.llc | <b>Email:</b> contacts@dgt.llc</p>
-                    <p class="text-nowrap"><b>Office#:</b> +97142278608 | <b>M#:</b> +971544816664</p>
                     <?php if (isset($PONE0L['notify'])) { ?>
-                        <div class="border-top">
+                        <div>
                             <h5>Notify Party</h5>
                             <div class="hide-on-print">
                                 <span><strong>Acc Name: </strong> <?= $PONE0L['notify']['np_acc_name']; ?> | <strong>Acc No: </strong> <?= $PONE0L['notify']['np_acc_no']; ?></span><br>
@@ -171,15 +464,15 @@ function printDesign($WarehouseType, $printType)
                 <thead>
                     <tr class="text-nowrap">
                         <th class="bg-dark text-white">#</th>
-                        <th class="bg-dark text-white">Container No</th>
-                        <th class="bg-dark text-white">GOODS / SIZE / BRAND / ORIGIN</th>
+                        <th class="bg-dark text-white">Container</th>
+                        <th class="bg-dark text-white">GOODS Details</th>
                         <th class="bg-dark text-white">QTY</th>
                         <th class="bg-dark text-white">KGs</th>
                         <th class="bg-dark text-white">NET KGs</th>
                         <th class="bg-dark text-white">TOTAL</th>
                         <th class="bg-dark text-white">DIVIDE</th>
                         <th class="bg-dark text-white">PRICE</th>
-                        <th class="bg-dark text-white">AMOUNT</th>
+                        <th class="bg-dark text-white">AMT</th>
                         <?php if ($PONE0T['type'] !== 'local') { ?>
                             <!-- <th class="bg-dark text-white" class="text-end">FINAL</th> -->
                         <?php } else { ?>
@@ -313,15 +606,15 @@ function printDesign($WarehouseType, $printType)
                 <thead>
                     <tr class="text-nowrap">
                         <th class="bg-dark text-white">#</th>
-                        <th class="bg-dark text-white">Container No</th>
-                        <th class="bg-dark text-white">GOODS / SIZE / BRAND / ORIGIN</th>
+                        <th class="bg-dark text-white">Container</th>
+                        <th class="bg-dark text-white">GOODS Details</th>
                         <th class="bg-dark text-white">QTY</th>
                         <th class="bg-dark text-white">KGs</th>
                         <th class="bg-dark text-white">NET KGs</th>
                         <th class="bg-dark text-white">TOTAL</th>
                         <th class="bg-dark text-white">DIVIDE</th>
                         <th class="bg-dark text-white">PRICE</th>
-                        <th class="bg-dark text-white">AMOUNT</th>
+                        <th class="bg-dark text-white">AMT</th>
                         <?php if ($PTWO0T['type'] !== 'local') { ?>
                             <!-- <th class="bg-dark text-white" class="text-end">FINAL</th> -->
                         <?php } else { ?>
@@ -406,9 +699,6 @@ function printDesign($WarehouseType, $printType)
         ?>
             <div class="row">
                 <div class="col-7">
-                    <h6 class="text-primary fw-bold text-nowrap">DAMAAN GENERAL TRADING LLC.</h6>
-                    <p class="mb-0 text-nowrap"><b>Web:</b> www.dgt.llc | <b>Email:</b> contacts@dgt.llc</p>
-                    <p class="text-nowrap"><b>Office#:</b> +97142278608 | <b>M#:</b> +971544816664</p>
                     <?php if (isset($PONE0L['notify'])) { ?>
                         <div class="border-top">
                             <h5>Notify Party</h5>
@@ -451,39 +741,41 @@ function printDesign($WarehouseType, $printType)
                 </div>
             </div>
             <?php
-            $Arowid = intval($PONE0L['agent']['row_id']);
-            $khaata_id = mysqli_fetch_assoc(mysqli_query($connect, "SELECT JSON_EXTRACT(khaata, '$.khaata_id') AS khaata_id FROM users WHERE id=$Arowid"))['khaata_id'];
-            $data = json_decode(mysqli_fetch_assoc(mysqli_query($connect, "SELECT * FROM khaata_details WHERE khaata_id=$khaata_id"))['json_data'], true);
-            $WEIGHT_License = array_combine($data['indexes1'], $data['vals1']);
-            $company_Name = $data['company_name'];
+            if (isset($PONE0L['agent'])) {
+                $Arowid = intval($PONE0L['agent']['row_id']);
+                $khaata_id = mysqli_fetch_assoc(mysqli_query($connect, "SELECT JSON_EXTRACT(khaata, '$.khaata_id') AS khaata_id FROM users WHERE id=$Arowid"))['khaata_id'];
+                $data = json_decode(mysqli_fetch_assoc(mysqli_query($connect, "SELECT * FROM khaata_details WHERE khaata_id=$khaata_id"))['json_data'], true);
+                $WEIGHT_License = array_combine($data['indexes1'], $data['vals1']);
+                $company_Name = $data['company_name'];
             ?>
 
-            <div class="row py-2 my-2 border-top">
-                <div class="col-4 my-2">
-                    <span><b>Agent Company Name:</b> <?= $company_Name ?? 'Not Set'; ?></span>
+                <div class="row py-2 my-2 border-top">
+                    <div class="col-4 my-2">
+                        <span><b>Agent Company Name:</b> <?= $company_Name ?? 'Not Set'; ?></span>
+                    </div>
+                    <div class="col-2 my-2">
+                        <span><b>Weight No:</b> <?= $WEIGHT_License['WEIGHT'] ?? ''; ?></span>
+                    </div>
+                    <div class="col-2 my-2">
+                        <span><b>License No:</b> <?= $WEIGHT_License['License'] ?? ''; ?></span>
+                    </div>
+                    <div class="col-2 my-2">
+                        <span><b>Loading Date:</b> <?= $PONE0L['transfer']['loading_date'] ?? ''; ?></span>
+                    </div>
+                    <div class="col-2 my-2">
+                        <span><b>Receiving Date:</b> <?= $PONE0L['transfer']['receiving_date'] ?? ''; ?></span>
+                    </div>
+                    <div class="col-2 my-2">
+                        <span><b>B/L No:</b> <?= $PONE0L['bl_no'] ?? ''; ?></span>
+                    </div>
+                    <div class="col-4 my-2">
+                        <span><b>BOE No:</b> <?= $PONE0L['agent']['boe_no'] ?? ''; ?></span>
+                    </div>
+                    <div class="col-4 my-2">
+                        <span><b>BOE Date:</b> <?= $PONE0L['agent']['boe_date'] ?? ''; ?></span>
+                    </div>
                 </div>
-                <div class="col-2 my-2">
-                    <span><b>Weight No:</b> <?= $WEIGHT_License['WEIGHT'] ?? ''; ?></span>
-                </div>
-                <div class="col-2 my-2">
-                    <span><b>License No:</b> <?= $WEIGHT_License['License'] ?? ''; ?></span>
-                </div>
-                <div class="col-2 my-2">
-                    <span><b>Loading Date:</b> <?= $PONE0L['transfer']['loading_date'] ?? ''; ?></span>
-                </div>
-                <div class="col-2 my-2">
-                    <span><b>Receiving Date:</b> <?= $PONE0L['transfer']['receiving_date'] ?? ''; ?></span>
-                </div>
-                <div class="col-2 my-2">
-                    <span><b>B/L No:</b> <?= $PONE0L['bl_no'] ?? ''; ?></span>
-                </div>
-                <div class="col-4 my-2">
-                    <span><b>BOE No:</b> <?= $PONE0L['agent']['boe_no'] ?? ''; ?></span>
-                </div>
-                <div class="col-4 my-2">
-                    <span><b>BOE Date:</b> <?= $PONE0L['agent']['boe_date'] ?? ''; ?></span>
-                </div>
-            </div>
+            <?php } ?>
 
             <div class="table-responsive my-2 py-2 border-top">
                 <table class="table table-bordered border-dark">
@@ -521,20 +813,24 @@ function printDesign($WarehouseType, $printType)
                             ?>
                 </table>
             </div>
-
+            <style>
+                table>* {
+                    font-size: 11px;
+                }
+            </style>
             <table class="table table-hover table-bordered border-dark my-2 py-2 mt-3">
                 <thead>
                     <tr class="text-nowrap">
                         <th class="bg-dark text-white">#</th>
-                        <th class="bg-dark text-white">Container No</th>
-                        <th class="bg-dark text-white">GOODS / SIZE / BRAND / ORIGIN</th>
+                        <th class="bg-dark text-white">Container</th>
+                        <th class="bg-dark text-white">GOODS Details</th>
                         <th class="bg-dark text-white">QTY</th>
                         <th class="bg-dark text-white">KGs</th>
                         <th class="bg-dark text-white">NET KGs</th>
                         <th class="bg-dark text-white">TOTAL</th>
                         <th class="bg-dark text-white">DIVIDE</th>
                         <th class="bg-dark text-white">PRICE</th>
-                        <th class="bg-dark text-white">AMOUNT</th>
+                        <th class="bg-dark text-white">AMT</th>
                         <?php if ($PONE0T['type'] !== 'local') { ?>
                             <!-- <th class="bg-dark text-white" class="text-end">FINAL</th> -->
                         <?php } else { ?>
@@ -700,15 +996,15 @@ function printDesign($WarehouseType, $printType)
                 <thead>
                     <tr class="text-nowrap">
                         <th class="bg-dark text-white">#</th>
-                        <th class="bg-dark text-white">Container No</th>
-                        <th class="bg-dark text-white">GOODS / SIZE / BRAND / ORIGIN</th>
+                        <th class="bg-dark text-white">Container</th>
+                        <th class="bg-dark text-white">GOODS Details</th>
                         <th class="bg-dark text-white">QTY</th>
                         <th class="bg-dark text-white">KGs</th>
                         <th class="bg-dark text-white">NET KGs</th>
                         <th class="bg-dark text-white">TOTAL</th>
                         <th class="bg-dark text-white">DIVIDE</th>
                         <th class="bg-dark text-white">PRICE</th>
-                        <th class="bg-dark text-white">AMOUNT</th>
+                        <th class="bg-dark text-white">AMT</th>
                         <?php if ($PTWO0T['type'] !== 'local') { ?>
                             <!-- <th class="bg-dark text-white" class="text-end">FINAL</th> -->
                         <?php } else { ?>

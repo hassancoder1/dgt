@@ -18,8 +18,11 @@ if (!empty($_POST['allot'])) {
 
             // Collect unique parent_ids for purchases and sales
             if ($entry['p_s'] === 'p') {
-                if (!in_array($entry['parent_id'], $purchase_ids)) {
-                    $purchase_ids[] = $entry['parent_id'];
+                if (!isset($purchase_ids[$key])) {
+                    $purchase_ids[$key] = [];
+                }
+                if (!in_array($entry['parent_id'], $purchase_ids[$key])) {
+                    $purchase_ids[$key][] = $entry['parent_id'];
                 }
 
                 // Add purchase entry to the processed list
@@ -35,14 +38,20 @@ if (!empty($_POST['allot'])) {
                         'total_sold_qty' => 0,
                         'total_sold_kgs' => 0,
                         'total_sold_net_kgs' => 0,
+                        'purchase_ids' => [],
+                        'sale_ids' => [],
                     ];
                 }
                 $processedEntries[$key]['total_purchased_qty'] += $entry['qty_no'];
                 $processedEntries[$key]['total_purchased_kgs'] += $entry['total_kgs'];
                 $processedEntries[$key]['total_purchased_net_kgs'] += $entry['net_kgs'];
+                $processedEntries[$key]['purchase_ids'][] = $entry['parent_id'];
             } elseif ($entry['p_s'] === 's') {
-                if (!in_array($entry['parent_id'], $sold_ids)) {
-                    $sold_ids[] = $entry['parent_id'];
+                if (!isset($sold_ids[$key])) {
+                    $sold_ids[$key] = [];
+                }
+                if (!in_array($entry['parent_id'], $sold_ids[$key])) {
+                    $sold_ids[$key][] = $entry['parent_id'];
                 }
 
                 // Add sales data to the corresponding purchase entry
@@ -50,29 +59,13 @@ if (!empty($_POST['allot'])) {
                     $processedEntries[$key]['total_sold_qty'] += $entry['qty_no'];
                     $processedEntries[$key]['total_sold_kgs'] += $entry['total_kgs'];
                     $processedEntries[$key]['total_sold_net_kgs'] += $entry['net_kgs'];
+                    $processedEntries[$key]['sale_ids'][] = $entry['parent_id'];
                 }
             }
         }
 ?>
         <div class="modal-header d-flex justify-content-between bg-white align-items-center">
             <h5 class="modal-title" id="staticBackdropLabel">Allotment Details: ( <?= htmlspecialchars($allot); ?> )</h5>
-            <div>
-                <span>Purchase IDs:
-                    <?php
-                    foreach ($purchase_ids as $purchased_single_id) {
-                        echo '<a href="purchases?t_id=' . htmlspecialchars($purchased_single_id) . '&print_type=contract">#' . htmlspecialchars($purchased_single_id) . '</a>, ';
-                    }
-                    ?>
-                </span> |
-                <span>Sale IDs:
-                    <?php
-                    foreach ($sold_ids as $sold_single_id) {
-                        echo '<a href="sales?t_id=' . htmlspecialchars($sold_single_id) . '&print_type=contract">#' . htmlspecialchars($sold_single_id) . '</a>, ';
-                    }
-                    ?>
-                </span>
-            </div>
-
             <div class="d-flex align-items-center justify-content-end gap-2">
                 <div class="dropdown">
                     <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
@@ -124,7 +117,8 @@ if (!empty($_POST['allot'])) {
                 <table class="table table-bordered table-hover table-sm">
                     <thead>
                         <tr class="text-nowrap">
-                            <th>No.</th>
+                            <th>No.#</th>
+                            <th>P | S</th>
                             <th>Goods (Name / Size / Brand / Origin)</th>
                             <th>Total Qty</th>
                             <th>T.G.Weight</th>
@@ -141,12 +135,16 @@ if (!empty($_POST['allot'])) {
                         <?php
                         // Initialize totals
                         $total_purchased_qty = $total_purchased_kgs = $total_purchased_net_kgs = $total_sold_qty = $total_sold_kgs = $total_sold_net_kgs = $total_remaining_qty = $total_remaining_gross_weight = $total_remaining_net_weight = 0;
-
                         $i = 1;
-                        foreach ($processedEntries as $entry):
+                        foreach ($processedEntries as $entry) {
                             $remaining_qty = $entry['total_purchased_qty'] - $entry['total_sold_qty'];
                             $remaining_gross_weight = $entry['total_purchased_kgs'] - $entry['total_sold_kgs'];
                             $remaining_net_weight = $entry['total_purchased_net_kgs'] - $entry['total_sold_net_kgs'];
+
+                            // Concatenate unique IDs
+                            $purchase_ids = !empty($entry['purchase_ids']) ? implode(',', $entry['purchase_ids']) : '-';
+                            $sale_ids = !empty($entry['sale_ids']) ? implode(',', $entry['sale_ids']) : '-';
+                            $ps_display = $purchase_ids . ' | ' . $sale_ids;
 
                             // Update totals
                             $total_purchased_qty += $entry['total_purchased_qty'];
@@ -161,6 +159,7 @@ if (!empty($_POST['allot'])) {
                         ?>
                             <tr>
                                 <td><?= htmlspecialchars($i); ?></td>
+                                <td><?= htmlspecialchars($ps_display); ?></td>
                                 <td>
                                     <?= goodsName(htmlspecialchars($entry['goods_id'])) . ' / ' .
                                         htmlspecialchars($entry['size']) . ' / ' .
@@ -177,10 +176,8 @@ if (!empty($_POST['allot'])) {
                                 <td class="fw-bold text-primary"><?= round($remaining_gross_weight); ?></td>
                                 <td class="fw-bold text-primary"><?= round($remaining_net_weight); ?></td>
                             </tr>
-                        <?php
-                            $i++;
-                        endforeach;
-                        ?>
+                        <?php $i++;
+                        } ?>
                         <!-- Totals Row -->
                         <tr>
                             <td></td>
@@ -197,6 +194,7 @@ if (!empty($_POST['allot'])) {
                         </tr>
                         <tr>
                             <td><i class="far fa-circle"></i></td>
+                            <td></td>
                             <td class="fw-bold">Allot Totals: </td>
                             <td class="fw-bold text-success"><?= number_format(round($total_purchased_qty)); ?></td>
                             <td class="fw-bold text-success"><?= number_format(round($total_purchased_kgs)); ?></td>

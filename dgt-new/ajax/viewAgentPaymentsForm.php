@@ -88,17 +88,16 @@ $parentGLoadingInfo = json_decode($parentRow['gloading_info'], true);
                                 <?php
                                 // Define the keys you want to display
                                 $allowedKeys = [
-                                    'received_date',
-                                    'clearing_date',
-                                    'loading_truck_number',
-                                    'truck_returning_date',
-                                    'boe_date',
+                                    'doe_date',
                                     'pick_up_date',
-                                    'waiting_if_any',
-                                    'days_waiting',
+                                    'waiting_days',
+                                    'truck_returning_date',
                                     'return_date',
+                                    'transporter_name',
                                     'truck_number',
-                                    'driver_details',
+                                    'details',
+                                    'driver_name',
+                                    'driver_number',
                                     'transporter_name'
                                 ];
 

@@ -22,7 +22,7 @@ if (isset($Ldata['transfer'][$PSKEY])) {
 ?>
 
 <div class="modal-header d-flex justify-content-between bg-white align-items-center mb-2">
-    <h5 class="modal-title" id="staticBackdropLabel">VIEW DETAILS</h5>
+    <h5 class="modal-title" id="staticBackdropLabel">VIEW DETAILS (WAREHOUSE: <?= $Ldata['transfer']['warehouse_transfer']; ?>)</h5>
     <a href="<?= $data_for . '?CCWpage=' . $_POST['CCWpage']; ?>" class="btn-close"></a>
 </div>
 </div>
@@ -35,7 +35,7 @@ if (isset($Ldata['transfer'][$PSKEY])) {
                     <table class="table table-bordered">
                         <thead>
                             <tr>
-                                <th colspan="9" class="bg-dark fs-6 fw-bold text-white">
+                                <th colspan="10" class="bg-dark fs-6 fw-bold text-white">
                                     <div class="d-flex justify-content-between px-2">
                                         <span>
                                             <?= strtoupper($Tdata['p_s_name']) . ' #' . $Tdata['sr_no']; ?>
@@ -64,19 +64,26 @@ if (isset($Ldata['transfer'][$PSKEY])) {
                                 <th class="bg-light text-center">Quantity</th>
                                 <th class="bg-light text-center">Gross Weight</th>
                                 <th class="bg-light text-center">Net Weight</th>
+                                <th class="bg-light text-center">Amount</th>
                                 <th class="bg-light text-center">Edit</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
                                 <td class="text-center fw-bold">P#<?= $Ldata['p_id'] . ' (' . $Ldata['sr_no'] . ')'; ?></td>
-                                <td class="text-center"><?= ('B/L: ' . $Ldata['bl_no']) ?? ('UID: ' . $Ldata['uid']); ?></td>
-                                <td class="text-center"><?= $Ldata['good']['container_no']; ?></td>
+                                <td class="text-center"><?php
+                                                        if (!empty($Ldata['bl_no'])) {
+                                                            echo 'B/L: ' . htmlspecialchars($Ldata['bl_no']);
+                                                        } elseif (!empty($Ldata['uid'])) {
+                                                            echo 'UID: ' . htmlspecialchars($Ldata['uid']);
+                                                        } ?></td>
+                                <td class="text-center"><?= $Ldata['good']['container_no'] ?? ''; ?></td>
                                 <td class="text-center"><?= $Ldata['transfer']['warehouse_transfer']; ?></td>
                                 <td class="text-center"><?= goodsName($Good['goods_id']); ?></td>
                                 <td class="text-center"><?= $Good['quantity_no'] . ' ' . $Good['quantity_name']; ?></td>
                                 <td class="text-center"><?= $Good['gross_weight']; ?></td>
                                 <td class="text-center"><?= $Good['net_weight']; ?></td>
+                                <td class="text-center"><?= $Good['final_amount']; ?></td>
                                 <td class="text-center pointer" onclick="fillData('<?= $purchaseEntry; ?>', '<?= implode('~', $saleEntries); ?>', '<?= $_POST['CCWpage']; ?>', 'invoice', '<?= $Ldata['sr_no'] ?>')">
                                     <i class="fa fa-pencil-alt text-primary" title="Edit"></i>
                                 </td>
@@ -93,15 +100,18 @@ if (isset($Ldata['transfer'][$PSKEY])) {
                         <table class="table table-bordered">
                             <thead>
                                 <tr>
-                                    <th colspan="7" class="bg-danger text-center fw-bold text-white">Sold Details</th>
+                                    <th colspan="10" class="bg-secondary text-center fw-bold text-white">Sold Details</th>
                                 </tr>
                                 <tr>
                                     <th class="bg-light text-center">S#</th>
+                                    <th class="bg-light text-center">B/L | UID</th>
+                                    <th class="bg-light text-center">Container No</th>
                                     <th class="bg-light text-center">Warehouse</th>
                                     <th class="bg-light text-center">Goods Name</th>
                                     <th class="bg-light text-center">Quantity</th>
                                     <th class="bg-light text-center">Gross Weight</th>
                                     <th class="bg-light text-center">Net Weight</th>
+                                    <th class="bg-light text-center">Amount</th>
                                     <th class="bg-light text-center">Edit</th>
                                 </tr>
                             </thead>
@@ -122,11 +132,19 @@ if (isset($Ldata['transfer'][$PSKEY])) {
                                 ?>
                                     <tr>
                                         <td class="text-center fw-bold">S# <?= decode_unique_code($data[0], 'TID') . ' (' . ($spData['sr_no'] ?? '??') . ')'; ?></td>
+                                        <td class="text-center"><?php
+                                                                if (!empty($spData['bl_no'])) {
+                                                                    echo 'B/L: ' . htmlspecialchars($spData['bl_no']);
+                                                                } elseif (!empty($spData['uid'])) {
+                                                                    echo 'UID: ' . htmlspecialchars($spData['uid']);
+                                                                } ?></td>
+                                        <td class="text-center"><?= $spData['good']['container_no'] ?? ''; ?></td>
                                         <td><?= $spData['transfer']['warehouse_transfer']; ?></td>
                                         <td><?= goodsName($spData['good']['goods_json']['goods_id']); ?></td>
                                         <td class="text-center"><?= $quantity . ' ' . $spData['good']['goods_json']['qty_name']; ?></td>
                                         <td class="text-center"><?= $grossWeight; ?></td>
                                         <td class="text-center"><?= $netWeight; ?></td>
+                                        <td class="text-center"><?= $spData['good']['final_amount']; ?></td>
                                         <td class="text-center pointer" onclick="fillData('<?= $data[0]; ?>','<?= $purchaseEntry; ?>', '<?= $_POST['CCWpage']; ?>', 'invoice', '<?= $spData['sr_no'] ?? ''; ?>')">
                                             <i class="fa fa-pencil-alt text-primary" title="Edit"></i>
                                         </td>
@@ -137,7 +155,7 @@ if (isset($Ldata['transfer'][$PSKEY])) {
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <th colspan="3" class="bg-light text-end fw-bold">Total:</th>
+                                    <th colspan="5" class="bg-light text-end fw-bold">Total:</th>
                                     <th class="bg-light text-center fw-bold"><?php echo $totalQuantity; ?></th>
                                     <th class="bg-light text-center fw-bold"><?php echo $totalGrossWeight; ?></th>
                                     <th class="bg-light text-center fw-bold"><?php echo $totalNetWeight; ?></th>
@@ -225,7 +243,8 @@ if (isset($Ldata['transfer'][$PSKEY])) {
                 print_party_2: print_party_2,
                 warehouse_type: warehouse_type,
                 print_type: print_type,
-                sr_no: sr_no
+                sr_no: sr_no,
+                fetch_from: '<?= $_POST['page'] === 'vat-purchase-sale-general-transfer' ? 'vat_copies' : 'data_copies'; ?>'
             },
             success: function(response) {
                 $('#EditDetails').html(response);

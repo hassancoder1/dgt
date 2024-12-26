@@ -182,7 +182,7 @@ if ($id > 0) {
                                             <th class="bg-dark text-white">Quantity</th>
                                             <?php // if (isset($Agent['permission_to_edit'])): 
                                             ?>
-                                            <th class="bg-dark text-white">BOE.D</th>
+                                            <th class="bg-dark text-white">BOE No</th>
                                             <th class="bg-dark text-white">PickUp.D</th>
                                             <th class="bg-dark text-white">Waiting Days</th>
                                             <th class="bg-dark text-white">Return.D</th>
@@ -205,8 +205,10 @@ if ($id > 0) {
                                                     continue;
                                                 }
                                                 if (isset($Agent['ag_id'])) {
-                                                    if ($Agent['ag_id'] !== json_decode($parent['agent_details'], true)['ag_id']) {
-                                                        continue;
+                                                    if ($Agent['ag_id'] !== '~~NOT-EXIST~~') {
+                                                        if ($Agent['ag_id'] !== json_decode($parent['agent_details'], true)['ag_id']) {
+                                                            continue;
+                                                        }
                                                     }
                                                 }
                                                 if (in_array(($record['p_id'] . '-' . $record['sr_no']), $ptransfrd)) {
@@ -219,16 +221,24 @@ if ($id > 0) {
                                                     <td class="border border-dark text-center">
                                                         <input type="checkbox" class="row-checkbox" <?= $checked; ?> value="<?= $record['p_id'] . '-' . $record['sr_no']; ?>">
                                                     </td>
-                                                    <td class="border border-dark"><a href="agent-form?view=1&lp_id=<?= $parent['id']; ?>&action=update&editId=<?= $record['id']; ?>"><b>#<?= $record['p_id'] . '-' . $record['sr_no']; ?></b></a>
-                                                        <?php if (isset($_POST['editId']) && $_POST['editId'] == $record['id']) {
-                                                            echo '<i class="fa fa-eye m-1" style="font-size: 12px;"></i>';
-                                                        } ?>
-                                                    </td>
+                                                    <?php if ($Agent['ag_id'] === '~~NOT-EXIST~~') { ?>
+                                                        <td class="border border-dark"><b>#<?= $record['p_id'] . '-' . $record['sr_no']; ?></b>
+                                                            <?php if (isset($_POST['editId']) && $_POST['editId'] == $record['id']) {
+                                                                echo '<i class="fa fa-eye m-1" style="font-size: 12px;"></i>';
+                                                            } ?>
+                                                        </td>
+                                                    <?php } else { ?>
+                                                        <td class="border border-dark"><a href="agent-form?view=1&lp_id=<?= $parent['id']; ?>&action=update&editId=<?= $record['id']; ?>"><b>#<?= $record['p_id'] . '-' . $record['sr_no']; ?></b></a>
+                                                            <?php if (isset($_POST['editId']) && $_POST['editId'] == $record['id']) {
+                                                                echo '<i class="fa fa-eye m-1" style="font-size: 12px;"></i>';
+                                                            } ?>
+                                                        </td>
+                                                    <?php } ?>
                                                     <td class="border border-dark"><?= json_decode($record['goods_details'], true)['container_no']; ?></td>
                                                     <td class="border border-dark"><?= goodsName(json_decode($record['goods_details'], true)['goods_id']); ?></td>
                                                     <td class="border border-dark"><?= json_decode($record['goods_details'], true)['quantity_no']; ?> <sub class="fw-bold"><?= json_decode($record['goods_details'], true)['quantity_name']; ?></sub></td>
                                                     <?php if (isset($Agent['permission_to_edit'])): ?>
-                                                        <td class="border border-dark"><?= $Agent['boe_date'] ?? ''; ?></td>
+                                                        <td class="border border-dark agent_details"><?= $Agent['boe_no'] ?? ''; ?></td>
                                                         <td class="border border-dark"><?= $Agent['pick_up_date'] ?? ''; ?></td>
                                                         <td class="border border-dark"><?= $Agent['waiting_days'] ?? ''; ?></td>
                                                         <td class="border border-dark"><?= $Agent['return_date'] ?? ''; ?></td>
@@ -260,7 +270,8 @@ if ($id > 0) {
                                                             }
                                                             ?>
                                                         </td>
-                                                    <?php endif; ?>
+                                                    <?php elseif ($Agent['ag_id'] === '~~NOT-EXIST~~'): echo '<td class="border border-dark agent_details">NOT EXIST!</td>';
+                                                    endif; ?>
                                                 </tr>
                                         <?php }
                                         } ?>
@@ -294,6 +305,14 @@ if ($id > 0) {
                                                     <input type="date" name="boe_date" id="boe_date" required
                                                         class="form-control form-control-sm"
                                                         value="<?= isset($myAgent['boe_date']) ? $myAgent['boe_date'] : ''; ?>">
+                                                </div>
+
+                                                <!-- BOE DATE -->
+                                                <div class="col-md-2">
+                                                    <label for="boe_no" class="form-label">BOE No</label>
+                                                    <input type="text" name="boe_no" id="boe_no" required
+                                                        class="form-control form-control-sm"
+                                                        value="<?= isset($myAgent['boe_no']) ? $myAgent['boe_no'] : ''; ?>">
                                                 </div>
 
                                                 <!-- PICK UP DATE -->
@@ -461,7 +480,7 @@ if ($id > 0) {
             let selectedValues = [];
             $('.row-checkbox:checked').each(function() {
                 let checkbox = $(this);
-                let agAccNoElem = checkbox.closest('tr').find('.ag_clearing_date');
+                let agAccNoElem = checkbox.closest('tr').find('.agent_details');
                 if (agAccNoElem.length === 0) {
                     $('#transfer-alert').text('Please Select #' + checkbox.val() + ' and Add Data to Transfer it!').removeClass('d-none');
                 } else {

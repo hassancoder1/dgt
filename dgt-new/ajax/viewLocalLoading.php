@@ -83,8 +83,8 @@ if ($id > 0) {
             </div>
         </div>
         <script>
-            let emptyKgs = 0;
-            let Rate = 0;
+            let emptyKgs = <?= isset($_GET['action']) ? $Goods['empty_kgs'] : 0; ?>;
+            let Rate = <?= isset($_GET['action']) ? $Goods['rate'] : 0; ?>;
         </script>
         <div class="row">
             <div class="col-md-10">
@@ -609,12 +609,12 @@ if ($id > 0) {
                                 ?>
 
                                 <div class="row g-3">
-                                    <input type="hidden" name="goods_json" id="goods_json">
+                                    <input type="hidden" name="goods_json" id="goods_json" value='<?= $Goods['goods_json'] ?? ''; ?>'>
                                     <!-- Goods Name -->
                                     <div class="col-md-2">
                                         <label for="goods_id" class="form-label">Goods Name</label>
                                         <select id="goods_id" name="goods_id" class="form-select" required>
-                                            <option hidden value="">Select</option>
+                                            <option value="">Select</option>
                                             <?php
                                             foreach ($goods_options as $id => $name) {
                                                 $selected = ($id == $Goods['goods_id']) ? 'selected' : '';

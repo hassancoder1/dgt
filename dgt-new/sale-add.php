@@ -548,7 +548,6 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                                     <div class="col-md-7">
                                         <div><b>Sr# </b> <?php echo $_fields['sr_no']; ?></div>
                                         <div class="row g-0">
-                                            <label for="allotment_name" class="col-md-2 col-form-label text-nowrap">Allot</label>
                                             <style>
                                                 .rotate {
                                                     animation: rotate 1s linear infinite;
@@ -573,16 +572,22 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                                                 }
                                             </style>
                                             <div class="col-md-10 d-flex gap-1 align-items-center">
-                                                <input value="<?= isset($item_fields['allotment_name']) ? $item_fields['allotment_name'] : ''; ?>" id="allotment_name"
-                                                    name="allotment_name" id="allotment_name" class="form-control" required>
-                                                <button type="button" id="allotSearch" onclick="fetchGoods()" class="btn ml-1 btn-sm btn-success"><i class="fa fa-search"></i></button>
+                                                <label for="allotment_name">Allot</label>
+                                                <select id="allotment_name" name="allotment_name" class="form-select" required>
+                                                    <?php
+                                                    if (isset($item_fields['allotment_name'])) {
+                                                        echo '<option value="' . $item_fields['allotment_name'] . '" selected>' . $item_fields['allotment_name'] . '</option>';
+                                                    } else {
+                                                        echo '<option value="">Select</option>';
+                                                    } ?>
+                                                </select>
                                             </div>
                                         </div>
                                     </div>
                                     <div class="col-md-7">
                                         <div class="input-group">
                                             <label for="goods_id">GOODS</label>
-                                            <select id="goods_id" name="goods_id" class="form-select" onchange="finalAmount()" required>
+                                            <select id="goods_id" name="goods_id" class="form-select" required>
                                                 <option hidden value="">Select</option>
                                                 <?php $goods = fetch('goods');
                                                 while ($good = mysqli_fetch_assoc($goods)) {
@@ -595,7 +600,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                                     <div class="col-md-5">
                                         <div class="input-group">
                                             <label for="size">SIZE</label>
-                                            <select class="form-select" name="size" id="size" onchange="finalAmount()" required>
+                                            <select class="form-select" name="size" id="size" required>
                                                 <option hidden value="">Select</option>
                                                 <?php $goods_sizes = mysqli_query($connect, "SELECT DISTINCT size FROM good_details");
                                                 while ($size_s = mysqli_fetch_assoc($goods_sizes)) {
@@ -608,7 +613,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                                     <div class="col-md-7">
                                         <div class="input-group">
                                             <label for="origin">ORIGIN</label>
-                                            <select class="form-select" name="origin" id="origin" onchange="finalAmount()" required>
+                                            <select class="form-select" name="origin" id="origin" required>
                                                 <option hidden value="">Select</option>
                                                 <?php $goods_sizes = mysqli_query($connect, "SELECT DISTINCT origin FROM good_details");
                                                 while ($size_s = mysqli_fetch_assoc($goods_sizes)) {
@@ -622,7 +627,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                                         <div class="input-group">
                                             <label for="brand">BRAND</label>
                                             <!-- <input type="text" name="brand" id="brand" value="<?= $item_fields['brand']; ?>" class="form-control" required> -->
-                                            <select class="form-select" name="brand" id="brand" onchange="finalAmount()" required>
+                                            <select class="form-select" name="brand" id="brand" required>
                                                 <option hidden value="">Select</option>
                                                 <?php $goods_sizes = mysqli_query($connect, "SELECT DISTINCT brand FROM good_details");
                                                 while ($size_s = mysqli_fetch_assoc($goods_sizes)) {
@@ -641,7 +646,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                                             <label for="qty_name" class="col-sm-4 col-form-label text-nowrap">Qty
                                                 Name</label>
                                             <div class="col-sm">
-                                                <input value="<?php echo $item_fields['qty_name']; ?>" onchange="finalAmount()" id="qty_name"
+                                                <input value="<?php echo $item_fields['qty_name']; ?>" id="qty_name"
                                                     name="qty_name" class="form-control" required>
                                             </div>
                                         </div>
@@ -653,7 +658,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                                             <div class="col-sm">
                                                 <input value="<?php echo $item_fields['qty_no']; ?>" id="qty_no"
                                                     name="qty_no"
-                                                    class="form-control currency" onchange="finalAmount()" required>
+                                                    class="form-control currency" required>
                                             </div>
                                         </div>
                                     </div>
@@ -1075,7 +1080,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                                             </tr>
                                 <?php endforeach;
                                     }
-                                }else {
+                                } else {
                                     echo '<tr><td colspan="3" class="text-center">No Reports Found!</td></tr>';
                                 }
                                 $purchase_reports = ["loading_details" => $prepareLoadingReport, "payment_details" => $preparePaymentReport];
@@ -1369,47 +1374,51 @@ include("footer.php"); ?>
     });
 </script>
 <script type="text/javascript">
-    let availableQuantities;
-
+    let availableAllotments;
     $(document).ready(function() {
         finalAmount();
-
-        $('#qty_no, #qty_kgs, #empty_kgs, #weight, #rate1, #rate2, #opr').on('keyup', function() {
+        $('#qty_no,#qty_kgs,#empty_kgs,#weight,#rate1,#rate2,#opr').on('change', function() {
+            finalAmount();
+        });
+        $('#goods_id').on('change', function() {
+            updateAllotmentOptions($(this).val());
             finalAmount();
         });
 
-        $('#allotSearch').on('click', function() {
-            fetchGoods();
+        $('#allotment_name').on('change', function() {
+            updateSizeBrandOriginTable($(this).val());
+            finalAmount();
         });
 
-        $('#goods_id').on('change', function() {
-            updateSizeOptions($(this).val());
-        });
-
-        $('#size').on('change', function() {
-            updateBrandOriginTable($(this).val());
-        });
+        // Initialize hidden div
+        $('#availableOptionsDiv').hide();
     });
 
-    function fetchGoods() {
-        let allot = $('#allotment_name').val().trim();
-        if (!allot) {
-            alert('Please enter an allotment name.');
+    function updateAllotmentOptions(goodsId) {
+        if (!goodsId) {
+            resetAllInputs();
             return;
         }
 
         $.ajax({
             type: 'POST',
-            url: 'ajax/fetch_goods_by_allot.php',
+            url: 'ajax/fetch_allot_by_goods.php', // Update to correct PHP file
             data: {
-                allot
+                goods_id: goodsId
             },
             success: function(res) {
                 res = JSON.parse(res);
-                $('#goods_id').html(res.html);
-                availableQuantities = res.quantities;
-                $('#size, #brand, #origin').html('<option value="">Select</option>');
-                $('#availableQuantitiesTable').empty();
+                $('#allotment_name').html(res.html);
+
+                if (res.allotments && res.allotments.length > 0) {
+                    availableQuantities = res.allotments;
+                    $('#size, #brand, #origin').html('<option value="">Select</option>');
+                    $('#availableQuantitiesTable').empty();
+                    $('#availableOptionsDiv').show(); // Show the div when data is available
+                } else {
+                    resetAllInputs();
+                    $('#availableOptionsDiv').hide(); // Hide the div if no data is available
+                }
             },
             error: function(err) {
                 console.error('AJAX error:', err);
@@ -1418,63 +1427,54 @@ include("footer.php"); ?>
         });
     }
 
-    function updateSizeOptions(goodsId) {
-        if (!goodsId) {
-            $('#size').html('<option value="">Select</option>');
-            return;
-        }
-
-        let selectedGood = availableQuantities.find(item => item.goods_id == goodsId);
-        if (selectedGood) {
-            let sizeOptions = '<option value="" selected>Select Size</option>';
-            selectedGood.sizes.forEach(size => {
-                sizeOptions += `<option value="${size.size}">${size.size}</option>`;
-            });
-            $('#size').html(sizeOptions);
-        } else {
-            $('#size').html('<option value="">Select</option>');
-        }
-    }
-
-    function updateBrandOriginTable(size) {
+    function updateSizeBrandOriginTable(allotmentName) {
         let selectedGood = $('#goods_id').val();
-        if (!selectedGood || !size) {
-            $('#availableQuantitiesTable').html('<p class="text-warning">Please select both a good and size to view available quantities.</p>');
+        if (!selectedGood || !allotmentName) {
+            $('#availableQuantitiesTable').html('<p class="text-warning">Please select both a good and allotment to view available options.</p>');
             return;
         }
 
-        let selectedGoodData = availableQuantities.find(item => item.goods_id == selectedGood);
-        if (!selectedGoodData) return;
+        let selectedAllotment = availableQuantities.find(item => item.allotment_name === allotmentName);
+        if (!selectedAllotment) return;
 
-        let sizeData = selectedGoodData.sizes.find(item => item.size == size);
-        if (!sizeData) return;
-
-        let originOptions = '<option value="" selected>Select Origin</option>';
+        let sizeOptions = '<option value="" selected>Select Size</option>';
         let brandOptions = '<option value="" selected>Select Brand</option>';
+        let originOptions = '<option value="" selected>Select Origin</option>';
 
-        let uniqueOrigins = new Set();
+        let uniqueSizes = new Set();
         let uniqueBrands = new Set();
+        let uniqueOrigins = new Set();
 
-        sizeData.brands.forEach(item => {
-            uniqueOrigins.add(item.origin);
-            uniqueBrands.add(item.brand);
+        selectedAllotment.sizes.forEach(sizeData => {
+            uniqueSizes.add(sizeData.size);
+            sizeData.brands.forEach(brandData => {
+                uniqueBrands.add(brandData.brand);
+                uniqueOrigins.add(brandData.origin);
+            });
         });
 
-        uniqueOrigins.forEach(origin => {
-            originOptions += `<option value="${origin}">${origin}</option>`;
+        uniqueSizes.forEach(size => {
+            sizeOptions += `<option value="${size}">${size}</option>`;
         });
 
         uniqueBrands.forEach(brand => {
             brandOptions += `<option value="${brand}">${brand}</option>`;
         });
 
-        $('#origin').html(originOptions);
-        $('#brand').html(brandOptions);
+        uniqueOrigins.forEach(origin => {
+            originOptions += `<option value="${origin}">${origin}</option>`;
+        });
 
+        $('#size').html(sizeOptions);
+        $('#brand').html(brandOptions);
+        $('#origin').html(originOptions);
+
+        // Populate the table
         let tableHTML = `
         <table class="table table-bordered table-striped">
             <thead class="table-dark">
                 <tr>
+                    <th>Size</th>
                     <th>Brand</th>
                     <th>Origin</th>
                     <th>Qty Name</th>
@@ -1486,23 +1486,32 @@ include("footer.php"); ?>
             <tbody>
     `;
 
-        sizeData.brands.forEach(item => {
-            item.quantities.forEach(qty => {
-                tableHTML += `
-                <tr>
-                    <td class="tbrand">${item.brand}</td>
-                    <td class="origin">${item.origin}</td>
-                    <td class="text-info tqty_name">${qty.qty_name}</td>
-                    <td class="fw-bold text-success">${qty.purchased_quantity}</td>
-                    <td class="fw-bold text-danger">${qty.sold_quantity}</td>
-                    <td class="fw-bold text-dark tqty_remaining">${qty.remaining_quantity}</td>
-                </tr>
-            `;
+        selectedAllotment.sizes.forEach(sizeData => {
+            sizeData.brands.forEach(brandData => {
+                brandData.quantities.forEach(qty => {
+                    tableHTML += `
+                    <tr>
+                        <td>${sizeData.size}</td>
+                        <td class="tbrand">${brandData.brand}</td>
+                        <td class="torigin">${brandData.origin}</td>
+                        <td class="tqty_name">${qty.qty_name}</td>
+                        <td class="text-success">${qty.purchased_quantity}</td>
+                        <td class="text-danger">${qty.sold_quantity}</td>
+                        <td class="text-dark tqty_remaining">${qty.remaining_quantity}</td>
+                    </tr>
+                `;
+                });
             });
         });
 
-        tableHTML += `</tbody></table>`;
+        tableHTML += '</tbody></table>';
         $('#availableQuantitiesTable').html(tableHTML);
+    }
+
+    function resetAllInputs() {
+        $('#allotment_name, #size, #brand, #origin').html('<option value="">Select</option>');
+        $('#availableQuantitiesTable').empty();
+        $('#availableOptionsDiv').hide(); // Hide the div when inputs are reset
     }
 
     function finalAmount() {
@@ -1556,7 +1565,12 @@ include("footer.php"); ?>
 
         $("#final_amount").val(isFinite(final_amount) ? final_amount : '');
         $("#final_amount_span").text(isFinite(final_amount) ? final_amount : '');
-
+        if (qty_no <= 0) {
+            $('#recordSubmit').addClass('disabled');
+        }
+        if (qty_no > 0) {
+            $('#recordSubmit').removeClass('disabled');
+        }
         if (final_amount <= 0 || isNaN(final_amount) || !isFinite(final_amount)) {
             disableButton('recordSubmit');
         } else {
@@ -1567,20 +1581,15 @@ include("footer.php"); ?>
     }
 
     function checkRemainingQuantity(qty_no) {
-        if (qty_no < 1) {
-            disableButton('recordSubmit');
-        }
         var qty_name = $("#qty_name").val().toLowerCase();
         var origin = $("#origin").val().toLowerCase();
         var brand = $("#brand").val().toLowerCase();
         var exceedLimit = false;
-
-        $("#availableQuantitiesTable tr").each(function() {
+        $("#availableQuantitiesTable table tbody tr").each(function() {
             var Tbrand = $(this).find(".tbrand").text().toLowerCase();
-            var Torigin = $(this).find(".origin").text().toLowerCase();
+            var Torigin = $(this).find(".torigin").text().toLowerCase();
             var Tqty_name = $(this).find(".tqty_name").text().toLowerCase();
             var Tqty_remaining = parseFloat($(this).find(".tqty_remaining").text()) || 0;
-
             if (Tbrand === brand && Torigin === origin && Tqty_name === qty_name) {
                 if (qty_no > Tqty_remaining) {
                     exceedLimit = true;
@@ -1588,19 +1597,18 @@ include("footer.php"); ?>
                 }
             }
         });
-
         if (exceedLimit) {
             disableButton('recordSubmit');
-            $('#qtyAlert').removeClass('d-none');
+            $('#qtyAlert').removeClass('hidden');
             $('#qty_no').addClass('is-invalid');
-
         } else {
             enableButton('recordSubmit');
-            $('#qtyAlert').addClass('d-none');
+            $('#qtyAlert').addClass('hidden');
             $('#qty_no').removeClass('is-invalid');
         }
     }
 </script>
+
 <?php $info = ['type' => 'danger', 'msg' => 'System Error :('];
 if (isset($_POST['saleSubmit'])) {
     $type = mysqli_real_escape_string($connect, $_POST['type']);

@@ -229,21 +229,25 @@ if ($id > 0) {
                                                 <input type="hidden" name="ag_row_id" id="row_id" value="<?= isset($record['agent_details']) && !empty($record['agent_details']) ? json_decode($record['agent_details'], true)['row_id'] : ''; ?>">
                                                 <!--  -->
                                                 <h5 class="text-primary">Agent Details</h5>
+                                                <div class="col-md-3">
+                                                    <input type="checkbox" class="pointer" name="AgentNotExist" id="AgentNotExist">
+                                                    <label for="AgentNotExist" class="form-label">Agent Not Exist (check this box)</label>
+                                                </div>
                                                 <div class="row g-3">
-                                                    <div class="col-md-1">
+                                                    <div class="col-md-1" id="AccNoInputDiv">
                                                         <label for="ag_acc_no" class="form-label">Acc No</label>
-                                                        <input type="text" name="ag_acc_no" id="ag_acc_no" required class="form-control form-control-sm" onkeyup="agentDetails()" value="<?= isset($record['agent_details']) && !empty($record['agent_details']) ? json_decode($record['agent_details'], true)['ag_acc_no'] : ''; ?>">
+                                                        <input type="text" name="ag_acc_no" id="ag_acc_no" class="form-control form-control-sm" onkeyup="agentDetails()" value="<?= isset($record['agent_details']) && !empty($record['agent_details']) ? json_decode($record['agent_details'], true)['ag_acc_no'] : ''; ?>">
                                                         <!--  -->
                                                     </div>
-                                                    <div class="col-md-3">
+                                                    <div class="col-md-3" id="AGNameInputDiv">
                                                         <label for="ag_name" class="form-label">AGENT NAME</label>
-                                                        <input type="text" name="ag_name" id="ag_name" required class="form-control form-control-sm" value="<?= isset($record['agent_details']) && !empty($record['agent_details']) ? json_decode($record['agent_details'], true)['ag_name'] : ''; ?>">
+                                                        <input type="text" name="ag_name" id="ag_name" class="form-control form-control-sm" value="<?= isset($record['agent_details']) && !empty($record['agent_details']) ? json_decode($record['agent_details'], true)['ag_name'] : ''; ?>">
                                                         <!--  -->
                                                     </div>
 
-                                                    <div class="col-md-2">
+                                                    <div class="col-md-2" id="AGIDInputDiv">
                                                         <label for="ag_id" class="form-label">AGENT ID</label>
-                                                        <input type="text" name="ag_id" id="ag_id" required class="form-control form-control-sm" value="<?= isset($record['agent_details']) && !empty($record['agent_details']) ? json_decode($record['agent_details'], true)['ag_id'] : ''; ?>">
+                                                        <input type="text" name="ag_id" id="ag_id" class="form-control form-control-sm" value="<?= isset($record['agent_details']) && !empty($record['agent_details']) ? json_decode($record['agent_details'], true)['ag_id'] : ''; ?>">
                                                         <!--  -->
                                                     </div>
                                                     <?php
@@ -370,6 +374,15 @@ if ($id > 0) {
 <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    $(document).ready(function() {
+        $("#AgentNotExist").on("change", function() {
+            if ($(this).is(":checked")) {
+                $("#AccNoInputDiv, #AGNameInputDiv, #AGIDInputDiv").hide();
+            } else {
+                $("#AccNoInputDiv, #AGNameInputDiv, #AGIDInputDiv").show();
+            }
+        });
+    });
     let selectedEntry = null;
     let saleQtyValue = null;
 

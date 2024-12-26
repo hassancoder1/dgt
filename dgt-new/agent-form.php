@@ -293,7 +293,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     $billNumber = json_decode($SingleLoading['gloading_info'], true)['billNumber'] ?? '';
                     $agentDetails = json_decode($SingleLoading['agent_details'], true);
                     if (!empty($agentDetails) && isset($agentDetails['transferred']) && $agentDetails['transferred'] === true) {
-                        if (isset($agentDetails['transporter_name'])) {
+                        if (isset($agentDetails['transporter_name']) || $agentDetails['ag_id'] === '~~NOT-EXIST~~') {
                             $rowColor = 'text-dark';
                             $locked = 1;
                         } else {
@@ -433,6 +433,7 @@ if (isset($_POST['AgentFormSubmit'])) {
         'transferred' => true,
         'permission_to_edit' => 'No',
         'ag_billNumber' => $billNumber,
+        'boe_no' => mysqli_real_escape_string($connect, $_POST['boe_no']),
         'boe_date' => mysqli_real_escape_string($connect, $_POST['boe_date']),
         'pick_up_date' => mysqli_real_escape_string($connect, $_POST['pick_up_date']),
         'waiting_days' => mysqli_real_escape_string($connect, $_POST['waiting_days']),
@@ -451,7 +452,7 @@ if (isset($_POST['AgentFormSubmit'])) {
         $type = 'success';
         $msg = 'Agent Form Updated!';
     }
-    message($type, $url . "?lp_id=" . $parent_id . '&view=1&action=update&editId=' . $id, $msg);
+    // message($type, $url . "?lp_id=" . $parent_id . '&view=1&action=update&editId=' . $id, $msg);
 }
 if (isset($_GET['lp_id']) && is_numeric($_GET['lp_id']) && isset($_GET['view']) && $_GET['view'] == 1) {
     $lp_id = mysqli_real_escape_string($connect, $_GET['lp_id']);

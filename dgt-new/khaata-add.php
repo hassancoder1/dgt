@@ -30,8 +30,8 @@ if (isset($_GET['id']) && $_GET['id'] > 0) {
         $person_details = [
             'full_name' => $contact_details->full_name,
             'father_name' => $contact_details->father_name,
-            'gender' => $contact_details->gender,
-            'identity' => $contact_details->identity,
+            'gender' => $contact_details->gender ?? '',
+            'identity' => $contact_details->identity ?? '',
             'idn_no' => $contact_details->idn_no,
             'idn_reg' => $contact_details->idn_reg,
             'idn_expiry' => $contact_details->idn_expiry,
@@ -92,7 +92,7 @@ if (isset($_GET['id']) && $_GET['id'] > 0) {
         }
     }
 }
-$types_array = array('bank', 'client', 'agent');
+$types_array = array('bank', 'client', 'agent', 'warehouse');
 /* $types_array = array('client' => 'checked', 'agent' => '', 'bank' => '');
 if (isset($_GET['acc_for']) && array_key_exists($_GET['acc_for'], $types_array)) {
     $acc_for = mysqli_real_escape_string($connect, $_GET['acc_for']);
@@ -216,21 +216,29 @@ while ($cn = mysqli_fetch_assoc($countryQ)) {
                                 <div><b>Sr#: </b> <?php echo $sr; ?></div>
                                 <div><b>Date: </b> <?php echo $user_date; ?></div>
                             </div>
-                            <div class="btn-group-sm">
+                            <div class="row align-items-center">
                                 <input type="hidden" value="<?php echo $id; ?>" name="hidden_id">
-                                <button name="recordSubmit" id="recordSubmit" type="submit" class="btn btn-dark">
-                                    Submit
-                                </button>
-                                <?php if ($id > 0) {
-                                    if ($acc_for == 'bank') {
-                                        echo '<button type="button" class="btn btn-outline-dark my-1" data-bs-toggle="modal" data-bs-target="#bankDetails">+ Bank</button> ';
-                                    } else {
-                                        echo '<button type="button" class="btn btn-outline-dark my-1" data-bs-toggle="modal" data-bs-target="#bankDetails">+ Bank</button> ';
-                                        echo '<button type="button" class="btn btn-outline-dark my-1" data-bs-toggle="modal" data-bs-target="#contactDetails">+ Contact</button> ';
-                                        echo '<button type="button" class="btn btn-outline-dark my-1" data-bs-toggle="modal" data-bs-target="#companyDetails">+ Company</button> ';
-                                        echo '<button type="button" class="btn btn-outline-dark my-1" data-bs-toggle="modal" data-bs-target="#warehouseDetails">+ Warehouse</button>';
-                                    } ?>
-                                <?php  } ?>
+                                <div class="col-md-4">
+                                    <button name="recordSubmit" id="recordSubmit" type="submit" class="btn btn-dark w-100">
+                                        Submit
+                                    </button>
+                                </div>
+                                <?php if ($id > 0) { ?>
+                                    <div class="col-md-8">
+                                        <label for="modalSelector">Add New Details</label>
+                                        <select class="form-select form-select-sm" id="modalSelector">
+                                            <option value="" selected>Select What to Add?</option>
+                                            <?php if ($acc_for == 'bank') { ?>
+                                                <option value="#bankDetails">Bank Details</option>
+                                            <?php } else { ?>
+                                                <option value="#bankDetails">Bank Details</option>
+                                                <option value="#contactDetails">Contact Details</option>
+                                                <option value="#companyDetails">Company Details</option>
+                                                <option value="#warehouseDetails">Warehouse Details</option>
+                                            <?php } ?>
+                                        </select>
+                                    </div>
+                                <?php } ?>
                             </div>
                         </div>
                     </div>
@@ -889,27 +897,29 @@ if (isset($_POST['recordSubmit'])) {
                             <table class="table table-borderless mb-0 contactsTable">
                                 <tbody class="row">
                                     <?php $arrayNumber = 0;
-                                    foreach ($company_details['indexes2'] as $index => $value) { ?>
-                                        <tr class="col-md-6 contact_row_<?php echo $arrayNumber; ?>">
-                                            <td onclick="removeContactRow(this)">
-                                                <i class="fa fa-close fa-2xl- btn fs-5 text-danger ps-0 pe-1 pt-1"></i>
-                                            </td>
-                                            <td class="w-50">
-                                                <select name="indexes2[]" class="form-select contact_indexes">
-                                                    <?php $static_types = fetch('static_types', array('type_for' => 'contacts'));
-                                                    while ($static_type = mysqli_fetch_assoc($static_types)) {
-                                                        $st_sel2 = $static_type['type_name'] == $value ? 'selected' : '';
-                                                        echo '<option ' . $st_sel2 . ' value="' . $static_type['type_name'] . '">' . $static_type['details'] . '</option>';
-                                                    } ?>
-                                                </select>
-                                            </td>
-                                            <td class="w-50">
-                                                <input name="vals2[]" required placeholder="Value <?php echo $index + 1; ?>"
-                                                    class="form-control contact_vals"
-                                                    value="<?php echo $company_details['vals2'][$index] ?>">
-                                            </td>
-                                        </tr>
+                                    if (!empty($company_details['indexes2'])) {
+                                        foreach ($company_details['indexes2'] as $index => $value) { ?>
+                                            <tr class="col-md-6 contact_row_<?php echo $arrayNumber; ?>">
+                                                <td onclick="removeContactRow(this)">
+                                                    <i class="fa fa-close fa-2xl- btn fs-5 text-danger ps-0 pe-1 pt-1"></i>
+                                                </td>
+                                                <td class="w-50">
+                                                    <select name="indexes2[]" class="form-select contact_indexes">
+                                                        <?php $static_types = fetch('static_types', array('type_for' => 'contacts'));
+                                                        while ($static_type = mysqli_fetch_assoc($static_types)) {
+                                                            $st_sel2 = $static_type['type_name'] == $value ? 'selected' : '';
+                                                            echo '<option ' . $st_sel2 . ' value="' . $static_type['type_name'] . '">' . $static_type['details'] . '</option>';
+                                                        } ?>
+                                                    </select>
+                                                </td>
+                                                <td class="w-50">
+                                                    <input name="vals2[]" required placeholder="Value <?php echo $index + 1; ?>"
+                                                        class="form-control contact_vals"
+                                                        value="<?php echo $company_details['vals2'][$index] ?>">
+                                                </td>
+                                            </tr>
                                     <?php $arrayNumber++;
+                                        }
                                     } ?>
                                 </tbody>
                             </table>
@@ -1319,6 +1329,17 @@ if (isset($_POST['recordSubmit'])) {
             alert('error! Refresh the page again');
         }
     }
+    $(document).ready(function() {
+        // Handle the change event of the select input
+        $('#modalSelector').on('change', function() {
+            var modalTarget = $(this).val(); // Get the selected value (modal ID)
+            if (modalTarget) {
+                $(modalTarget).modal('show'); // Show the modal using Bootstrap
+            }
+            // Reset the dropdown to default after selection
+            $(this).val('');
+        });
+    });
 
     $(document).ready(function() {
         $('.addContactRow').on('click', function() {

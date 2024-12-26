@@ -276,14 +276,14 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
             <thead>
                 <tr class="text-nowrap">
                     <?php if (SuperAdmin()): ?>
-                        <th>P/S#</th>
+                        <th>P/S#+Bill#</th>
                         <th>AGENT ACC</th>
                         <th>AGENT ID</th>
                         <th>AGENT NAME</th>
                     <?php else: ?>
                         <th>#</th>
                     <?php endif; ?>
-                    <th>B/L No</th>
+                    <th>BOE No</th>
                     <?php if (!SuperAdmin()): ?>
                         <th>AGENT ACC</th>
                         <th>AGENT ID</th>
@@ -291,12 +291,11 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     <?php endif; ?>
                     <th>BOE.Date</th>
                     <th>PickUp.Date</th>
-                    <th>Waiting(YES/NO)</th>
-                    <th>No.of.Days.W</th>
+                    <th>Wait Days</th>
                     <th>Return.Date</th>
-                    <th>Truck No.</th>
-                    <th>Driver</th>
                     <th>Transporter</th>
+                    <th>Truck No.</th>
+                    <th>Driver Name</th>
                     <th>T.Bill.Amt</th>
                     <th>Acc Trans Date</th>
                     <th>Roz#</th>
@@ -354,7 +353,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                         <?php if (!SuperAdmin()): ?>
                             <td class="<?= $rowColor; ?>"><?= $row_count + 1; ?></td>
                         <?php endif; ?>
-                        <td class="<?= $SuperCode; ?>"><b><?= SuperAdmin() ? ucfirst($SingleLoading['type'])."#" . $SingleLoading['p_id'] . " ($currentBillNumber)" : $SingleLoading['bl_no']; ?></b></td>
+                        <td class="<?= $SuperCode; ?>"><b><?= SuperAdmin() ? ucfirst($SingleLoading['type']) . "#" . $SingleLoading['p_id'] . " ($currentBillNumber)" : $SingleLoading['bl_no']; ?></b></td>
                         <td class="<?= $rowColor; ?>"><?= $agentDetails['ag_acc_no']; ?></td>
                         <td class="<?= $rowColor; ?>"><?= $agentDetails['ag_id']; ?></td>
                         <td class="<?= $rowColor; ?>"><?= $agentDetails['ag_name']; ?></td>
@@ -363,12 +362,11 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                         <?php endif; ?>
                         <td class="<?= $rowColor; ?>"><?= $agentDetails['boe_date'] ?? ''; ?></td>
                         <td class="<?= $rowColor; ?>"><?= $agentDetails['pick_up_date'] ?? ''; ?></td>
-                        <td class="<?= $rowColor; ?>"><?= $agentDetails['waiting_if_any'] ?? ''; ?></td>
-                        <td class="<?= $rowColor; ?>"><?= $agentDetails['days_waiting'] ?? ''; ?></td>
+                        <td class="<?= $rowColor; ?>"><?= $agentDetails['waiting_days'] ?? ''; ?></td>
                         <td class="<?= $rowColor; ?>"><?= $agentDetails['return_date'] ?? ''; ?></td>
-                        <td class="<?= $rowColor; ?>"><?= $agentDetails['truck_number'] ?? ''; ?></td>
-                        <td class="<?= $rowColor; ?>"><?= $agentDetails['driver_details'] ?? ''; ?></td>
                         <td class="<?= $rowColor; ?>"><?= $agentDetails['transporter_name'] ?? ''; ?></td>
+                        <td class="<?= $rowColor; ?>"><?= $agentDetails['truck_number'] ?? ''; ?></td>
+                        <td class="<?= $rowColor; ?>"><?= $agentDetails['driver_name'] ?? ''; ?></td>
                         <td class="<?= $rowColor; ?>"><?= $grandTotal; ?></td>
                         <td class="<?= $rowColor; ?> transfer_date"><?= !empty($createdAt) ? $createdAt : '<i class="fa fa-times text-danger"></i>'; ?></td>
                         <td class="<?= $rowColor; ?>"><?= !empty($roznamchaasDisplay) ? $roznamchaasDisplay : '<i class="fa fa-times text-danger"></i>'; ?></td>

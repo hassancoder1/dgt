@@ -59,8 +59,8 @@ if ($_GET) {
                 } ?>
             </select>
             <input type="text" id="khaata_no" name="khaata_no" class="form-control form-control-sm"
-                   placeholder="Account No."
-                   value="<?php echo $khaata_no; ?>">
+                placeholder="Account No."
+                value="<?php echo $khaata_no; ?>">
             <select multiple name="cat_ids[]" id="cat_id" class="v-select" placeholder="Category">
                 <?php $cats = fetch('cats');
                 while ($cat = mysqli_fetch_assoc($cats)) {
@@ -82,76 +82,102 @@ if ($_GET) {
             <div class="card-body">
                 <table class="table mb-0 table-sm table-hover">
                     <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Date</th>
-                        <th>A/C NO.</th>
-                        <th>A/C NAME</th>
-                        <th>A/C FOR</th>
-                        <th>BRANCH</th>
-                        <th>CATEGORY</th>
-                        <th>CONTACT</th>
-                        <th></th>
-                    </tr>
+                        <tr>
+                            <th>#</th>
+                            <th>Date</th>
+                            <th>A/C NO.</th>
+                            <th>A/C NAME</th>
+                            <th>Bank</th>
+                            <th>Company</th>
+                            <th>Customer</th>
+                            <th>A/C FOR</th>
+                            <th>BRANCH</th>
+                            <th>CATEGORY</th>
+                            <th>CONTACT</th>
+                            <th></th>
+                        </tr>
                     </thead>
                     <tbody>
-                    <?php $row_count = 0;
-                    $khaatas = mysqli_query($connect, $sql);
-                    while ($khaata = mysqli_fetch_assoc($khaatas)) {
-                        $id = $khaata['id'];
-                        if (empty($khaata['image'])) {
-                            $img_url = 'assets/img/avatar.png';
-                        } else {
-                            $img_url = $khaata['image'];
-                        }
-                        $rowColor = '';
-                        if ($khaata['acc_for'] == "agent") {
-                            $rowColor = 'bg-warning bg-opacity-10';
-                        }
-                        if ($khaata['acc_for'] == "bank") {
-                            $rowColor = 'bg-danger bg-opacity-10';
-                        }
-                        ++$row_count; ?>
-                        <tr>
-                            <td><?php echo $khaata['id']; ?></td>
-                            <td><?php echo my_date($khaata['created_at']); ?></td>
-                            <td><?php echo $khaata['khaata_no']; ?></td>
-                            <td>
-                                <a class="text-dark" href="khaata-add?id=<?php echo $khaata['id']; ?>">
-                                    <?php echo $khaata['khaata_name']; ?>
-                                </a>
-                            </td>
-                            <td><?php echo badge(strtoupper($khaata['acc_for']), 'dark'); ?></td>
-                            <td><?php echo branchName($khaata['branch_id']); ?></td>
-                            <td><?php echo catName($khaata['cat_id']); ?></td>
-                            <td>
-                                <ul class="socials">
-                                    <li><a href="tel://<?php echo $khaata['phone']; ?>"
-                                           data-bs-toggle="tooltip"
-                                           data-bs-title="Mobile <?php echo $khaata['phone']; ?>">
-                                            <i class="fa fa-mobile"></i>
-                                        </a></li>
-                                    <li>
-                                        <a href="mailto://<?php echo $khaata['email']; ?>"
-                                           data-bs-toggle="tooltip"
-                                           data-bs-title="Email <?php echo $khaata['email']; ?>">
-                                            <i class="fa fa-envelope"></i>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </td>
-                            <td>
-                                <?php if (SuperAdmin()) { ?>
-                                    <form method="post" onsubmit="return confirm('Are you sure to delete?')">
-                                        <input type="hidden" name="hidden_id" value="<?php echo $khaata['id']; ?>">
-                                        <button name="deleteSubmit" type="submit" data-bs-toggle="tooltip" data-bs-title="Delete Account <?php echo $khaata['khaata_no']; ?>"
+                        <?php $row_count = 0;
+                        $khaatas = mysqli_query($connect, $sql);
+                        $companies = mysqli_fetch_all(mysqli_query($connect, "SELECT khaata_id, json_data FROM khaata_details"), MYSQLI_ASSOC);
+                        while ($khaata = mysqli_fetch_assoc($khaatas)) {
+                            $id = $khaata['id'];
+                            if (empty($khaata['image'])) {
+                                $img_url = 'assets/img/avatar.png';
+                            } else {
+                                $img_url = $khaata['image'];
+                            }
+                            $rowColor = '';
+                            if ($khaata['acc_for'] == "agent") {
+                                $rowColor = 'bg-warning bg-opacity-10';
+                            }
+                            if ($khaata['acc_for'] == "bank") {
+                                $rowColor = 'bg-danger bg-opacity-10';
+                            }
+
+                            $companyMatch = false; // Default is no match
+                            $companyData = '';
+
+                            // Check if this khaata's ID matches any company's khaata_id
+                            foreach ($companies as $company) {
+                                if ($khaata['id'] == $company['khaata_id']) {
+                                    $companyMatch = true;
+                                    $companyData = $company['json_data'];
+                                    break;
+                                }
+                            }
+                            ++$row_count; ?>
+                            <tr>
+                                <td><?php echo $khaata['id']; ?></td>
+                                <td><?php echo my_date($khaata['created_at']); ?></td>
+                                <td><?php echo $khaata['khaata_no']; ?></td>
+                                <td>
+                                    <a class="text-dark" href="khaata-add?id=<?php echo $khaata['id']; ?>">
+                                        <?php echo $khaata['khaata_name']; ?>
+                                    </a>
+                                </td>
+                                <td class="<?= !empty($khaata['bank_details']) ? 'fw-bold text-success' : 'fw-bold text-danger'; ?>">
+                                    <?= !empty($khaata['bank_details']) ? 'Yes' : 'No'; ?>
+                                </td>
+                                <td class="<?= $companyMatch ? 'fw-bold text-success' : 'fw-bold text-danger'; ?>">
+                                    <?php echo $companyMatch ? 'Yes' : 'No'; ?>
+                                </td>
+                                <td class="<?= !empty($khaata['contact_details']) ? 'fw-bold text-success' : 'fw-bold text-danger'; ?>">
+                                    <?= !empty($khaata['contact_details']) ? 'Yes' : 'No'; ?>
+                                </td>
+
+                                <td><?php echo badge(strtoupper($khaata['acc_for']), 'dark'); ?></td>
+                                <td><?php echo branchName($khaata['branch_id']); ?></td>
+                                <td><?php echo catName($khaata['cat_id']); ?></td>
+                                <td>
+                                    <ul class="socials">
+                                        <li><a href="tel://<?php echo $khaata['phone']; ?>"
+                                                data-bs-toggle="tooltip"
+                                                data-bs-title="Mobile <?php echo $khaata['phone']; ?>">
+                                                <i class="fa fa-mobile"></i>
+                                            </a></li>
+                                        <li>
+                                            <a href="mailto://<?php echo $khaata['email']; ?>"
+                                                data-bs-toggle="tooltip"
+                                                data-bs-title="Email <?php echo $khaata['email']; ?>">
+                                                <i class="fa fa-envelope"></i>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </td>
+                                <td>
+                                    <?php if (SuperAdmin()) { ?>
+                                        <form method="post" onsubmit="return confirm('Are you sure to delete?')">
+                                            <input type="hidden" name="hidden_id" value="<?php echo $khaata['id']; ?>">
+                                            <button name="deleteSubmit" type="submit" data-bs-toggle="tooltip" data-bs-title="Delete Account <?php echo $khaata['khaata_no']; ?>"
                                                 class="btn btn-sm btn-outline-danger py-0 px-1">
-                                            <i class="fa fa-trash-alt"></i></button>
-                                    </form>
-                                <?php } ?>
-                            </td>
-                        </tr>
-                    <?php } ?>
+                                                <i class="fa fa-trash-alt"></i></button>
+                                        </form>
+                                    <?php } ?>
+                                </td>
+                            </tr>
+                        <?php } ?>
                     </tbody>
                 </table>
                 <input type="hidden" id="row_count" value="<?php echo $row_count; ?>">
@@ -160,13 +186,17 @@ if ($_GET) {
     </div>
 </div>
 <?php include("footer.php"); ?>
-<script>$("#entries").addClass('active');</script>
-<script>$("#khaata").addClass('active');</script>
+<script>
+    $("#entries").addClass('active');
+</script>
+<script>
+    $("#khaata").addClass('active');
+</script>
 <script>
     $("#rows_count_span").text($("#row_count").val());
 </script>
 <div class="modal fade" id="KhaataDetails" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
-     role="dialog" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+    role="dialog" aria-labelledby="staticBackdropLabel" aria-hidden="true">
     <div class="modal-dialog modal-fullscreen -modal-xl -modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -183,9 +213,12 @@ if ($_GET) {
             $.ajax({
                 url: 'ajax/viewSingleKhaataAndDetails.php',
                 type: 'post',
-                data: {id: id, k_no: k_no},
+                data: {
+                    id: id,
+                    k_no: k_no
+                },
                 //dataType: 'json',
-                success: function (response) {
+                success: function(response) {
                     //console.log(response);
                     $('#viewKhaataDetailsBody').html(response);
                     $('#khaata_no').focus();
@@ -197,7 +230,7 @@ if ($_GET) {
     }
 </script>
 <script>
-    $(document).on('keyup', "#khaata_no", function (e) {
+    $(document).on('keyup', "#khaata_no", function(e) {
         let khaata_no = $(this).val();
         fetchKhaata(khaata_no);
     });
@@ -206,9 +239,11 @@ if ($_GET) {
         $.ajax({
             url: 'ajax/fetchSingleKhaata.php',
             type: 'post',
-            data: {khaata_no: khaata_no},
+            data: {
+                khaata_no: khaata_no
+            },
             dataType: 'json',
-            success: function (response) {
+            success: function(response) {
                 if (response.success === true) {
                     viewKhaataDetails(response.messages['khaata_id'], khaata_no);
                 }

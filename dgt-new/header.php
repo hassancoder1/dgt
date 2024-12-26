@@ -72,8 +72,12 @@ $back_page_url = $back_page_url ?? './'; ?>
     <!-- <link href="assets/fa/css/solid.css" rel="stylesheet"/> -->
     <script src="assets/fa/fontawesome.js" crossorigin="anonymous"></script>
     <link rel="shortcut icon" href="assets/images/favicon.jpg" />
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="assets/fonts/lexend.css" rel="stylesheet">
     <style>
+        * {
+            font-family: "Lexend", serif;
+        }
+
         .sidebar-menu-scroll {
             margin-top: calc(50px + 26px);
         }
