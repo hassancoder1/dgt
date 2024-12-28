@@ -101,6 +101,7 @@ $total_pages = ceil($total_rows / $rows_per_page);
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <h5 class="card-title fw-bold text-success"><?= $CCWPage; ?></h5>
+                        <?php if($CCWPage === 'All WareHouses'){?>
                         <div class="dropdown hide-on-print">
                             <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="fa fa-print"></i>
@@ -138,6 +139,7 @@ $total_pages = ceil($total_rows / $rows_per_page);
                                 </li>
                             </ul>
                         </div>
+                        <?php } ?>
                     </div>
                     <div class="row mb-3">
                         <div class="col-md-3">
@@ -294,7 +296,7 @@ $total_pages = ceil($total_rows / $rows_per_page);
                                 $trans = $ldata['transfer']['sold_to'] ?? $ldata['transfer']['sold_from'] ?? [];
                                 $TIDS = [];
                                 foreach ($trans as $one) {
-                                    $TIDS[] = '#' . decode_unique_code(explode('~', $one)[0], 'TID');
+                                    $TIDS[] = 'S#' . getTransactionSr(decode_unique_code(explode('~', $one)[0], 'TID'));
                                 }
                                 $TIDS = array_unique($TIDS);
                                 $trans = implode(', ', $TIDS);
@@ -303,7 +305,7 @@ $total_pages = ceil($total_rows / $rows_per_page);
                                     <td class="<?= $rowColor; ?>"><?= htmlspecialchars($i); ?></td>
                                     <td class="<?= $rowColor; ?> pointer"
                                         onclick="window.location.href = '?view=1&unique_code=<?= $unique_code; ?>&print_type=contract&CCWpage=<?= $_GET['CCWpage']; ?>';">
-                                        <b><?= ucfirst($ldata['type']); ?>#</b> <?= htmlspecialchars($ldata['p_id']); ?> (<?= htmlspecialchars($ldata['sr_no']); ?>)
+                                        <b><?= ucfirst($ldata['type']); ?>#</b> <?= htmlspecialchars($ldata['p_sr']); ?> (<?= htmlspecialchars($ldata['sr_no']); ?>)
                                     </td>
                                     <?php if ($_GET['CCWpage'] === 'all') { ?>
                                         <td class="<?= $rowColor; ?>"><?= htmlspecialchars($ldata['transfer']['warehouse_transfer']); ?></td>

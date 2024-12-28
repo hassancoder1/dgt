@@ -44,7 +44,7 @@ if ($id > 0) {
                             <div class="row border-bottom pb-2">
                                 <div class="col-md-12 border-bottom px-2 pb-2 mb-2">
                                     <div class="d-flex align-items-center justify-content-between">
-                                        <div><b><?= "Sr#" . $record['sr_no']; ?></b></div>
+                                        <div><b><?= ucfirst($record['type']) . "#" . $record['p_sr']; ?></b></div>
                                         <div><b>Purchase Date </b><?php echo my_date($record['p_date']); ?></div>
                                         <div><b>Type </b><?php echo badge(strtoupper($record['p_type']), 'dark'); ?></div>
                                         <div><b>Branch </b><?php echo $record['p_branch']; ?></div>
@@ -178,9 +178,9 @@ if ($id > 0) {
                                                 ?>
                                                         <tr data-loading="<?= $record['id']; ?>">
                                                             <td class="border border-dark text-center">
-                                                                <input type="checkbox" class="row-checkbox" value="<?= $record['p_id'] . '-' . $record['sr_no']; ?>">
+                                                                <input type="checkbox" class="row-checkbox" value="<?= $record['p_sr'] . '-' . $record['sr_no'] . '-' . $record['type']; ?>">
                                                             </td>
-                                                            <td class="border border-dark"><a href="general-loading?p_id=<?= $id; ?>&view=1&lp_id=<?= $record['id']; ?>&action=update"><?= $record['p_id'] . '-' . $record['sr_no']; ?></a></td>
+                                                            <td class="border border-dark"><a href="general-loading?p_id=<?= $id; ?>&view=1&lp_id=<?= $record['id']; ?>&action=update"><?= $record['p_sr'] . '-' . $record['sr_no']; ?></a></td>
                                                             <td class="border border-dark"><?= json_decode($record['goods_details'], true)['container_no']; ?></td>
                                                             <td class="border border-dark"><?= goodsName(json_decode($record['goods_details'], true)['goods_id']); ?></td>
 
@@ -188,8 +188,8 @@ if ($id > 0) {
                                                             <td class="border border-dark"><?= json_decode($record['goods_details'], true)['quantity_no']; ?></td>
                                                             <td class="border border-dark"><?= json_decode($record['goods_details'], true)['gross_weight']; ?></td>
                                                             <td class="border border-dark"><?= json_decode($record['goods_details'], true)['net_weight']; ?></td>
-                                                            <td class="border border-dark ag_acc_no"><?= isset($Agent['ag_acc_no']) ? $Agent['ag_acc_no'] : '<i class="text-danger fa fa-times"></i>'; ?></td>
-                                                            <td class="border border-dark"><?= isset($Agent['ag_name']) ? $Agent['ag_name'] : '<i class="text-danger fa fa-times"></i>'; ?></td>
+                                                            <td class="border border-dark ag_acc_no"><?= isset($Agent['ag_acc_no']) ? (!empty($Agent['ag_acc_no']) ? $Agent['ag_acc_no'] : 'NOT EXIST') : '<i class="text-danger fa fa-times"></i>'; ?></td>
+                                                            <td class="border border-dark"><?= isset($Agent['ag_name']) ? (!empty($Agent['ag_name']) ? $Agent['ag_name'] : 'NOT EXIST') : '<i class="text-danger fa fa-times"></i>'; ?></td>
                                                             <td class="border border-dark fw-bold"><?= isset($Agent['permission_to_edit']) ? ($Agent['permission_to_edit'] === 'No' ? '<span class="text-danger">No</span>' : '<span class="text-success">Yes</span>') : '<span class="text-danger">No</span>'; ?></td>
                                                             <td class="border border-dark text-success" style="position: relative;">
                                                                 <?php
@@ -220,38 +220,45 @@ if ($id > 0) {
                                     <strong class="text-success <?= !$ifAllTransferred ? 'd-none' : '' ?>" id="transferredText">All enteries are Transferred!</strong>
                                     <div class="card mt-3 <?= $ifAllTransferred ? 'd-none transfer-form' : '' ?>">
                                         <div class="card-body">
-                                            <span class="fw-bold text-danger tex-sm my-2" id="transfer-alert"></span>
+                                            <?php $myAgent = !empty(json_decode($record['agent_details'], true)) ? json_decode($record['agent_details'], true) : [];
+                                            $myAgent['agent_exist'] = isset($myAgent['agent_exist']) ? $myAgent['agent_exist'] : 'yes';
+                                            ?>
+                                            <span class="fw-bold text-danger text-sm my-2" id="transfer-alert"></span>
                                             <form method="post" class="table-form">
                                                 <input type="hidden" name="unique_code" value="<?= $parent['type'] . $parent['p_type'][0] . ($Shipping['transfer_by'] === 'sea' ? 'se' : 'rd')
                                                                                                     . '_' . $parent['p_id'] . '_'; ?>">
                                                 <input type="hidden" name="currentLoading" id="currentLoading">
                                                 <input type="hidden" name="openRecord" value="<?= $parent['id']; ?>">
-                                                <input type="hidden" name="ag_row_id" id="row_id" value="<?= isset($record['agent_details']) && !empty($record['agent_details']) ? json_decode($record['agent_details'], true)['row_id'] : ''; ?>">
+                                                <input type="hidden" name="ag_row_id" id="row_id" value="<?= $myAgent['row_id'] ?? ''; ?>">
                                                 <!--  -->
                                                 <h5 class="text-primary">Agent Details</h5>
-                                                <div class="col-md-3">
-                                                    <input type="checkbox" class="pointer" name="AgentNotExist" id="AgentNotExist">
-                                                    <label for="AgentNotExist" class="form-label">Agent Not Exist (check this box)</label>
-                                                </div>
                                                 <div class="row g-3">
+                                                    <div class="col-md-2">
+                                                        <label for="agent_exist" class="form-label">Agent Exist ??</label>
+                                                        <select name="agent_exist" id="agent_exist" class="form-select form-select-sm">
+                                                            <option value="yes" <?= $myAgent['agent_exist'] === 'yes' ? 'selected' : ''; ?>>Yes</option>
+                                                            <option value="no" <?= $myAgent['agent_exist'] === 'no' ? 'selected' : ''; ?>>No</option>
+                                                        </select>
+                                                        <!--  -->
+                                                    </div>
                                                     <div class="col-md-1" id="AccNoInputDiv">
                                                         <label for="ag_acc_no" class="form-label">Acc No</label>
-                                                        <input type="text" name="ag_acc_no" id="ag_acc_no" class="form-control form-control-sm" onkeyup="agentDetails()" value="<?= isset($record['agent_details']) && !empty($record['agent_details']) ? json_decode($record['agent_details'], true)['ag_acc_no'] : ''; ?>">
+                                                        <input type="text" name="ag_acc_no" id="ag_acc_no" class="form-control form-control-sm" onkeyup="agentDetails()" value="<?= $myAgent['ag_acc_no'] ?? ''; ?>">
                                                         <!--  -->
                                                     </div>
                                                     <div class="col-md-3" id="AGNameInputDiv">
                                                         <label for="ag_name" class="form-label">AGENT NAME</label>
-                                                        <input type="text" name="ag_name" id="ag_name" class="form-control form-control-sm" value="<?= isset($record['agent_details']) && !empty($record['agent_details']) ? json_decode($record['agent_details'], true)['ag_name'] : ''; ?>">
+                                                        <input type="text" name="ag_name" id="ag_name" class="form-control form-control-sm" value="<?= $myAgent['ag_name'] ?? ''; ?>">
                                                         <!--  -->
                                                     </div>
 
                                                     <div class="col-md-2" id="AGIDInputDiv">
                                                         <label for="ag_id" class="form-label">AGENT ID</label>
-                                                        <input type="text" name="ag_id" id="ag_id" class="form-control form-control-sm" value="<?= isset($record['agent_details']) && !empty($record['agent_details']) ? json_decode($record['agent_details'], true)['ag_id'] : ''; ?>">
+                                                        <input type="text" name="ag_id" id="ag_id" class="form-control form-control-sm" value="<?= $myAgent['ag_id'] ?? ''; ?>">
                                                         <!--  -->
                                                     </div>
                                                     <?php
-                                                    $warehouse = !empty(json_decode($record['agent_details'], true)['cargo_transfer_warehouse']) ? json_decode($record['agent_details'], true)['cargo_transfer_warehouse'] : '';
+                                                    $warehouse = $myAgent['cargo_transfer_warehouse'] ?? '';
                                                     $warehouseOptions = ['Local Import', 'Free Zone Import', 'Import Re-Export', 'Transit', 'Local Export', 'Local Market'];
                                                     $saleCheck = '';
                                                     if ($parent['type'] === 's') {
@@ -274,7 +281,7 @@ if ($id > 0) {
 
                                                     </div>
                                                     <div class="col-md-4">
-                                                        <label for="ag_transfer_ids" class="form-label">Transfer IDs <small> ( Ex:66-4,57-1,66-5 )</small></label>
+                                                        <label for="ag_transfer_ids" class="form-label">Transfer IDs <small> ( Ex:66-4-p,57-1-p,66-5-s )</small></label>
                                                         <input type="text" name="ag_transfer_ids" id="ag_transfer_ids" required class="form-control form-control-sm">
                                                     </div>
 
@@ -324,7 +331,15 @@ if ($id > 0) {
                                                         </div>
                                                     </div>
                                                     <?php if ($parent['type'] === 's') { ?>
-                                                        <div class="col-md-5">
+                                                        <div class="col-md-2">
+                                                            <label for="vat_general" class="form-label">VAT General ??</label>
+                                                            <select name="vat_general" id="vat_general" class="form-select form-select-sm">
+                                                                <option value="yes">Yes</option>
+                                                                <option value="no">No</option>
+                                                            </select>
+                                                            <!--  -->
+                                                        </div>
+                                                        <div class="col-md-4">
                                                             <label for="warehouse_entry" class="form-label">Current Entries In Warehouse</label>
                                                             <select id="warehouse_entry" name="warehouse_entry" class="form-select form-select-sm">
                                                             </select>
@@ -375,8 +390,9 @@ if ($id > 0) {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     $(document).ready(function() {
-        $("#AgentNotExist").on("change", function() {
-            if ($(this).is(":checked")) {
+        $('#agent_exist').val() === 'no' ? $('#AccNoInputDiv, #AGNameInputDiv, #AGIDInputDiv').hide() : $('#AccNoInputDiv, #AGNameInputDiv, #AGIDInputDiv').show();
+        $("#agent_exist").on("change", function() {
+            if ($(this).val() === 'no') {
                 $("#AccNoInputDiv, #AGNameInputDiv, #AGIDInputDiv").hide();
             } else {
                 $("#AccNoInputDiv, #AGNameInputDiv, #AGIDInputDiv").show();

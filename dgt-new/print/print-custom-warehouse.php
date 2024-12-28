@@ -56,7 +56,7 @@ function printDesign($WarehouseType, $printType)
                 <h6 class="text-primary fw-bold text-nowrap"><?= $warehouse_type . ' ' . $print_type; ?></h6>
             </div>
             <div class="col-6">
-                <span><b> <?= $PONE0T['p_s'] === 'p' ? 'Purchase' : 'Sale'; ?> #: </b><?= $p1TID; ?></span><br>
+                <span><b> <?= $PONE0T['p_s'] === 'p' ? 'Purchase' : 'Sale'; ?> #: </b><?= $PONE0T['sr']; ?></span><br>
                 <span><b>Date:</b> <?= $PONE0T['_date']; ?></span><br>
                 <span><b>Country:</b> <?= $PONE0T['country']; ?></span><br>
                 <span><b>Branch:</b> <?= branchName($PONE0T['branch_id']) ?? ''; ?></span><br>
@@ -226,7 +226,7 @@ function printDesign($WarehouseType, $printType)
                 <span><b>Driver Number:</b> <?= $PTWO0L['agent']['driver_number'] ?? ''; ?></span><br>
             </div>
             <div class="col-2 border-bottom-2 border-dark text-end">
-                <span><b> <?= $PTWO0T['p_s'] === 'p' ? 'Purchase' : 'Sale'; ?> #: </b><?= $p2TID; ?></span><br>
+                <span><b> <?= $PTWO0T['p_s'] === 'p' ? 'Purchase' : 'Sale'; ?> #: </b><?= $PTWO0T['sr']; ?></span><br>
                 <span><b> Date: </b><?= $PTWO0T['_date']; ?></span><br>
                 <span><b> Country: </b><?= $PTWO0T['country']; ?></span><br>
                 <span><b> Branch: </b><?= branchName($PTWO0T['branch_id']) ?? ''; ?></span><br>
@@ -364,7 +364,7 @@ function printDesign($WarehouseType, $printType)
                     <h6 class="text-primary fw-bold text-nowrap"><?= $warehouse_type . ' ' . $print_type; ?></h6>
                 </div>
                 <div class="col-2">
-                    <span><b> <?= $PONE0T['p_s'] === 'p' ? 'Purchase' : 'Sale'; ?> #: </b><?= $p1TID; ?></span><br>
+                    <span><b> <?= $PONE0T['p_s'] === 'p' ? 'Purchase' : 'Sale'; ?> #: </b><?= $PONE0T['sr']; ?></span><br>
                     <span><b>Date:</b> <?= $PONE0T['_date']; ?></span><br>
                     <span><b>Country:</b> <?= $PONE0T['country']; ?></span><br>
                     <span><b>Branch:</b> <?= branchName($PONE0T['branch_id']) ?? ''; ?></span><br>
@@ -558,7 +558,7 @@ function printDesign($WarehouseType, $printType)
                     <span><b>Driver Number:</b> <?= $PTWO0L['agent']['driver_number'] ?? ''; ?></span><br>
                 </div>
                 <div class="col-2 border-bottom-2 border-dark text-end">
-                    <span><b> <?= $PTWO0T['p_s'] === 'p' ? 'Purchase' : 'Sale'; ?> #: </b><?= $p2TID; ?></span><br>
+                    <span><b> <?= $PTWO0T['p_s'] === 'p' ? 'Purchase' : 'Sale'; ?> #: </b><?= $PTWO0T['sr']; ?></span><br>
                     <span><b> Date: </b><?= $PTWO0T['_date']; ?></span><br>
                     <span><b> Country: </b><?= $PTWO0T['country']; ?></span><br>
                     <span><b> Branch: </b><?= branchName($PTWO0T['branch_id']) ?? ''; ?></span><br>
@@ -715,7 +715,7 @@ function printDesign($WarehouseType, $printType)
                     <h6 class="text-primary fw-bold text-nowrap"><?= "IMPORTER Company Invoice"; ?></h6>
                 </div>
                 <div class="col-2">
-                    <span><b> <?= $PONE0T['p_s'] === 'p' ? 'Purchase' : 'Sale'; ?> #: </b><?= $p1TID; ?></span><br>
+                    <span><b> <?= $PONE0T['p_s'] === 'p' ? 'Purchase' : 'Sale'; ?> #: </b><?= $PONE0T['sr']; ?></span><br>
                     <span><b>Date:</b> <?= $PONE0T['_date']; ?></span><br>
                     <span><b>Country:</b> <?= $PONE0T['country']; ?></span><br>
                     <span><b>Branch:</b> <?= branchName($PONE0T['branch_id']) ?? ''; ?></span><br>
@@ -913,7 +913,7 @@ function printDesign($WarehouseType, $printType)
                     <span><?= str_replace(getCompanyName($PTWO0T['dr_acc_kd_id']), '', $PONE0T['dr_acc_details']); ?></span>
                 </div>
                 <div class="col-2 text-end">
-                    <span><b> <?= $PTWO0T['p_s'] === 'p' ? 'Purchase' : 'Sale'; ?> #: </b><?= $p2TID; ?></span><br>
+                    <span><b> <?= $PTWO0T['p_s'] === 'p' ? 'Purchase' : 'Sale'; ?> #: </b><?= $PTWO0T['sr']; ?></span><br>
                     <span><b> Date: </b><?= $PTWO0T['_date']; ?></span><br>
                     <span><b> Country: </b><?= $PTWO0T['country']; ?></span><br>
                     <span><b> Branch: </b><?= branchName($PTWO0T['branch_id']) ?? ''; ?></span><br>
@@ -1094,7 +1094,7 @@ function printDesign($WarehouseType, $printType)
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> <?= ucfirst($p1Ttype) . '#' . $p1TID . ' Allot: ' . $PONE0L['good']['goods_json']['allotment_name'] . ' ' . $print_type; ?> Print</title>
+    <title> <?= ucfirst($p1Ttype) . '#' . $PONE0T['sr'] . ' Allot: ' . $PONE0L['good']['goods_json']['allotment_name'] . ' ' . $print_type; ?> Print</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {

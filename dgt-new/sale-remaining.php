@@ -56,7 +56,7 @@ if ($_GET) {
 if (count($conditions) > 0) {
     $sql .= ' AND ' . implode(' AND ', $conditions);
 }
-    $sql .= " AND locked IN ('1','2') AND transfer_level >= '4'";
+$sql .= " AND locked IN ('1','2') AND transfer_level >= '4'";
 
 $sql .= " ORDER BY id DESC";
 if (count($print_filters) > 0) {
@@ -190,9 +190,9 @@ $mypageURL = $pageURL;
                                 <th>Qty</th>
                                 <th>KGs</th>
                                 <th>AMOUNT</th>
-                                <th>Advance Payment</th> <!-- Updated Column -->
-                                <!-- <th>Remaining Payment</th> Updated Column -->
-                                <th class="text-success">Total</th> <!-- Updated Column -->
+                                <!-- <th>Advance Payment</th> Updated Column -->
+                                <th>Remaining Payment</th> <!-- Updated Column -->
+                                <th class="text-success">Total</th>
                                 <th class="text-danger">Balance</th>
                                 <th>ROAD</th>
                                 <th>Loading Date</th>
@@ -275,8 +275,8 @@ $mypageURL = $pageURL;
                                 <tr class="text-nowrap">
                                     <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $id; ?>)"
                                         data-bs-toggle="modal" data-bs-target="#KhaataDetails">
-                                        <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $id; ?>
-                                        <?php echo in_array($locked, [1,2]) ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
+                                        <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $purchase['sr']; ?>
+                                        <?php echo in_array($locked, [1, 2]) ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
                                     </td>
                                     <td class="<?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['type']); ?></td>
                                     <td class="<?php echo $rowColor; ?>"><?php echo branchName($_fields_single['branch_id']); ?></td>
@@ -293,12 +293,12 @@ $mypageURL = $pageURL;
                                     </td>
 
                                     <!-- New Advance Payment column displaying partial_amount1 -->
-                                    <td class="<?php echo $rowColor; ?>">
-                                        <?php echo isset($payments['partial_amount1']) ? $payments['partial_amount1'] : "No Advance Alloted"; ?>
-                                    </td>
                                     <!-- <td class="<?php echo $rowColor; ?>">
-                                        <?php echo isset($payments['partial_amount2']) ? $payments['partial_amount2'] : "No Advance Alloted"; ?>
+                                        <?php echo isset($payments['partial_amount1']) ? $payments['partial_amount1'] : "No Advance Alloted"; ?>
                                     </td> -->
+                                    <td class="<?php echo $rowColor; ?>">
+                                        <?php echo isset($payments['partial_amount2']) ? $payments['partial_amount2'] : "No Advance Alloted"; ?>
+                                    </td>
                                     <td class="text-success"><?= round($rem_paid_final); ?></td>
                                     <td class="text-danger"><?= round($bal); ?></td>
                                     <?php if ($sea_road == '') { ?>
@@ -373,6 +373,7 @@ if (isset($_POST['tRemSubmit'])) {
     $msg = 'DB Error';
     $msgType = 'danger';
     $p_id = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
+    $s_sr = mysqli_real_escape_string($connect, $_POST['s_sr']);
     $p_type = mysqli_real_escape_string($connect, $_POST['p_type_hidden']);
     $url = 'sale-remaining?p_id=' . $p_id;
     $jmaa_khaata_no = mysqli_real_escape_string($connect, $_POST['dr_khaata_no']);
@@ -387,7 +388,7 @@ if (isset($_POST['tRemSubmit'])) {
     $final_amount = mysqli_real_escape_string($connect, $_POST['final_amount']);
     $transfer_date = mysqli_real_escape_string($connect, $_POST['transfer_date']);
     $report = mysqli_real_escape_string($connect, $_POST['report']);
-    $details = $_POST['action'] == 'update' ? $report : $report . ' Amount: ' . $amount . $currency1 . ' Rate: ' . $rate . '/' . $currency2 . ' TransferDate' . $transfer_date;
+    $details = $_POST['action'] == 'update' ? $report : $report . " | Amount: $amount " . $_POST['currency1'] . " " . $_POST['opr'] . " " . $_POST['rate'] . ' = ' . $final_amount . " " . $_POST['currency2'];
     $data = array(
         'type' => 'p_rem',
         'purchase_id' => $p_id,
@@ -428,17 +429,17 @@ if (isset($_POST['tRemSubmit'])) {
         $dataArray = array(
             'r_type' => $r_type,
             'transfered_from' => $transfered_from,
-            'transfered_from_id' => $purchase_pays_id,
+            'transfered_from_id' => $s_sr,
             'branch_id' => $p_data['branch_id'],
             'user_id' => $p_data['created_by'],
             'username' => $userName,
             'r_date' => $transfer_date,
-            'roznamcha_no' => $purchase_pays_id,
+            'roznamcha_no' => $s_sr,
             'r_name' => $type,
-            'r_no' => $p_id,
+            'r_no' => $s_sr,
             'details' => $details
         );
-        $str = ucfirst($p_data['type']) . " Purchase#" . $p_id . " ";
+        $str = ucfirst($p_data['type']) . " Sale#" . $s_sr . " ";
         $transferred = false;
         if (isset($_POST['r_id'])) {
             $r_ids = $_POST['r_id'];
@@ -500,7 +501,7 @@ if (isset($_POST['tRemSubmit'])) {
                     $dataArray['dr_cr'] = 'cr';
                     $str .= "<span class='badge bg-dark mx-2'>Cr." . $bnaam_khaata_no . "</span>";
                 }
-                $dataArray['transfered_from_id'] = $purchase_pays_id;
+                $dataArray['transfered_from_id'] = $s_sr;
                 $transferred = insert('roznamchaas', $dataArray);
             }
         }

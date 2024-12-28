@@ -2,7 +2,7 @@
 $page_title = 'G. Loading';
 $pageURL = 'general-loading';
 include("header.php");
-$remove = $goods_name = $start_print = $end_print = $type = $acc_no = $p_id = $sea_road = $is_transferred = '';
+$remove = $goods_name = $start_print = $end_print = $type = $acc_no = $p_sr = $sea_road = $is_transferred = '';
 $is_search = false;
 global $connect;
 $results_per_page = 25;
@@ -15,9 +15,9 @@ if ($_GET) {
     $remove = removeFilter('general-loading');
     $is_search = true;
     if (isset($_GET['p_id']) && !empty($_GET['p_id'])) {
-        $p_id = mysqli_real_escape_string($connect, $_GET['p_id']);
-        $print_filters[] = 'p_id=' . $p_id;
-        $conditions[] = "id = '$p_id'";
+        $p_sr = mysqli_real_escape_string($connect, $_GET['p_id']);
+        $print_filters[] = 'p_id=' . $p_sr;
+        $conditions[] = "sr = '$p_sr'";
     }
     if (isset($_GET['start']) && !empty($_GET['start'])) {
         $start_print = mysqli_real_escape_string($connect, $_GET['start']);
@@ -186,7 +186,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
         <div class="input-group input-group-sm">
             <div class="form-group">
                 <label for="p_id" class="form-label">P/S#</label>
-                <input type="number" name="p_id" value="<?php echo $p_id; ?>" id="p_id" class="form-control form-control-sm mx-1" style="max-width:80px;" placeholder="e.g. 33">
+                <input type="number" name="p_id" value="<?php echo $p_sr; ?>" id="p_id" class="form-control form-control-sm mx-1" style="max-width:80px;" placeholder="e.g. 33">
             </div>
             <div class="form-group">
                 <label for="start" class="form-label">Start Date</label>
@@ -265,6 +265,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                 $generalLoadingData = [];
                 while ($loading = mysqli_fetch_assoc($generalLoadingResult)) {
                     $p_id = $loading['p_id'];
+                    $p_sr = $loading['p_sr'];
                     if (!isset($generalLoadingData[$p_id])) {
                         $generalLoadingData[$p_id] = [];
                     }
@@ -278,6 +279,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
 
                 while ($purchase = mysqli_fetch_assoc($purchases)) {
                     $id = $purchase['id'];
+                    $p_sr = $purchase['sr'];
                     $_fields_single = transactionSingle($id);
                     $is_doc = $purchase['is_doc'];
                     $locked = $purchase['locked'];
@@ -332,7 +334,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
 
                     <tr class="text-nowrap">
                         <td class="pointer <?php echo $rowColor; ?>" onclick="window.location.href = '?p_id=<?= $id; ?>&view=1';">
-                            <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $id; ?>
+                            <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $p_sr; ?>
                             <?php echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
                         </td>
                         <td class="<?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['type']); ?></td>
@@ -419,6 +421,7 @@ if (isset($_POST['GLoadingSubmit'])) {
     // General Details
     $sr_no = mysqli_real_escape_string($connect, $_POST['sr_no']);
     $p_id = mysqli_real_escape_string($connect, $_POST['p_id']);
+    $p_sr = mysqli_real_escape_string($connect, $_POST['p_sr']);
     $p_type = mysqli_real_escape_string($connect, $_POST['p_type']);
     $p_branch = mysqli_real_escape_string($connect, $_POST['p_branch']);
     $p_date = mysqli_real_escape_string($connect, $_POST['p_date']);
@@ -557,6 +560,7 @@ if (isset($_POST['GLoadingSubmit'])) {
     $data = [
         'sr_no' => $sr_no,
         'p_id' => $p_id,
+        'p_sr' => $p_sr,
         'type' => $_POST['type'],
         'p_type' => $p_type,
         'p_branch' => $p_branch,
@@ -571,7 +575,7 @@ if (isset($_POST['GLoadingSubmit'])) {
         'importer_details' => json_encode($importer_details),
         'notify_party_details' => json_encode($notify_party_details),
         'exporter_details' => json_encode($exporter_details),
-        'goods_details' => json_encode($goods_details),
+        'goods_details' => mysqli_real_escape_string($connect, json_encode($goods_details)),
         'shipping_details' => json_encode($shipping_details),
         'attachments' => json_encode($uploadedFiles)
     ];

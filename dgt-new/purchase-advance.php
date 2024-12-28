@@ -277,7 +277,7 @@ $mypageURL = $pageURL;
                                 <tr class="text-nowrap">
                                     <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $id; ?>)"
                                         data-bs-toggle="modal" data-bs-target="#KhaataDetails">
-                                        <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $id; ?>
+                                        <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $purchase['sr']; ?>
                                         <?php echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
                                     </td>
                                     <td class="<?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['type']); ?></td>
@@ -372,6 +372,7 @@ if (isset($_POST['tAdvSubmit'])) {
     $msg = 'DB Error';
     $msgType = 'danger';
     $p_id = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
+    $p_sr = mysqli_real_escape_string($connect, $_POST['p_sr']);
     $p_type = mysqli_real_escape_string($connect, $_POST['p_type_hidden']);
     $url = 'purchase-advance?p_id=' . $p_id . '&view=1';
     $jmaa_khaata_no = mysqli_real_escape_string($connect, $_POST['dr_khaata_no']);
@@ -428,17 +429,17 @@ if (isset($_POST['tAdvSubmit'])) {
         $dataArray = array(
             'r_type' => $r_type,
             'transfered_from' => $transfered_from,
-            'transfered_from_id' => $purchase_pays_id,
+            'transfered_from_id' => $p_sr,
             'branch_id' => $p_data['branch_id'],
             'user_id' => $p_data['created_by'],
             'username' => $userName,
             'r_date' => $transfer_date,
-            'roznamcha_no' => $purchase_pays_id,
+            'roznamcha_no' => $p_sr,
             'r_name' => $type,
-            'r_no' => $p_id,
+            'r_no' => $p_sr,
             'details' => $details
         );
-        $str = ucfirst($p_data['type']) . " Purchase#" . $p_id . " ";
+        $str = ucfirst($p_data['type']) . " Purchase#" . $p_sr . " ";
         $transferred = false;
         if (isset($_POST['r_id'])) {
             $r_ids = $_POST['r_id'];
@@ -496,7 +497,7 @@ if (isset($_POST['tAdvSubmit'])) {
                     $dataArray['dr_cr'] = 'cr';
                     $str .= "<span class='badge bg-dark mx-2'>Cr." . $bnaam_khaata_no . "</span>";
                 }
-                $dataArray['transfered_from_id'] = $purchase_pays_id;
+                $dataArray['transfered_from_id'] = $p_sr;
                 $transferred = insert('roznamchaas', $dataArray);
             }
         }
@@ -567,8 +568,6 @@ if (isset($_GET['p_id']) && is_numeric($_GET['p_id']) && isset($_GET['view']) &&
 }
 
 if (isset($_POST['transferAdvanceToRem'])) {
-?>
-<?php
     $type = 'danger';
     $msg = 'DB Failed';
     $p_id_hidden = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);

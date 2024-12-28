@@ -22,7 +22,7 @@ if ($id > 0) {
                             <div class="col-md-12 border-bottom px-2 pb-2 mb-2">
                                 <div class="d-flex align-items-center justify-content-between">
                                     <div>
-                                        <b><?php echo strtoupper($_fields['p_s_name']) . ' #'; ?> </b><?php echo $_fields['sr_no']; ?>
+                                        <b><?php echo strtoupper($_fields['p_s_name']) . ' #'; ?> </b><?php echo $_fields['sr']; ?>
                                     </div>
                                     <div><b>User </b><?php echo $_fields['username']; ?></div>
                                     <!-- </div>
@@ -129,7 +129,7 @@ if ($id > 0) {
                                             ?>
                                         <?php endforeach; ?>
                                     </div>
-                                    <?php else: ?>
+                                <?php else: ?>
                                     <div class="col-md-4">
                                         <?php
                                         if ($_fields['sea_road_array']['sea_road'] === 'sea'): ?>
@@ -295,15 +295,22 @@ if ($id > 0) {
                                             echo '<th class="fw-bold text-end">' . round($final_amount, 2) . '</th>';
                                         }
                                         echo '<th></th>';
-                                        echo '</tr>';   
+                                        echo '</tr>';
                                     }
                                     ?>
                                 </tbody>
                             </table>
                         <?php } ?>
                     </div>
-                    <?php if ($record['khaata_tr1'] != '') {
-                        $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $record['id'], 'transfered_from' => 'sale_' . $record['type']));
+                    <?php
+                    $payments = json_decode($record['payments'], true);
+                    $total_amount = isset($_fields['items_sum']['sum_final_amount']) ? (float)$_fields['items_sum']['sum_final_amount'] : 0;
+                    $percentage = isset($payments['pct_value']) ? (int)$payments['pct_value'] : 0;
+                    $remaining_percentage = 100 - $percentage;
+                    $partial_amount1 = ($percentage / 100) * $total_amount;
+                    $partial_amount2 = ($remaining_percentage / 100) * $total_amount;
+                    if ($record['khaata_tr1'] != '') {
+                        $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $record['sr'], 'transfered_from' => 'sale_' . $record['type']));
                         $roz = mysqli_fetch_assoc($rozQ);
                         $roz_arr1 = array(
                             array('Sr#', SuperAdmin() ? $roz['r_id'] . '-' . $roz['branch_serial'] : $roz['branch_serial']),
@@ -367,7 +374,7 @@ if ($id > 0) {
                                         if ($bal <= 10 && $record['transfer_level'] < 3) {
                                             update('transactions', array('transfer_level' => 3), array('id' => $record['id']));
                                         ?><script>
-                                                window.location.href = '<?= "purchase-advance?view=1&p_id=" . $id ?>';
+                                                window.location.href = '<?= "sale-advance?view=1&p_id=" . $id ?>';
                                             </script><?php
                                                     }
                                                     if ($bal <= 10) {
@@ -408,7 +415,7 @@ if ($id > 0) {
                                 <?php $adv_paid = purchaseSpecificData($record['id'], 'adv');
                                 $i = 1;
                                 foreach ($adv_paid as $item) {
-                                    // $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $purchase_id, 'transfered_from' => 'purchase_' . $record['type']));
+                                    // $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $record['sr], 'transfered_from' => 'purchase_' . $record['type']));
                                     // $roz = mysqli_fetch_assoc($rozQ);
                                     echo '<tr>';
                                     echo '<td class="border border-dark">' . $i++ . '</td>';
@@ -441,7 +448,7 @@ if ($id > 0) {
                             'opr' => '*',
                             'final_amount' => '',
                             'transfer_date' => date('Y-m-d'),
-                            'report' => ''
+                            'report' => ucfirst($_fields['p_s_name']) . ' ' . ' #' . $_fields['sr'] . ', Type: ' . ucfirst($_fields['type']) . ', Quantity: ' . $qty_no . ' '
                             //'report' => 'ENTRY:' . $rows . ' GOODS:' . $goods . ' COUNTRY:' . $record['country'] . ' ALLOT:' . $record['allot'] . ' T.Qty:' . $qtys . ' T.KGs:' . $totals . ' RATE:' . $rate . ' T.AMNT:' . $amounts . $curr . ' EXCH.:' . $curr2
                         );
                         if ($purchase_pays_id > 0) {
@@ -561,12 +568,13 @@ if ($id > 0) {
                                         </div>
                                     </div>
                                     <input type="hidden" name="p_id_hidden" value="<?php echo $record['id']; ?>">
+                                    <input type="hidden" name="s_sr" value="<?php echo $record['sr']; ?>">
                                     <input type="hidden" name="p_type_hidden" value="<?php echo $purchase_type; ?>">
                                     <input type="hidden" name="purchase_pays_id_hidden" value="<?php echo $adv_arr['finish']['purchase_pays_id']; ?>">
                                     <input type="hidden" name="action" value="<?php echo $adv_arr['finish']['action']; ?>">
                                     <?php
                                     if ($purchase_pays_id > 0) {
-                                        $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'transfered_from_id' => $purchase_pays_id, 'transfered_from' => 'sale_advance'));
+                                        $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'transfered_from_id' => $record['sr'], 'transfered_from' => 'sale_advance'));
                                         if (mysqli_num_rows($rozQ) > 0) { ?>
                                             <table class="table table-sm table-bordered">
                                                 <thead>

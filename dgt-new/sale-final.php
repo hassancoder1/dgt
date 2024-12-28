@@ -299,7 +299,7 @@ $mypageURL = $pageURL;
                                 <tr class="text-nowrap">
                                     <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $id; ?>)"
                                         data-bs-toggle="modal" data-bs-target="#KhaataDetails">
-                                        <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $id; ?>
+                                        <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $purchase['sr']; ?>
                                         <?php echo in_array($locked, [1, 2]) ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
                                     </td>
                                     <td class="<?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['type']); ?></td>

@@ -127,7 +127,7 @@ $FR = $rowCount > 0 ? $rows[0] : null;
                 <div class="section-title">Bill Info</div>
                 <small class="d-block"><b>Sr# </b><?= $FR['sr_no']; ?> / <b>Bill No# </b><?= $FR['bill_no']; ?></small>
                 <small class="d-block"><b>Purchase Date: </b><?= $P['p_date']; ?></small>
-                <small class="d-block"><b>Type: </b><?= $P['p_type']; ?></small>
+                <small class="d-block"><b>Type: </b><?= ucfirst($P['p_type']); ?></small>
             </div>
         </div>
 

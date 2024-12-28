@@ -8,7 +8,7 @@ global $connect;
 $results_per_page = 25;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $start_from = ($page - 1) * $results_per_page;
-$sql = "SELECT * FROM `transactions` WHERE p_s='p'";
+$sql = "SELECT * FROM `transactions` WHERE p_s='s'";
 $conditions = [];
 $print_filters = [];
 if ($_GET) {
@@ -127,7 +127,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
     <div class="bg-white mt-3">
         <div class="d-flex justify-content-between align-items-center w-100">
             <h1 class="mb-2" style="font-size: 2rem; font-weight: 700; color: #333; text-transform: uppercase; letter-spacing: 1.5px; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">
-                Purchases
+                Sales
                 <span class="text-muted d-block">
                     <?php
                     $applied_filters = [];

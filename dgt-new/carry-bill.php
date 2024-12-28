@@ -2,23 +2,23 @@
 $page_title = 'Carry Bill';
 $pageURL = 'carry-bill';
 include("header.php");
-$remove = $start_print = $end_print = $type = $acc_no = $p_id = $truck_no = $sea_road = $billStatus = $blSearch = $date_type = '';
+$remove = $start_print = $end_print = $type = $acc_no = $p_sr = $truck_number = $sea_road = $billStatus = $blSearch = $date_type = '';
 $is_search = false;
 global $connect;
 $results_per_page = 25;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $start_from = ($page - 1) * $results_per_page;
 $sql = "SELECT * FROM `general_loading` WHERE JSON_EXTRACT(gloading_info, '$.parent_id') IS NULL";
-$conditions = [];
+$conditions = ["JSON_EXTRACT(agent_details, '$.agent_exist') = 'yes'"];
 $print_filters = [];
 $user = $_SESSION['username'];
 if ($_GET) {
     $remove = removeFilter('carry-bill');
     $is_search = true;
     if (isset($_GET['p_id']) && !empty($_GET['p_id'])) {
-        $p_id = mysqli_real_escape_string($connect, $_GET['p_id']);
-        $print_filters[] = 'p_id=' . $p_id;
-        $conditions[] = "p_id = '$p_id'";
+        $p_sr = mysqli_real_escape_string($connect, $_GET['p_id']);
+        $print_filters[] = 'p_id=' . $p_sr;
+        $conditions[] = "p_sr = '$p_sr'";
     }
     $date_type = isset($_GET['date_type']) ? $_GET['date_type'] : '';
     if (!empty($_GET['start'])) {
@@ -59,10 +59,10 @@ if ($_GET) {
         $print_filters[] = 'acc_no=' . $acc_no;
         $conditions[] = "JSON_EXTRACT(agent_details, '$.ag_acc_no') = '$acc_no'";
     }
-    if (!empty($_GET['truck_no'])) {
-        $truck_no = mysqli_real_escape_string($connect, $_GET['truck_no']);
-        $print_filters[] = 'truck_no=' . $truck_no;
-        $conditions[] = "JSON_EXTRACT(agent_details, '$.loading_truck_number') = '$truck_no'";
+    if (!empty($_GET['truck_number'])) {
+        $truck_number = mysqli_real_escape_string($connect, $_GET['truck_number']);
+        $print_filters[] = 'truck_number=' . $truck_number;
+        $conditions[] = "JSON_EXTRACT(agent_details, '$.truck_number') = '$truck_number'";
     }
     if (!empty($_GET['sea_road'])) {
         $sea_road = mysqli_real_escape_string($connect, $_GET['sea_road']);
@@ -204,7 +204,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
         <div class="input-group input-group-sm">
             <div class="form-group">
                 <label for="p_id" class="form-label">P/S#</label>
-                <input type="number" name="p_id" value="<?php echo $p_id; ?>" id="p_id" class="form-control form-control-sm mx-1" style="max-width:80px;" placeholder="e.g. 33">
+                <input type="number" name="p_id" value="<?php echo $p_sr; ?>" id="p_id" class="form-control form-control-sm mx-1" style="max-width:80px;" placeholder="e.g. 33">
             </div>
             <div class="form-group">
                 <label for="date_type" class="form-label">Date Type</label>
@@ -250,8 +250,8 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                 <input type="text" class="form-control form-control-sm mx-1" style="max-width:130px;" name="blSearch" placeholder="B/L Search" value="<?php echo $blSearch; ?>" id="blSearch">
             </div>
             <div class="form-group">
-                <label for="truck_no" class="form-label">Truck No.</label>
-                <input type="text" name="truck_no" value="<?php echo $truck_no; ?>" id="truck_no" class="form-control form-control-sm mx-1" style="max-width:100px;" placeholder="e.g. TKU 2563 COMTY NMNVBM">
+                <label for="truck_number" class="form-label">Truck No.</label>
+                <input type="text" name="truck_number" value="<?php echo $truck_number; ?>" id="truck_number" class="form-control form-control-sm mx-1" style="max-width:100px;" placeholder="e.g. TKU 2563 COMTY NMNVBM">
             </div>
             <div class="form-group">
                 <label for="billStatus" class="form-label">Bill Status</label>
@@ -353,7 +353,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                         <?php if (!SuperAdmin()): ?>
                             <td class="<?= $rowColor; ?>"><?= $row_count + 1; ?></td>
                         <?php endif; ?>
-                        <td class="<?= $SuperCode; ?>"><b><?= SuperAdmin() ? ucfirst($SingleLoading['type']) . "#" . $SingleLoading['p_id'] . " ($currentBillNumber)" : $SingleLoading['bl_no']; ?></b></td>
+                        <td class="<?= $SuperCode; ?>"><b><?= SuperAdmin() ? ucfirst($SingleLoading['type']) . "#" . $SingleLoading['p_sr'] . " ($currentBillNumber)" : $SingleLoading['bl_no']; ?></b></td>
                         <td class="<?= $rowColor; ?>"><?= $agentDetails['ag_acc_no']; ?></td>
                         <td class="<?= $rowColor; ?>"><?= $agentDetails['ag_id']; ?></td>
                         <td class="<?= $rowColor; ?>"><?= $agentDetails['ag_name']; ?></td>

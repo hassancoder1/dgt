@@ -82,9 +82,9 @@ while ($SPid = mysqli_fetch_assoc($pIDQ)) {
 }
 $Ag_acc_no = $fAgent['ag_acc_no'];
 $AGAcc = mysqli_fetch_assoc(mysqli_query($connect, "SELECT id, email, phone FROM khaata WHERE LOWER(khaata_no) = LOWER('$Ag_acc_no')"));
-$AGAcc_id = $AGAcc['id'];
+$AGAcc_id = $AGAcc['id'] ?? '';
 $AGCompany = mysqli_fetch_assoc(mysqli_query($connect, "SELECT json_data FROM khaata_details WHERE khaata_id = '$AGAcc_id' ORDER BY created_at ASC LIMIT 1"));
-$AGCompany = json_decode($AGCompany['json_data'], true);
+$AGCompany = json_decode($AGCompany['json_data'] ?? '[]', true);
 $AGCombine = array_combine(isset($AGCompany['indexes1']) ? $AGCompany['indexes1'] : [], isset($AGCompany['vals1']) ? $AGCompany['vals1'] : []);
 ?>
 <!DOCTYPE html>
@@ -102,9 +102,14 @@ $AGCombine = array_combine(isset($AGCompany['indexes1']) ? $AGCompany['indexes1'
     echo "<style>";
     include '../assets/bs/css/bootstrap.min.css';
     include '../assets/css/custom.css';
+    include '../assets/fonts/lexend.css';
     echo "</style>";
     ?>
     <style>
+        * {
+            font-family: 'Lexend', serif;
+        }
+
         body {
             font-size: 13px;
             background-color: #f8f9fa;
@@ -195,7 +200,7 @@ $AGCombine = array_combine(isset($AGCompany['indexes1']) ? $AGCompany['indexes1'
                         <img src="../assets/images/logo.png" alt="logo" class="img-fluid">
                     </div>
                     <h6 class="fw-bold mt-2">DAMAAN GENERAL TRADING LLC</h6>
-                    <p class="text-muted">Booking Ref.: <?= ucfirst($firstBl['type']); ?>#<?= $firstBl['p_id'] . " (" . $blOrders[$firstBl['bl_no']] . ")" ?> - B/L Number: #<?= $firstBl['bl_no']; ?></p>
+                    <p class="text-muted">Booking Ref.: <?= ucfirst($firstBl['type']); ?>#<?= $firstBl['p_sr'] . " (" . $blOrders[$firstBl['bl_no']] . ")" ?> - B/L Number: #<?= $firstBl['bl_no']; ?></p>
                 </div>
 
                 <div class="border p-2 mb-2">
@@ -254,11 +259,15 @@ $AGCombine = array_combine(isset($AGCompany['indexes1']) ? $AGCompany['indexes1'
                         <th>Gross Weight</th>
                         <th>Net Weight</th>
                         <?php if (isset($_GET['agent-print'])) { ?>
-                            <th>R.Date</th>
-                            <th>Clear.D</th>
-                            <th>Bill Entry No</th>
-                            <th>L.Truck.No</th>
-                            <th>R.Truck.Date</th>
+                            <th>BOE No</th>
+                            <th>PickUp.D</th>
+                            <th>Waiting Days</th>
+                            <th>Return.D</th>
+                            <th>Transporter</th>
+                            <th>Truck No.</th>
+                            <th>Details</th>
+                            <th>Driver Name</th>
+                            <th>Driver No</th>
                         <?php } ?>
                     </tr>
                 </thead>
@@ -267,11 +276,6 @@ $AGCombine = array_combine(isset($AGCompany['indexes1']) ? $AGCompany['indexes1'
                         $G = json_decode($SingleLoading['goods_details'], true);
                         $A = json_decode($SingleLoading['agent_details'], true);
                         // Check if any required field is empty and set it to "Not Given"
-                        $A['received_date'] = !empty($A['received_date']) ? $A['received_date'] : "Not Given";
-                        $A['clearing_date'] = !empty($A['clearing_date']) ? $A['clearing_date'] : "Not Given";
-                        $A['bill_of_entry_no'] = !empty($A['bill_of_entry_no']) ? $A['bill_of_entry_no'] : "Not Given";
-                        $A['loading_truck_number'] = !empty($A['loading_truck_number']) ? $A['loading_truck_number'] : "Not Given";
-                        $A['truck_returning_date'] = !empty($A['truck_returning_date']) ? $A['truck_returning_date'] : "Not Given";
                     ?>
                         <tr>
                             <td><?= htmlspecialchars($G['container_no']) . ' / ' . htmlspecialchars($G['container_name']); ?></td>
@@ -280,11 +284,15 @@ $AGCombine = array_combine(isset($AGCompany['indexes1']) ? $AGCompany['indexes1'
                             <td><?= htmlspecialchars($G['gross_weight']); ?></td>
                             <td><?= htmlspecialchars($G['net_weight']); ?></td>
                             <?php if (isset($_GET['agent-print'])) { ?>
-                                <td><?= htmlspecialchars($A['received_date']); ?></td>
-                                <td><?= htmlspecialchars($A['clearing_date']); ?></td>
-                                <td><?= htmlspecialchars($A['bill_of_entry_no']); ?></td>
-                                <td><?= htmlspecialchars($A['loading_truck_number']); ?></td>
-                                <td><?= htmlspecialchars($A['truck_returning_date']); ?></td>
+                                <td><?= $A['boe_no'] ?? 'Not Given!'; ?></td>
+                                <td><?= $A['pick_up_date'] ?? 'Not Given!'; ?></td>
+                                <td><?= $A['waiting_days'] ?? 'Not Given!'; ?></td>
+                                <td><?= $A['return_date'] ?? 'Not Given!'; ?></td>
+                                <td><?= $A['transporter_name'] ?? 'Not Given!'; ?></td>
+                                <td><?= $A['truck_number'] ?? 'Not Given!'; ?></td>
+                                <td><?= $A['details'] ?? 'Not Given!'; ?></td>
+                                <td><?= $A['driver_name'] ?? 'Not Given!'; ?></td>
+                                <td><?= $A['driver_number'] ?? 'Not Given!'; ?></td>
                             <?php } ?>
 
                         </tr>

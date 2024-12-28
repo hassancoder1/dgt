@@ -272,7 +272,7 @@ if ($id > 0) {
                                 $quantity_no = $gross_weight = $net_weight = 0;
                                 foreach ($rows as $row): ?>
                                     <tr class="LoadingRow">
-                                        <td class="border sr_no border-dark"><a href="general-loading?p_id=<?= $id; ?>&view=1&lp_id=<?= $row['id']; ?>&action=update&sr_no=<?= $row['sr_no']; ?>"><?= $row['sr_no']; ?></a></td>
+                                        <td class="border sr_no border-dark"><a href="general-loading?p_id=<?= $id; ?>&view=1&lp_id=<?= $row['id']; ?>&action=update&sr_no=<?= $row['sr_no']; ?>">#<?= $row['sr_no']; ?></a></td>
                                         <td class="border border-dark"><?= json_decode($row['goods_details'], true)['container_no']; ?></td>
                                         <td class="border border-dark"><?= $row['bl_no']; ?></td>
                                         <!-- <td class="border border-dark"><?= json_decode($row['importer_details'], true)['im_acc_no']; ?></td>
@@ -711,6 +711,7 @@ if ($id > 0) {
                                 <!-- Submit Button -->
                                 <div class="row mt-4">
                                     <div class="col-md-12 text-end">
+                                        <input type="hidden" name="p_sr" value="<?= $record['sr']; ?>">
                                         <input type="reset"
                                             class="btn btn-warning btn-sm rounded-0" value="Clear Form">
 
@@ -730,7 +731,7 @@ if ($id > 0) {
                 <div class="align-items-center justify-content-between flex-wrap pt-2">
                     <div>
                         <strong><?php echo strtoupper($_fields['p_s_name']) . ' #'; ?></strong>
-                        <?php echo $_fields['sr_no']; ?>
+                        <?php echo $_fields['sr']; ?>
                     </div>
                     <div>
                         <strong>User:</strong> <?php echo $_fields['username']; ?>

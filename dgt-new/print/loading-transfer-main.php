@@ -2,7 +2,7 @@
 $page_title = 'G. Loading';
 $pageURL = 'loading-transfer-main';
 require("../connection.php");
-$remove = $start_print = $end_print = $type = $acc_no = $p_id = $blSearch = $sea_road = $transferred = $date_type = '';
+$remove = $start_print = $end_print = $type = $acc_no = $p_sr = $blSearch = $sea_road = $transferred = $date_type = '';
 $is_search = false;
 global $connect;
 $results_per_page = 50;
@@ -20,9 +20,9 @@ if ($_GET) {
         $conditions[] = "bl_no='$blSearch'";
     }
     if (isset($_GET['p_id']) && !empty($_GET['p_id'])) {
-        $p_id = mysqli_real_escape_string($connect, $_GET['p_id']);
-        $print_filters[] = 'p_id=' . $p_id;
-        $conditions[] = "p_id = '$p_id'";
+        $p_sr = mysqli_real_escape_string($connect, $_GET['p_id']);
+        $print_filters[] = 'p_id=' . $p_sr;
+        $conditions[] = "p_sr = '$p_sr'";
     }
     $date_type = isset($_GET['date_type']) ? $_GET['date_type'] : '';
     $print_filters[] = 'date_type=' . $date_type;
@@ -90,19 +90,21 @@ $total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_pa
     echo "<style>";
     include '../assets/bs/css/bootstrap.min.css';
     include '../assets/css/custom.css';
+    include '../assets/fonts/lexend.css';
+    echo "*{font-family:'Lexend', serif;}";
     echo "</style>";
     ?>
 </head>
 
 <body class="mx-2">
     <div class="bg-white mt-3">
-    <div class="d-flex justify-content-between align-items-center w-100">
+        <div class="d-flex justify-content-between align-items-center w-100">
             <h1 class="mb-2" style="font-size: 2rem; font-weight: 700; color: #333; text-transform: uppercase; letter-spacing: 1.5px; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">
                 Loading Transfer
                 <span class="text-muted" style="font-size: 12px; display: block;">
                     <?php
                     $applied_filters = [];
-                    if ($p_id) $applied_filters[] = "P# $p_id";
+                    if ($p_sr) $applied_filters[] = "# $p_sr";
                     if ($date_type) $applied_filters[] = "Date Type: " . ucfirst($date_type);
                     if ($start_print && $end_print) $applied_filters[] = "From $start_print to $end_print";
                     if ($type) $applied_filters[] = "Purchase Type: $type";
@@ -180,8 +182,10 @@ $total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_pa
                     $locked = 0;
                     $pIdCounts = [];
                     foreach ($Loadings as $SingleLoading) {
+                        $myAgent = json_decode($SingleLoading['agent_details'], true);
                         $id = $SingleLoading['id'];
                         $pId = $SingleLoading['p_id'];
+                        $p_sr = $SingleLoading['p_sr'];
 
                         if (empty($SingleLoading['agent_details'])) {
                             $rowColor = 'text-danger';
@@ -202,12 +206,12 @@ $total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_pa
 
                         <tr class="text-nowrap">
                             <td class="pointer <?= $rowColor; ?>">
-                                <?php echo '<b>P#', $pId . "</b> (" . $pIdDisplayCount . ")"; ?>
+                                <?php echo '<b>' . ucfirst($SingleLoading['type']) . '#', $p_sr . "</b> (" . $pIdDisplayCount . ")"; ?>
                                 <?php echo $locked ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
                             </td>
                             <td class="<?php echo $rowColor; ?>"><?= isset(json_decode($SingleLoading['agent_details'], true)['cargo_transfer_warehouse']) ? json_decode($SingleLoading['agent_details'], true)['cargo_transfer_warehouse'] : ''; ?></td>
-                            <td class="<?php echo $rowColor; ?>"><?= isset(json_decode($SingleLoading['agent_details'], true)['ag_id']) ? json_decode($SingleLoading['agent_details'], true)['ag_id'] : ''; ?></td>
-                            <td class="<?php echo $rowColor; ?>"><?= isset(json_decode($SingleLoading['agent_details'], true)['ag_id']) ? json_decode($SingleLoading['agent_details'], true)['ag_name'] : ''; ?></td>
+                            <td class="<?php echo $rowColor; ?>"><?= isset($myAgent['ag_id']) ? (!empty($myAgent['ag_id']) ? $myAgent['ag_id'] : 'NOT EXIST') : ''; ?></td>
+                            <td class="<?php echo $rowColor; ?>"><?= isset($myAgent['ag_name']) ? (!empty($myAgent['ag_name']) ? $myAgent['ag_name'] : 'NOT EXIST') : ''; ?></td>
                             <td class="<?php echo $rowColor; ?>"><?= my_date(json_decode($SingleLoading['loading_details'], true)['loading_date']); ?></td>
                             <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['loading_details'], true)['loading_port_name']; ?></td>
                             <td class="<?php echo $rowColor; ?>"><?= my_date(json_decode($SingleLoading['receiving_details'], true)['receiving_date']); ?></td>

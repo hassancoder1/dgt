@@ -2,23 +2,23 @@
 $page_title = 'Agent Form';
 $pageURL = 'agent-form-main';
 require("../connection.php");
-$remove = $start_print = $end_print = $type = $acc_no = $p_id = $sea_road = $blNoSearch = $date_type = '';
+$remove = $start_print = $end_print = $type = $acc_no = $p_sr = $sea_road = $blNoSearch = $date_type = '';
 $is_search = false;
 global $connect;
 $results_per_page = 50;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $start_from = ($page - 1) * $results_per_page;
 $sql = "SELECT * FROM `general_loading`";
-$conditions = [];
+$conditions = ["JSON_EXTRACT(agent_details, '$.agent_exist') = 'yes'"];
 $print_filters = [];
 $user = $_SESSION['username'];
 if ($_GET) {
     $remove = removeFilter('agent-form-main');
     $is_search = true;
     if (isset($_GET['p_id']) && !empty($_GET['p_id'])) {
-        $p_id = mysqli_real_escape_string($connect, $_GET['p_id']);
-        $print_filters[] = 'p_id=' . $p_id;
-        $conditions[] = "p_id = '$p_id'";
+        $p_sr = mysqli_real_escape_string($connect, $_GET['p_id']);
+        $print_filters[] = 'p_id=' . $p_sr;
+        $conditions[] = "p_sr = '$p_sr'";
     }
     $date_type = isset($_GET['date_type']) ? $_GET['date_type'] : '';
     $print_filters[] = 'date_type=' . $date_type;
@@ -89,6 +89,8 @@ $total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_pa
     echo "<style>";
     include '../assets/bs/css/bootstrap.min.css';
     include '../assets/css/custom.css';
+    include '../assets/fonts/lexend.css';
+    echo "*{font-family:'Lexend', serif;}";
     echo "</style>";
     ?>
 </head>
@@ -102,7 +104,7 @@ $total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_pa
                     <span class="text-muted d-block" style="font-size: 12px;">
                         <?php
                         $applied_filters = [];
-                        if ($p_id) $applied_filters[] = "P# $p_id";
+                        if ($p_sr) $applied_filters[] = "# $p_sr";
                         if ($date_type) $applied_filters[] = "Date Type: " . ucfirst($date_type);
                         if ($start_print && $end_print) $applied_filters[] = "From $start_print to $end_print";
                         if ($type) $applied_filters[] = "Purchase Type: $type";
@@ -190,7 +192,7 @@ $total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_pa
                                 <tr class="text-nowrap">
                                     <?php if (SuperAdmin()) { ?>
                                         <td class="pointer <?php echo $rowColor; ?>">
-                                            <?= '<b>P#' . $SingleLoading['p_id'] . "($billNumber)"; ?>
+                                            <?= '<b>' . ucfirst($SingleLoading['type']) . '#' . $SingleLoading['p_sr'] . "($billNumber)"; ?>
                                             <?php echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
                                         </td>
                                     <?php } else { ?>

@@ -277,8 +277,8 @@ $mypageURL = $pageURL;
                                 <tr class="text-nowrap">
                                     <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $id; ?>)"
                                         data-bs-toggle="modal" data-bs-target="#KhaataDetails">
-                                        <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $id; ?>
-                                        <?php echo in_array($locked, [1,2]) ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
+                                        <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $purchase['sr']; ?>
+                                        <?php echo in_array($locked, [1, 2]) ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
                                     </td>
                                     <td class="<?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['type']); ?></td>
                                     <td class="<?php echo $rowColor; ?>"><?php echo branchName($_fields_single['branch_id']); ?></td>
@@ -372,6 +372,7 @@ if (isset($_POST['tAdvSubmit'])) {
     $msg = 'DB Error';
     $msgType = 'danger';
     $p_id = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
+    $s_sr = mysqli_real_escape_string($connect, $_POST['s_sr']);
     $p_type = mysqli_real_escape_string($connect, $_POST['p_type_hidden']);
     $url = 'sale-advance?p_id=' . $p_id . '&view=1';
     $jmaa_khaata_no = mysqli_real_escape_string($connect, $_POST['dr_khaata_no']);
@@ -428,17 +429,17 @@ if (isset($_POST['tAdvSubmit'])) {
         $dataArray = array(
             'r_type' => $r_type,
             'transfered_from' => $transfered_from,
-            'transfered_from_id' => $purchase_pays_id,
+            'transfered_from_id' => $s_sr,
             'branch_id' => $p_data['branch_id'],
             'user_id' => $p_data['created_by'],
             'username' => $userName,
             'r_date' => $transfer_date,
-            'roznamcha_no' => $purchase_pays_id,
+            'roznamcha_no' => $s_sr,
             'r_name' => $type,
-            'r_no' => $p_id,
+            'r_no' => $s_sr,
             'details' => $details
         );
-        $str = ucfirst($p_data['type']) . " SAle#" . $p_id . " ";
+        $str = ucfirst($p_data['type']) . " Sale#" . $s_sr . " ";
         $transferred = false;
         if (isset($_POST['r_id'])) {
             $r_ids = $_POST['r_id'];
@@ -496,7 +497,7 @@ if (isset($_POST['tAdvSubmit'])) {
                     $dataArray['dr_cr'] = 'cr';
                     $str .= "<span class='badge bg-dark mx-2'>Cr." . $bnaam_khaata_no . "</span>";
                 }
-                $dataArray['transfered_from_id'] = $purchase_pays_id;
+                $dataArray['transfered_from_id'] = $s_sr;
                 $transferred = insert('roznamchaas', $dataArray);
             }
         }

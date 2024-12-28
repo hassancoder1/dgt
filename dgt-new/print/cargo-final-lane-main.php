@@ -2,7 +2,7 @@
 $page_title = 'Cargo Final Lane';
 $pageURL = 'cargo-final-lane';
 require("../connection.php");
-$remove = $start_print = $end_print = $type = $p_id = $l_port = $acc_no = $r_port = $blSearch = $sea_road = $date_type = '';
+$remove = $start_print = $end_print = $type = $p_sr = $l_port = $acc_no = $r_port = $blSearch = $sea_road = $date_type = '';
 $is_search = false;
 global $connect;
 $results_per_page = 50;
@@ -15,9 +15,9 @@ if ($_GET) {
     $remove = removeFilter('cargo-final-lane');
     $is_search = true;
     if (isset($_GET['p_id']) && !empty($_GET['p_id'])) {
-        $p_id = mysqli_real_escape_string($connect, $_GET['p_id']);
-        $print_filters[] = 'p_id=' . $p_id;
-        $conditions[] = "p_id = '$p_id'";
+        $p_sr = mysqli_real_escape_string($connect, $_GET['p_id']);
+        $print_filters[] = 'p_id=' . $p_sr;
+        $conditions[] = "p_sr = '$p_sr'";
     }
     $date_type = isset($_GET['date_type']) ? $_GET['date_type'] : '';
     $print_filters[] = 'date_type=' . $date_type;
@@ -96,6 +96,8 @@ $total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_pa
     echo "<style>";
     include '../assets/bs/css/bootstrap.min.css';
     include '../assets/css/custom.css';
+    include '../assets/fonts/lexend.css';
+    echo "*{font-family:'Lexend',serif;}";
     echo "</style>";
     ?>
 </head>
@@ -108,7 +110,7 @@ $total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_pa
                 <span class="text-muted" style="font-size: 12px; display: block;">
                     <?php
                     $applied_filters = [];
-                    if ($p_id) $applied_filters[] = "P# $p_id";
+                    if ($p_sr) $applied_filters[] = "# $p_sr";
                     if ($date_type) $applied_filters[] = "Date Type: " . ucfirst($date_type);
                     if ($start_print && $end_print) $applied_filters[] = "From $start_print to $end_print";
                     if ($type) $applied_filters[] = "Purchase Type: $type";
@@ -177,7 +179,7 @@ $total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_pa
                         <tr class="text-nowrap">
                             <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $SingleLoading['id']; ?>)"
                                 data-bs-toggle="modal" data-bs-target="#KhaataDetails">
-                                <?php echo '<b>P#', $SingleLoading['p_id']; ?>
+                                <?php echo '<b>' . ucfirst($SingleLoading['type']).'#' . $SingleLoading['p_id']; ?>
                                 <?php echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
                             </td>
                             <td class="<?php echo $rowColor; ?>"><?php echo $SingleLoading['sr_no']; ?></td>
@@ -188,7 +190,7 @@ $total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_pa
                             <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['receiving_details'], true)['receiving_country']; ?></td>
                             <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['receiving_details'], true)['receiving_port_name']; ?></td>
                             <td class="<?php echo $rowColor; ?>"><?= $SingleLoading['bl_no']; ?></td>
-                            <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['goods_details'], true)['container_no']; ?></td>
+                            <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['goods_details'], true)['container_no'] ?? ''; ?></td>
                             <td class="<?php echo $rowColor; ?>"><?= isset(json_decode($SingleLoading['agent_details'], true)['ag_id']) ? json_decode($SingleLoading['agent_details'], true)['ag_id'] : ''; ?></td>
                             <td class="<?php echo $rowColor; ?>"><?= isset(json_decode($SingleLoading['agent_details'], true)['ag_id']) ? json_decode($SingleLoading['agent_details'], true)['ag_name'] : ''; ?></td>
                         </tr>

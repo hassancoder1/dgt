@@ -11,7 +11,7 @@ $print_url = 'print/print-custom-warehouse.php?warehouse_type=' . $_POST['wareho
 echo '<script>let printUrl = "' . $print_url . '";</script>';
 ?>
 <div class="modal-header d-flex justify-content-between bg-white align-items-center mb-2">
-    <h5 class="modal-title fw-bold" id="staticBackdropLabel">EDIT => <?= ucfirst($Ttype) . '# ' . $TID . ' (' . $_POST['sr_no'] . ') (' . ucwords(str_replace('-', ' ', $_POST['warehouse_type'])) . ')'; ?></h5>
+    <h5 class="modal-title fw-bold" id="staticBackdropLabel">EDIT => <?= ucfirst($Ttype) . '# ' . $Tdata['sr'] . ' (' . $_POST['sr_no'] . ') (' . ucwords(str_replace('-', ' ', $_POST['warehouse_type'])) . ')'; ?></h5>
     <div class="d-flex align-items-center gap-2">
         <?php if ($_POST['fetch_from'] !== 'vat_copies') { ?>
             <select name="print_type" id="print_type" class="form-select form-select-sm">

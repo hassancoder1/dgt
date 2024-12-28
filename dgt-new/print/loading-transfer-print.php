@@ -96,9 +96,13 @@ while ($SPid = mysqli_fetch_assoc($pIDQ)) {
     echo "<style>";
     include '../assets/bs/css/bootstrap.min.css';
     include '../assets/css/custom.css';
+    include '../assets/fonts/lexend.css';
     echo "</style>";
     ?>
     <style>
+        *{
+            font-family: 'Lexend', serif;
+        }
         body {
             font-size: 13px;
             background-color: #f8f9fa;
@@ -189,7 +193,7 @@ while ($SPid = mysqli_fetch_assoc($pIDQ)) {
                         <img src="../assets/images/logo.png" alt="logo" class="img-fluid">
                     </div>
                     <h6 class="fw-bold mt-2">DAMAAN GENERAL TRADING LLC</h6>
-                    <p class="text-muted">Booking Ref.: P#<?= $firstBl['p_id'] . " (" . $blOrders[$firstBl['bl_no']] . ")" ?> - B/L Number: #<?= $firstBl['bl_no']; ?></p>
+                    <p class="text-muted">Booking Ref.: <?= ucfirst($firstBl['type']).'#'.$firstBl['p_sr'] . " (" . $blOrders[$firstBl['bl_no']] . ")" ?> - B/L Number: #<?= $firstBl['bl_no']; ?></p>
                 </div>
 
                 <div class="border p-2 mb-2">

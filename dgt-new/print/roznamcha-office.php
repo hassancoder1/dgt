@@ -42,9 +42,14 @@ if (isset($_GET['viewID']) || isset($_GET['editID'])) {
     echo "<style>";
     include '../assets/bs/css/bootstrap.min.css';
     include '../assets/css/custom.css';
+    include '../assets/fonts/lexend.css';
     echo "</style>";
     ?>
     <style>
+        * {
+            font-family: 'Lexend', serif;
+        }
+
         @media print {
             .hide-on-print {
                 display: none;

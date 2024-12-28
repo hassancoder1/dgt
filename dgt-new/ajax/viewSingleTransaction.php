@@ -14,6 +14,7 @@ if ($id > 0) {
     }
     $_POST['print_type'] = $_POST['print_type'] ?? '';
     $print_url .= '?t_id=' . $id . '&print_type=' . $_POST['print_type'] . "&timestamp=" . ($_POST['timestamp'] ?? '');
+    $payments = json_decode($record['payments'], true);
     if (!empty($_fields)) { ?>
         <?php if (in_array($_POST['page'], ['purchases', 'sales'])) { ?>
             <div class="modal-header d-flex justify-content-between bg-white align-items-center">
@@ -81,7 +82,7 @@ if ($id > 0) {
                             <div class="col-md-12 border-bottom px-2 pb-2 mb-2">
                                 <div class="d-flex align-items-center justify-content-between">
                                     <div>
-                                        <b><?php echo strtoupper($_fields['p_s_name']) . ' #'; ?> </b><?php echo $_fields['sr_no']; ?>
+                                        <b><?php echo strtoupper($_fields['p_s_name']) . ' #'; ?> </b><?php echo $_fields['sr']; ?>
                                     </div>
                                     <div><b>User </b><?php echo $_fields['username']; ?></div>
                                     <!-- </div>
@@ -218,7 +219,6 @@ if ($id > 0) {
                                 <div class="fs-6 fw-bold">Payment Details</div>
                                 <div>
                                     <?php
-                                    $payments = $_fields['payment_details'];
                                     $total_amount = isset($_fields['items_sum']['sum_final_amount']) ? (float)$_fields['items_sum']['sum_final_amount'] : 0;
                                     $percentage = isset($payments->pct_value) ? (int)$payments->pct_value : 0;
                                     $remaining_percentage = 100 - $percentage;
@@ -424,8 +424,8 @@ if ($id > 0) {
 
                 </div>
                 <?php
-                if (in_array($record['locked'], [1, 2]) && ($_POST['page'] === "bill-transfer" || $_POST['page'] === "purchase-advance" || $_POST['page'] === "purchase-remaining")) {
-                    $ddd = '';
+                if (in_array($record['locked'], [1, 2]) && $_POST['page'] === "bill-transfer") {
+                    $ddd = ucfirst($_fields['p_s_name']) . ' ' . ' #' . $_fields['sr'] . ', Type: ' . ucfirst($_fields['type']) . ', Quantity: ' . $qty_no . ' ';
                     // $ddd = 'ENTRY:' . $i . ' GOODS:' . $goods . ' COUNTRY:' . $t_country . ' ALLOT:' . $allot . ' T.Qty:' . $qty_no . ' T.KGs:' . $total_kgs . ' RATE:' . $rate / $i . ' T.AMNT:' . $amount . $curr1 . ' EXCH.:' . $curr2;
                 ?>
                     <div class="card">
@@ -480,16 +480,17 @@ if ($id > 0) {
                                         </div>
                                     </div>
                                     <div class="col-2">
-                                        <input type="hidden" name="check_full_payment" value="<?= $payments->full_advance === 'full' ? 'true' : 'false'; ?>">
+                                        <input type="hidden" name="check_full_payment" value="<?= $payments['full_advance'] === 'full' ? 'true' : 'false'; ?>">
                                         <button name="ttrFirstSubmit" type="submit"
                                             class="btn btn-primary w-100 btn-sm"><i class="fa fa-upload"></i>Transfer
                                         </button>
                                     </div>
                                     <input type="hidden" name="p_id_hidden" value="<?php echo $record['id']; ?>">
+                                    <input type="hidden" name="p_sr" value="<?php echo $record['sr']; ?>">
                                     <input type="hidden" name="type" value="<?php echo $record['type']; ?>">
                                 </div>
                                 <?php if ($record['khaata_tr1'] != '') {
-                                    $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'transfered_from_id' => $record['id'], 'transfered_from' => $_POST['type'] . '_' . $record['type']));
+                                    $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'transfered_from_id' => $record['sr'], 'transfered_from' => $_POST['type'] . '_' . $record['type']));
                                     if (mysqli_num_rows($rozQ) > 0) { ?>
                                         <table class="table table-sm table-bordered mb-0">
                                             <thead>

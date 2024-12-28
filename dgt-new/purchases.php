@@ -2,7 +2,7 @@
 $page_title = 'Purchases';
 $pageURL = 'purchases';
 include("header.php");
-$remove = $goods_name = $start_print = $end_print = $type = $acc_no = $branch = $p_id = $payment_type = $sea_road = $country = $country_type = $date_type = $is_transferred = '';
+$remove = $goods_name = $start_print = $end_print = $type = $acc_no = $branch = $p_sr = $payment_type = $sea_road = $country = $country_type = $date_type = $is_transferred = '';
 $is_search = false;
 global $connect;
 $results_per_page = 25;
@@ -16,9 +16,9 @@ if ($_GET) {
     $is_search = true;
 
     if (isset($_GET['p_id']) && !empty($_GET['p_id'])) {
-        $p_id = mysqli_real_escape_string($connect, $_GET['p_id']);
-        $print_filters[] = 'p_id=' . $p_id;
-        $conditions[] = "id = '$p_id'";
+        $p_sr = mysqli_real_escape_string($connect, $_GET['p_id']);
+        $print_filters[] = 'p_id=' . $p_sr;
+        $conditions[] = "sr = '$p_sr'";
     }
     $date_type = isset($_GET['date_type']) ? $_GET['date_type'] : '';
     $print_filters[] = 'date_type=' . $date_type;
@@ -85,7 +85,7 @@ if ($_GET) {
 if (count($conditions) > 0) {
     $sql .= ' AND ' . implode(' AND ', $conditions);
 }
-$sql .= " ORDER BY id DESC LIMIT $start_from, $results_per_page";
+$sql .= " ORDER BY sr DESC LIMIT $start_from, $results_per_page";
 $purchases = mysqli_query($connect, $sql);
 $query_string = implode('&', $print_filters);
 $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
@@ -226,7 +226,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
         <div class="input-group input-group-sm">
             <div class="form-group">
                 <label for="p_id" class="form-label">P#</label>
-                <input type="number" name="p_id" value="<?php echo $p_id; ?>" id="p_id" class="form-control form-control-sm mx-1" style="max-width:80px;" placeholder="e.g. 33">
+                <input type="number" name="p_id" value="<?php echo $p_sr; ?>" id="p_id" class="form-control form-control-sm mx-1" style="max-width:80px;" placeholder="e.g. 33">
             </div>
             <div class="form-group">
                 <label for="date_type" class="form-label">Date Type</label>
@@ -460,7 +460,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     <tr class="text-nowrap">
                         <td class="sticky-column pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $id; ?>)"
                             data-bs-toggle="modal" data-bs-target="#KhaataDetails">
-                            <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $id;
+                            <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $purchase['sr'];
                             echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?></td>
                         <td class="sticky-column <?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['type']); ?></td>
                         <td class="sticky-column <?= $rowColor; ?>"><?= $_fields_single['items'][0]['allotment_name'] ?? ''; ?></td>

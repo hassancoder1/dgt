@@ -22,39 +22,41 @@ $rows_per_page = 20;
 $current_page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($current_page - 1) * $rows_per_page;
 
-// Base SQL query
-$sql = "SELECT * 
-        FROM transaction_items 
-        WHERE allotment_name != '' AND parent_id IN (SELECT id FROM transactions WHERE transfer_level >= 2)";
+// Base SQL query with JOIN to include `sr` from `transactions`
+$sql = "SELECT ti.*, t.sr 
+        FROM transaction_items ti
+        INNER JOIN transactions t ON ti.parent_id = t.id
+        WHERE t.transfer_level >= 2 AND ti.allotment_name != ''";
 
 // Apply filters dynamically
 if ($allot) {
-    $sql .= " AND allotment_name LIKE '%" . mysqli_real_escape_string($connect, $allot) . "%'";
+    $sql .= " AND ti.allotment_name LIKE '%" . mysqli_real_escape_string($connect, $allot) . "%'";
     $is_search = true;
 }
 if ($size) {
-    $sql .= " AND size = '" . mysqli_real_escape_string($connect, $size) . "'";
+    $sql .= " AND ti.size = '" . mysqli_real_escape_string($connect, $size) . "'";
     $is_search = true;
 }
 if ($brand) {
-    $sql .= " AND brand = '" . mysqli_real_escape_string($connect, $brand) . "'";
+    $sql .= " AND ti.brand = '" . mysqli_real_escape_string($connect, $brand) . "'";
     $is_search = true;
 }
 if ($origin) {
-    $sql .= " AND origin = '" . mysqli_real_escape_string($connect, $origin) . "'";
+    $sql .= " AND ti.origin = '" . mysqli_real_escape_string($connect, $origin) . "'";
     $is_search = true;
 }
 if ($goods_name) {
-    $sql .= " AND goods_id IN (SELECT id FROM goods WHERE name = '" . mysqli_real_escape_string($connect, $goods_name) . "')";
+    $sql .= " AND ti.goods_id IN (SELECT id FROM goods WHERE name = '" . mysqli_real_escape_string($connect, $goods_name) . "')";
     $is_search = true;
 }
 if ($date_from && $date_to) {
-    $sql .= " AND DATE(created_at) BETWEEN '" . mysqli_real_escape_string($connect, $date_from) . "' AND '" . mysqli_real_escape_string($connect, $date_to) . "'";
+    $sql .= " AND DATE(ti.created_at) BETWEEN '" . mysqli_real_escape_string($connect, $date_from) . "' AND '" . mysqli_real_escape_string($connect, $date_to) . "'";
     $is_search = true;
 }
 
 // Fetch data and count total rows
 $result = mysqli_query($connect, $sql);
+
 $total_rows = mysqli_num_rows($result);
 
 // Apply pagination
@@ -68,6 +70,7 @@ while ($entry = mysqli_fetch_assoc($entries)) {
     if (!isset($processed_entries[$allotment_name])) {
         $processed_entries[$allotment_name] = [
             'goods_id' => $entry['goods_id'],
+            'sr' => $entry['sr'],
             'size' => $entry['size'],
             'brand' => $entry['brand'],
             'origin' => $entry['origin'],
@@ -258,7 +261,7 @@ $paginated_entries = array_slice($processed_entries, 0, $rows_per_page);
                             ?>
                                 <tr class="text-nowrap">
                                     <td><?= htmlspecialchars($i); ?></td>
-                                    <td>P# <?= htmlspecialchars($entry['p_id']); ?></td>
+                                    <td>P# <?= htmlspecialchars($entry['sr']); ?></td>
                                     <td class="pointer" onclick="window.location.href = '?view=1&allot=<?= $allotment_name; ?>'"><b><?= htmlspecialchars($allotment_name); ?></b></td>
                                     <td>
                                         <?= goodsName(htmlspecialchars($entry['goods_id'])) . ' / ' .

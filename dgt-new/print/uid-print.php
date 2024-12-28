@@ -71,6 +71,7 @@ while ($SPid = mysqli_fetch_assoc($pIDQ)) {
     echo "<style>";
     include '../assets/bs/css/bootstrap.min.css';
     include '../assets/css/custom.css';
+    include '../assets/css/custom.css';
     echo "</style>";
     ?>
     <style>
@@ -133,7 +134,7 @@ while ($SPid = mysqli_fetch_assoc($pIDQ)) {
                     </div>
                     <div>
                         <h6 class="fw-bold mt-2">DAMAAN GENERAL TRADING LLC</h6>
-                        <p class="text-muted">Booking Ref.: <?= ucfirst($firstUID['type']); ?>#<?= $firstUID['p_id'] . " (" . $UIDOrders[$firstUID['uid']] . ")" ?> - UID: #<?= $firstUID['uid']; ?></p>
+                        <p class="text-muted">Booking Ref.: <?= ucfirst($firstUID['type']); ?>#<?= $firstUID['p_sr'] . " (" . $UIDOrders[$firstUID['uid']] . ")" ?> - UID: #<?= $firstUID['uid']; ?></p>
                     </div>
                 </div>
             </div>

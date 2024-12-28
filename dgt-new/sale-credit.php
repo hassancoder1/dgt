@@ -224,35 +224,35 @@ $mypageURL = $pageURL;
                                 $KGs = empty($_fields_single['items_sum']) ? '' : $_fields_single['items_sum']['sum_total_kgs'];
 
                                 $sea_road = '';
-                    $sea_road_array = json_decode(getSeaRoadArray($id));
-                    $_fields_sr = ['l_country' => '', 'l_date' => '', 'r_country' => '', 'r_date' => ''];
-                    if (!empty($sea_road_array)) {
-                        $sea_road = $sea_road_array->sea_road ?? '';
-                        $_fields_sr = [];
-                        if ($sea_road === 'sea') {
-                            $_fields_sr = [
-                                'l_country' => $sea_road_array->l_country ?? '',
-                                'l_date'    => $sea_road_array->l_date ?? '',
-                                'r_country' => $sea_road_array->r_country ?? '',
-                                'r_date'    => $sea_road_array->r_date ?? '',
-                                'truck_no' => $sea_road_array->truck_no ?? '',
-                                'truck_name' => $sea_road_array->truck_name ?? '',
-                                'loading_company_name' => $sea_road_array->loading_company_name ?? '',
-                                'loading_date' => $sea_road_array->loading_date ?? '',
-                                'transfer_name' => $sea_road_array->transfer_name ?? ''
-                            ];
-                        } elseif ($sea_road === 'road') {
-                            $_fields_sr = [
-                                'l_country' => $sea_road_array->l_country_road ?? '',
-                                'l_date'    => $sea_road_array->l_date_road ?? '',
-                                'r_country' => $sea_road_array->r_country_road ?? '',
-                                'r_date'    => $sea_road_array->r_date_road ?? '',
-                                'old_company_name' => $sea_road_array->old_company_name ?? '',
-                                'transfer_company_name' => $sea_road_array->transfer_company_name ?? '',
-                                'warehouse_date' => $sea_road_array->warehouse_date ?? '',
-                            ];
-                        }
-                    }
+                                $sea_road_array = json_decode(getSeaRoadArray($id));
+                                $_fields_sr = ['l_country' => '', 'l_date' => '', 'r_country' => '', 'r_date' => ''];
+                                if (!empty($sea_road_array)) {
+                                    $sea_road = $sea_road_array->sea_road ?? '';
+                                    $_fields_sr = [];
+                                    if ($sea_road === 'sea') {
+                                        $_fields_sr = [
+                                            'l_country' => $sea_road_array->l_country ?? '',
+                                            'l_date'    => $sea_road_array->l_date ?? '',
+                                            'r_country' => $sea_road_array->r_country ?? '',
+                                            'r_date'    => $sea_road_array->r_date ?? '',
+                                            'truck_no' => $sea_road_array->truck_no ?? '',
+                                            'truck_name' => $sea_road_array->truck_name ?? '',
+                                            'loading_company_name' => $sea_road_array->loading_company_name ?? '',
+                                            'loading_date' => $sea_road_array->loading_date ?? '',
+                                            'transfer_name' => $sea_road_array->transfer_name ?? ''
+                                        ];
+                                    } elseif ($sea_road === 'road') {
+                                        $_fields_sr = [
+                                            'l_country' => $sea_road_array->l_country_road ?? '',
+                                            'l_date'    => $sea_road_array->l_date_road ?? '',
+                                            'r_country' => $sea_road_array->r_country_road ?? '',
+                                            'r_date'    => $sea_road_array->r_date_road ?? '',
+                                            'old_company_name' => $sea_road_array->old_company_name ?? '',
+                                            'transfer_company_name' => $sea_road_array->transfer_company_name ?? '',
+                                            'warehouse_date' => $sea_road_array->warehouse_date ?? '',
+                                        ];
+                                    }
+                                }
 
                                 // $rowColor = $locked == 0 ? ($is_doc == 0 ? ' text-danger ' : ' text-warning ') : '';
                                 $_fields = transactionSingle($id);
@@ -275,8 +275,8 @@ $mypageURL = $pageURL;
                                 <tr class="text-nowrap">
                                     <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $id; ?>)"
                                         data-bs-toggle="modal" data-bs-target="#KhaataDetails">
-                                        <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $id; ?>
-                                        <?php echo in_array($locked, [1,2]) ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
+                                        <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $purchase['sr']; ?>
+                                        <?php echo in_array($locked, [1, 2]) ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
                                     </td>
                                     <td class="<?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['type']); ?></td>
                                     <td class="<?php echo $rowColor; ?>"><?php echo branchName($_fields_single['branch_id']); ?></td>
@@ -372,6 +372,7 @@ if (isset($_POST['tCrdtSubmit'])) {
     $msg = 'DB Error';
     $msgType = 'danger';
     $p_id = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
+    $s_sr = mysqli_real_escape_string($connect, $_POST['s_sr']);
     $p_type = mysqli_real_escape_string($connect, $_POST['p_type_hidden']);
     $url = 'sale-credit?p_id=' . $p_id . '&view=1';
     $jmaa_khaata_no = mysqli_real_escape_string($connect, $_POST['dr_khaata_no']);
@@ -428,17 +429,17 @@ if (isset($_POST['tCrdtSubmit'])) {
         $dataArray = array(
             'r_type' => $r_type,
             'transfered_from' => $transfered_from,
-            'transfered_from_id' => $purchase_pays_id,
+            'transfered_from_id' => $s_sr,
             'branch_id' => $p_data['branch_id'],
             'user_id' => $p_data['created_by'],
             'username' => $userName,
             'r_date' => $transfer_date,
-            'roznamcha_no' => $purchase_pays_id,
+            'roznamcha_no' => $s_sr,
             'r_name' => $type,
-            'r_no' => $p_id,
+            'r_no' => $s_sr,
             'details' => $details
         );
-        $str = ucfirst($p_data['type']) . " Sale#" . $p_id . " ";
+        $str = ucfirst($p_data['type']) . " Sale#" . $s_sr . " ";
         $transferred = false;
         if (isset($_POST['r_id'])) {
             $r_ids = $_POST['r_id'];
@@ -496,7 +497,7 @@ if (isset($_POST['tCrdtSubmit'])) {
                     $dataArray['dr_cr'] = 'cr';
                     $str .= "<span class='badge bg-dark mx-2'>Cr." . $bnaam_khaata_no . "</span>";
                 }
-                $dataArray['transfered_from_id'] = $purchase_pays_id;
+                $dataArray['transfered_from_id'] = $s_sr;
                 $transferred = insert('roznamchaas', $dataArray);
             }
         }
@@ -556,7 +557,7 @@ if (isset($_POST['t_id_hidden_attach'])) {
     }
     messageNew($type, $url_, $msg);
 }
- if (isset($_GET['p_id']) && is_numeric($_GET['p_id']) && isset($_GET['view']) && $_GET['view'] == 1) {
+if (isset($_GET['p_id']) && is_numeric($_GET['p_id']) && isset($_GET['view']) && $_GET['view'] == 1) {
     $p_id = mysqli_real_escape_string($connect, $_GET['p_id']);
     if (isset($_GET['purchase_pays_id']) && is_numeric($_GET['purchase_pays_id'])) {
         $purchase_pays_id = mysqli_real_escape_string($connect, $_GET['purchase_pays_id']);
@@ -572,7 +573,7 @@ if (isset($_POST['transferCreditToFinal'])) {
     $type = 'danger';
     $msg = 'DB Failed';
     $p_id_hidden = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
-    $data = array('transfer_level' => 6 , '`from`' => 'sale-credit');
+    $data = array('transfer_level' => 6, '`from`' => 'sale-credit');
     // $data = array('transfer_level' => 4, 't2_date' => date('Y-m-d'));
     $locked = update('transactions', $data, array('id' => $p_id_hidden));
     if ($locked) {

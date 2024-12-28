@@ -64,8 +64,8 @@ if ($_GET) {
     }
 }
 
-$where_clause = !empty($conditions) ? ' AND ' . implode(' AND ', $conditions) : '';
-$sql = "SELECT * FROM vat_copies WHERE unique_code LIKE '_l%' $where_clause";
+$where_clause = !empty($conditions) ? ' WHERE ' . implode(' AND ', $conditions) : '';
+$sql = "SELECT * FROM vat_copies $where_clause";
 $data = mysqli_query($connect, $sql);
 $entries = [];
 while ($one = mysqli_fetch_assoc($data)) {
@@ -80,7 +80,7 @@ $redEntries = $yellowEntries = $darkEntries = [];
 $totalAmount = $totalTax = $totalWithTax = 0; // Totals for purchase entries
 $soldAmount = $soldTax = $soldWithTax = 0; // Totals for sold entries
 $remainingAmount = $remainingTax = $remainingWithTax = 0; // Remaining totals
-
+$sortedEntries = [];
 foreach ($entries as $entry) {
     $ldata = json_decode($entry['ldata'], true);
     $tdata = json_decode($entry['tdata'], true);
@@ -91,33 +91,35 @@ foreach ($entries as $entry) {
 
     $appendDash = isset($tdata['p_s']) && $tdata['p_s'] === 's'; // 's' indicates a sale entry
 
-    // Categorize entries into red, yellow, or dark
-    if ($SoldQty === 0) {
-        // No sales, entirely unsold
-        $entry['row_color'] = 'text-danger'; // Red for unsold
-        $redEntries[] = $entry;
-    } elseif ($RemQty > 0) {
-        // Partially sold
-        $entry['row_color'] = 'text-warning'; // Yellow for partially sold
-        $yellowEntries[] = $entry;
-    } else {
-        // Fully sold
-        $entry['row_color'] = 'text-dark'; // Dark for fully sold
-        $darkEntries[] = $entry;
-    }
+    // // Categorize entries into red, yellow, or dark
+    // if ($SoldQty === 0) {
+    //     // No sales, entirely unsold
+    //     $entry['row_color'] = 'text-danger'; // Red for unsold
+    //     $redEntries[] = $entry;
+    // } elseif ($RemQty > 0) {
+    //     // Partially sold
+    //     $entry['row_color'] = 'text-warning'; // Yellow for partially sold
+    //     $yellowEntries[] = $entry;
+    // } else {
+    //     // Fully sold
+    $entry['row_color'] = 'text-danger'; // Dark for fully sold
+    //     $darkEntries[] = $entry;
+    // }
 
     // Aggregate totals based on purchase or sale
     if (!$appendDash) {
+        $entry['row_color'] = 'text-success'; // Dark for fully sold
         // Purchase entry
         $totalAmount += $ldata['good']['amount'];
         $totalTax += (float)$ldata['good']['tax_amount'];
-        $totalWithTax += $ldata['good']['total_with_tax'];
+        $totalWithTax += $ldata['good']['total_with_tax'] === 0 ? $ldata['good']['amount'] : $ldata['good']['total_with_tax'];
     } else {
         // Sale entry
         $soldAmount += $ldata['good']['amount'];
         $soldTax += (float)$ldata['good']['tax_amount'];
-        $soldWithTax += $ldata['good']['total_with_tax'];
+        $soldWithTax += $ldata['good']['total_with_tax'] === 0 ? $ldata['good']['amount'] : $ldata['good']['total_with_tax'];
     }
+    $sortedEntries[] = $entry;
 }
 
 // Calculate remaining values
@@ -126,7 +128,7 @@ $remainingTax = $totalTax - $soldTax;
 $remainingWithTax = $totalWithTax - $soldWithTax;
 
 // Merge categorized entries for further use or display
-$sortedEntries = array_merge($redEntries, $yellowEntries, $darkEntries);
+// $sortedEntries = array_merge($redEntries, $yellowEntries, $darkEntries);
 
 ?>
 
@@ -340,13 +342,13 @@ $sortedEntries = array_merge($redEntries, $yellowEntries, $darkEntries);
                                 $grossWeight = $ldata['good']['gross_weight'] ?? 0;
                                 $amount = $ldata['good']['amount'] ?? 0;
                                 $tax = $ldata['good']['tax_amount'] ?? 0;
-                                $total = $ldata['good']['total_with_tax'] ?? 0;
+                                $total = $ldata['good']['total_with_tax'] === 0 ? $ldata['good']['amount'] : $ldata['good']['total_with_tax'];
                                 $appendDash = isset($tdata['p_s']) && $tdata['p_s'] === 's';
                                 // Fetch company name and weight for $tdata['cr_acc']
-                                $crAcc = $tdata['cr_acc'] ?? '';
+                                $CompanyWeightAcc = $tdata['p_s'] === 'p' ? $tdata['cr_acc'] : $tdata['dr_acc'];
                                 $companyName = $weight = '';
-                                if (isset($khaataMap[$crAcc])) {
-                                    $khaataId = $khaataMap[$crAcc];
+                                if (isset($khaataMap[$CompanyWeightAcc])) {
+                                    $khaataId = $khaataMap[$CompanyWeightAcc];
                                     if (isset($khaataDetailsMap[$khaataId])) {
                                         $details = $khaataDetailsMap[$khaataId];
                                         $companyName = $details['company_name'] ?? 'N/A';
@@ -359,7 +361,7 @@ $sortedEntries = array_merge($redEntries, $yellowEntries, $darkEntries);
                             ?>
                                 <tr class="text-nowrap">
                                     <td class="<?= $entry['row_color']; ?> pointer" onclick="window.location.href='<?= $pageURL; ?>?view=1&unique_code=<?= $entry['unique_code']; ?>&print_type=contract&CCWpage=all&sr_no=<?= $ldata['sr_no']; ?>'">
-                                        <b><?= ucfirst($ldata['type']); ?>#</b> <?= htmlspecialchars($ldata['p_id']); ?> (<?= htmlspecialchars($ldata['sr_no']); ?>)
+                                        <b><?= ucfirst($ldata['type']); ?>#</b> <?= htmlspecialchars($ldata['p_sr']); ?> (<?= htmlspecialchars($ldata['sr_no']); ?>)
                                     </td>
                                     <td class="fw-bold"><?= my_date(htmlspecialchars($tdata['_date'] ?? 'N/A')); ?></td>
                                     <td class="fw-bold"><?= !empty($companyName) ? $companyName : 'N/A'; ?></td>
@@ -369,13 +371,13 @@ $sortedEntries = array_merge($redEntries, $yellowEntries, $darkEntries);
                                     <td class="<?= $entry['row_color']; ?>"><?= htmlspecialchars($ldata['good']['size'] ?? 'N/A'); ?></td>
                                     <td class="<?= $entry['row_color']; ?>"><?= htmlspecialchars($ldata['good']['brand'] ?? 'N/A'); ?></td>
                                     <td class="<?= $entry['row_color']; ?>"><?= htmlspecialchars($ldata['good']['origin'] ?? 'N/A'); ?></td>
-                                    <td class="<?= $entry['row_color']; ?>"><?= ($appendDash ? ' -' : '') . htmlspecialchars($quantity); ?></td>
-                                    <td class="<?= $entry['row_color']; ?>"><?= ($appendDash ? ' -' : '') . htmlspecialchars($netWeight); ?></td>
-                                    <td class="<?= $entry['row_color']; ?>"><?= ($appendDash ? ' -' : '') . htmlspecialchars($grossWeight); ?></td>
+                                    <td class="<?= $entry['row_color']; ?>"><?= ($appendDash ? '-' : '+') . htmlspecialchars($quantity); ?></td>
+                                    <td class="<?= $entry['row_color']; ?>"><?= ($appendDash ? '-' : '+') . htmlspecialchars($netWeight); ?></td>
+                                    <td class="<?= $entry['row_color']; ?>"><?= ($appendDash ? '-' : '+') . htmlspecialchars($grossWeight); ?></td>
                                     <td class="<?= $entry['row_color']; ?>"><?= htmlspecialchars($ldata['good']['goods_json']['rate1'] ?? 'N/A') . ' ' . htmlspecialchars($ldata['good']['goods_json']['price'] ?? 'N/A'); ?></td>
-                                    <td class="<?= $entry['row_color']; ?>"><?= ($appendDash ? ' -' : '') . htmlspecialchars($amount); ?></td>
-                                    <td class="<?= $entry['row_color']; ?>"><?= ($appendDash ? ' -' : '') . htmlspecialchars($tax); ?></td>
-                                    <td class="<?= $entry['row_color']; ?>"><?= ($appendDash ? ' -' : '') . htmlspecialchars($total); ?></td>
+                                    <td class="<?= $entry['row_color']; ?>"><?= ($appendDash ? '-' : '+') . htmlspecialchars($amount); ?></td>
+                                    <td class="<?= $entry['row_color']; ?>"><?= ($appendDash ? '-' : '+') . htmlspecialchars($tax); ?></td>
+                                    <td class="<?= $entry['row_color']; ?>"><?= ($appendDash ? '-' : '+') . htmlspecialchars($total); ?></td>
                                 </tr>
                             <?php
                             }

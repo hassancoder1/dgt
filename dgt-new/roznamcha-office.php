@@ -330,7 +330,7 @@ function generateUniqueBillNo($existingBillNumbers)
 
                 <?php
                 $roznamcha = json_decode($record['roznamcha_transfer'], true) ?? [];
-                $roznamcha = array_merge($roznamcha, ['amount' => $record['final_amount'], 'transfer_date' => $roznamcha['transfer_date'] ?? date('Y-m-d'), 'final_amount' => '', 'rate' => '']);
+                $roznamcha = array_merge($roznamcha, ['amount' => $record['final_amount'], 'transfer_date' => $roznamcha['transfer_date'] ?? date('Y-m-d'), 'final_amount' => '', 'rate' => '', 'details' => 'Final Amount: ' . number_format($record['final_amount'])]);
                 ?>
                 <form method="post" class="m-4">
                     <div class="row gx-3 gy-4 align-items-center">

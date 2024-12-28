@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -14,9 +13,14 @@
     echo "<style>";
     include '../assets/bs/css/bootstrap.min.css';
     include '../assets/css/custom.css';
+    include '../assets/fonts/lexend.css';
     echo "</style>";
     ?>
     <style>
+        * {
+            font-family: 'Lexend', serif;
+        }
+
         .bt2 {
             border-top: 1px solid #444;
         }

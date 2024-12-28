@@ -87,7 +87,12 @@ $total_pages = ceil($total_rows / $rows_per_page);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>General Warehouse Print</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="../assets/fonts/lexend.css" rel="stylesheet">
     <style>
+        * {
+            font-family: 'Lexend', serif;
+        }
+
         body {
             font-size: 12px;
             color: black;
@@ -211,7 +216,7 @@ $total_pages = ceil($total_rows / $rows_per_page);
                                 $trans = $ldata['transfer']['sold_to'] ?? $ldata['transfer']['sold_from'] ?? [];
                                 $TIDS = [];
                                 foreach ($trans as $one) {
-                                    $TIDS[] = '#' . decode_unique_code(explode('~', $one)[0], 'TID');
+                                    $TIDS[] = 'S#' . getTransactionSr(decode_unique_code(explode('~', $one)[0], 'TID'));
                                 }
                                 $TIDS = array_unique($TIDS);
                                 $trans = implode(', ', $TIDS);
@@ -220,7 +225,7 @@ $total_pages = ceil($total_rows / $rows_per_page);
                                     <td class="<?= $rowColor; ?>"><?= htmlspecialchars($i); ?></td>
                                     <td class="<?= $rowColor; ?> pointer"
                                         onclick="window.location.href = '?view=1&unique_code=<?= $unique_code; ?>&print_type=contract&CCWpage=<?= $_GET['CCWpage']; ?>';">
-                                        <b><?= ucfirst($ldata['type']); ?>#</b> <?= htmlspecialchars($ldata['p_id']); ?> (<?= htmlspecialchars($ldata['sr_no']); ?>)
+                                        <b><?= ucfirst($ldata['type']); ?>#</b> <?= htmlspecialchars($ldata['p_sr']); ?> (<?= htmlspecialchars($ldata['sr_no']); ?>)
                                     </td>
                                     <?php if ($_GET['CCWpage'] === 'all') { ?>
                                         <td class="<?= $rowColor; ?>"><?= htmlspecialchars($ldata['transfer']['warehouse_transfer']); ?></td>

@@ -2,7 +2,7 @@
 $page_title = 'Cargo Lane';
 $pageURL = 'cargo-lane';
 include("header.php");
-$remove = $start_print = $end_print = $type = $p_id = $l_port = $r_port = $blSearch = $sea_road = $date_type = '';
+$remove = $start_print = $end_print = $type = $p_sr = $l_port = $r_port = $blSearch = $sea_road = $date_type = '';
 $is_search = false;
 global $connect;
 $results_per_page = 50;
@@ -15,9 +15,9 @@ if ($_GET) {
     $remove = removeFilter('cargo-lane');
     $is_search = true;
     if (isset($_GET['p_id']) && !empty($_GET['p_id'])) {
-        $p_id = mysqli_real_escape_string($connect, $_GET['p_id']);
-        $print_filters[] = 'p_id=' . $p_id;
-        $conditions[] = "p_id = '$p_id'";
+        $p_sr = mysqli_real_escape_string($connect, $_GET['p_id']);
+        $print_filters[] = 'p_id=' . $p_sr;
+        $conditions[] = "p_sr = '$p_sr'";
     }
     $date_type = isset($_GET['date_type']) ? $_GET['date_type'] : '';
     $print_filters[] = 'date_type=' . $date_type;
@@ -44,7 +44,7 @@ if ($_GET) {
         $print_filters[] = 'blSearch=' . $blSearch;
         $conditions[] = "bl_no='$blSearch'";
     }
-    
+
     if (!empty($_GET['p_type'])) {
         $type = mysqli_real_escape_string($connect, $_GET['p_type']);
         $print_filters[] = 'p_type=' . $type;
@@ -168,7 +168,7 @@ $total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_pa
         <div class="input-group input-group-sm">
             <div class="form-group">
                 <label for="p_id" class="form-label">P/S#</label>
-                <input type="number" name="p_id" value="<?php echo $p_id; ?>" id="p_id" class="form-control form-control-sm mx-1" style="max-width:80px;" placeholder="e.g. 33">
+                <input type="number" name="p_id" value="<?php echo $p_sr; ?>" id="p_id" class="form-control form-control-sm mx-1" style="max-width:80px;" placeholder="e.g. 33">
             </div>
             <div class="form-group">
                 <label for="date_type" class="form-label">Date Type</label>
@@ -277,7 +277,7 @@ $total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_pa
                     <tr class="text-nowrap">
                         <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $SingleLoading['id']; ?>)"
                             data-bs-toggle="modal" data-bs-target="#KhaataDetails">
-                            <?php echo '<b>'.ucfirst($SingleLoading['type']).'#', $SingleLoading['p_id']; ?>
+                            <?php echo '<b>' . ucfirst($SingleLoading['type']) . '#', $SingleLoading['p_sr']; ?>
                             <?php echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
                         </td>
                         <td class="<?php echo $rowColor; ?>"><?php echo $SingleLoading['sr_no']; ?></td>
@@ -288,7 +288,7 @@ $total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_pa
                         <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['receiving_details'], true)['receiving_country']; ?></td>
                         <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['receiving_details'], true)['receiving_port_name']; ?></td>
                         <td class="<?php echo $rowColor; ?>"><?= $SingleLoading['bl_no']; ?></td>
-                        <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['goods_details'], true)['container_no']; ?></td>
+                        <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['goods_details'], true)['container_no'] ?? ''; ?></td>
                     </tr>
                 <?php
                     $row_count++;
@@ -336,7 +336,7 @@ $total_pages = ceil(mysqli_fetch_assoc($count_result)['total'] / $results_per_pa
                     </div>
 
                     <!-- Close Button -->
-                    <a href="<?php echo $mypageURL; ?>" class="btn-close ms-3" aria-label="Close"></a>
+                    <a href="<?php echo $pageURL; ?>" class="btn-close ms-3" aria-label="Close"></a>
                 </div>
             </div>
 

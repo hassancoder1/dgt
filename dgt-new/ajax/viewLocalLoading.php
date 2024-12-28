@@ -412,6 +412,7 @@ if ($id > 0) {
                                 <input type="hidden" name="type" value="<?= $record['p_s']; ?>">
 
                                 <input type="hidden" name="p_id" id="p_id" value="<?= $id; ?>">
+                                <input type="hidden" name="p_sr" id="p_sr" value="<?= $_fields['sr']; ?>">
                                 <input type="hidden" name="p_branch" id="p_branch" value="<?= branchName($_fields['branch_id']); ?>">
                                 <input type="hidden" name="p_date" id="p_date" value="<?= $_fields['_date']; ?>">
                                 <input type="hidden" name="p_cr_acc" id="p_cr_acc" value="<?= $_fields['cr_acc']; ?>">
@@ -713,7 +714,7 @@ if ($id > 0) {
                 <div class="align-items-center justify-content-between flex-wrap pt-2">
                     <div>
                         <strong><?php echo strtoupper($_fields['p_s_name']) . ' #'; ?></strong>
-                        <?php echo $_fields['sr_no']; ?>
+                        <?php echo $_fields['sr']; ?>
                     </div>
                     <div>
                         <strong>User:</strong> <?php echo $_fields['username']; ?>

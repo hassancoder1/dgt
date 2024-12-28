@@ -1,43 +1,14 @@
 <?php
+require_once 'connection.php';
 require_once 'functions.php';
-$myGood = json_decode('{
-    "goods_id": "9",
-    "quantity_no": "200",
-    "rate": "5",
-    "empty_kgs": "0.1",
-    "quantity_name": "cotton",
-    "size": "30/32",
-    "brand": "DGT",
-    "origin": "CHILI",
-    "net_weight": "980",
-    "gross_weight": "1000",
-    "container_no": "sdcxdc",
-    "container_name": "345efsdf",
-    "goods_json": {
-        "id": "86",
-        "parent_id": "64",
-        "p_s": "p",
-        "sr": "2",
-        "goods_id": "9",
-        "allotment_name": "jkhsdjahd",
-        "size": "30/32",
-        "brand": "DGT",
-        "origin": "CHILI",
-        "qty_name": "cotton",
-        "qty_no": 54,
-        "qty_kgs": "5",
-        "empty_kgs": "0.1",
-        "rate1": "5",
-        "rate2": "6",
-        "opr": "*",
-        "tax_percent": "10",
-        "total_kgs": "1000",
-        "total_qty_kgs": "20",
-        "net_kgs": "980",
-        "amount": "4900",
-        "total_with_tax": "5390",
-        "created_at": "2024-10-10 16:15:31"
-    }
-}', true);
 
-echo json_encode(calcNewValues(20, $myGood,'rems'));
+$mydata = '{"goods_id":"12","quantity_no":3434,"rate":"5","empty_kgs":"0.3","quantity_name":"bags","size":"0","brand":"DG","origin":"AFGHANI","net_weight":16139.8,"gross_weight":17170,"container_no":"ssd","container_name":"HASnk","goods_json":{"id":"123","parent_id":"1","p_s":"p","sr":"1","quality_report":"This is best quality","goods_id":"12","allotment_name":"5container ","size":"0","brand":"DG","origin":"AFGHANI","qty_name":"bags","qty_no":3434,"qty_kgs":"5","total_kgs":17170,"empty_kgs":"0.3","total_qty_kgs":1030.2,"net_kgs":16139.8,"divide":"TON","weight":"0.2","total":80699,"price":"TON","currency1":"USD","rate1":"2","amount":161398,"currency2":"AED","rate2":"10","opr":"*","tax_percent":"","tax_amount":0,"total_with_tax":0,"final_amount":1613980,"created_at":"2024-12-27 17: 23: 54"},"amount":161398,"tax_amount":0,"total_with_tax":0,"final_amount":1613980}';
+
+// Decode JSON without escaping it
+$myGood = json_decode($mydata, true);
+
+if ($myGood === null) {
+    echo "JSON decoding failed: " . json_last_error_msg();
+} else {
+    print_r($myGood);
+}

@@ -2,22 +2,22 @@
 $page_title = 'G. Loading';
 $pageURL = 'general-loading-main';
 require("../connection.php");
-$remove = $goods_name = $start_print = $end_print = $type = $acc_no = $p_id = $sea_road = $is_transferred = '';
+$remove = $goods_name = $start_print = $end_print = $type = $acc_no = $p_sr = $sea_road = $is_transferred = '';
 $is_search = false;
 global $connect;
 $results_per_page = 50;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $start_from = ($page - 1) * $results_per_page;
-$sql = "SELECT * FROM `transactions` WHERE type='booking'";
+$sql = "SELECT * FROM `transactions` WHERE type IN ('booking','commission')";
 $conditions = [];
 $print_filters = [];
 if ($_GET) {
     $remove = removeFilter('general-loading-main');
     $is_search = true;
     if (isset($_GET['p_id']) && !empty($_GET['p_id'])) {
-        $p_id = mysqli_real_escape_string($connect, $_GET['p_id']);
-        $print_filters[] = 'p_id=' . $p_id;
-        $conditions[] = "id = '$p_id'";
+        $p_sr = mysqli_real_escape_string($connect, $_GET['p_id']);
+        $print_filters[] = 'p_id=' . $p_sr;
+        $conditions[] = "sr = '$p_sr'";
     }
     if (isset($_GET['start']) && !empty($_GET['start'])) {
         $start_print = mysqli_real_escape_string($connect, $_GET['start']);
@@ -58,10 +58,8 @@ if ($_GET) {
 }
 if (count($conditions) > 0) {
     $sql .= ' AND ' . implode(' AND ', $conditions);
-} else {
-    $sql .= " AND locked = '1' AND transfer_level >= '2'";
 }
-$sql .= " ORDER BY id DESC LIMIT $start_from, $results_per_page";
+$sql .= " AND locked IN ('1', '2') AND (CASE WHEN type='commission' THEN transfer_level >= '1' ELSE transfer_level >= '2' END) ORDER BY id DESC LIMIT $start_from, $results_per_page";
 $purchases = mysqli_query($connect, $sql);
 $query_string = implode('&', $print_filters);
 $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
@@ -82,9 +80,14 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
     echo "<style>";
     include '../assets/bs/css/bootstrap.min.css';
     include '../assets/css/custom.css';
+    include '../assets/fonts/lexend.css';
     echo "</style>";
     ?>
     <style>
+        * {
+            font-family: 'Lexend', serif;
+        }
+
         @media print {
             .hide-on-print {
                 display: none;
@@ -101,7 +104,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                 <span class="text-muted" style="font-size: 12px; display: block;">
                     <?php
                     $applied_filters = [];
-                    if ($p_id) $applied_filters[] = "P# $p_id";
+                    if ($p_sr) $applied_filters[] = "# $p_sr";
                     if ($start_print || $end_print) $applied_filters[] = "From $start_print to $end_print";
                     if ($type) $applied_filters[] = "Purchase Type: $type";
                     if ($sea_road) $applied_filters[] = "Sea/Road: $sea_road";
@@ -152,6 +155,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     $generalLoadingData = [];
                     while ($loading = mysqli_fetch_assoc($generalLoadingResult)) {
                         $p_id = $loading['p_id'];
+                        $p_sr = $loading['p_sr'];
                         if (!isset($generalLoadingData[$p_id])) {
                             $generalLoadingData[$p_id] = [];
                         }
@@ -165,6 +169,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
 
                     while ($purchase = mysqli_fetch_assoc($purchases)) {
                         $id = $purchase['id'];
+                        $p_sr = $purchase['sr'];
                         $_fields_single = transactionSingle($id);
                         $is_doc = $purchase['is_doc'];
                         $locked = $purchase['locked'];
@@ -218,7 +223,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     ?>
                         <tr class="text-nowrap">
                             <td class="pointer <?php echo $rowColor; ?>">
-                                <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $id; ?>
+                                <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $p_sr; ?>
                                 <?php echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
                             </td>
                             <td class="<?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['type']); ?></td>

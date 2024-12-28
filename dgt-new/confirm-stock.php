@@ -55,11 +55,11 @@ if ($_GET) {
 $where_clause = !empty($conditions) ? ' AND ' . implode(' AND ', $conditions) : '';
 
 $sql = "
-    SELECT id, sr_no, p_id, type, goods_details, shipping_details, created_at, bl_no, loading_details, receiving_details, 'general' AS source 
+    SELECT id, sr_no, p_id, p_sr, type, goods_details, shipping_details, created_at, bl_no, loading_details, receiving_details, 'general' AS source 
     FROM general_loading 
     WHERE agent_details IS NOT NULL {$where_clause}
     UNION
-    SELECT id, sr_no, p_id, type, goods_details, transfer_details AS shipping_details, created_at, uid AS bl_no, p_date AS dummy1, p_branch AS dummy2, 'local' AS source 
+    SELECT id, sr_no, p_id, p_sr, type, goods_details, transfer_details AS shipping_details, created_at, uid AS bl_no, p_date AS dummy1, p_branch AS dummy2, 'local' AS source 
     FROM local_loading 
     WHERE goods_details IS NOT NULL {$where_clause}
 ";
@@ -199,7 +199,7 @@ $total_pages = ceil($total_rows / $rows_per_page);
                                     <tr class="text-nowrap">
                                         <td><?= htmlspecialchars($i); ?></td>
                                         <td class="pointer" onclick="viewPurchase(<?php echo $entry['p_id']; ?>)" data-bs-toggle="modal" data-bs-target="#KhaataDetails">
-                                            <b><?= ucfirst($entry['type']); ?>#</b> <?= htmlspecialchars($entry['p_id']); ?> (<?= $entry['sr_no']; ?>)
+                                            <b><?= ucfirst($entry['type']); ?>#</b> <?= htmlspecialchars($entry['p_sr']); ?> (<?= $entry['sr_no']; ?>)
                                         </td>
                                         <td><?= htmlspecialchars($entry['source'] === 'general' ? 'B/L: ' . $entry['bl_no'] : 'UID: ' . $entry['bl_no']); ?></td>
                                         <td><?= goodsName(htmlspecialchars($goodsDetails['goods_id'])) . ' / ' . htmlspecialchars($goodsDetails['size']) . ' / ' . htmlspecialchars($goodsDetails['brand']); ?></td>

@@ -2,7 +2,7 @@
 $page_title = 'Loading Transfer';
 $pageURL = 'loading-transfer';
 include("header.php");
-$remove = $start_print = $end_print = $type = $acc_no = $p_id = $blSearch = $sea_road = $transferred = $date_type = '';
+$remove = $start_print = $end_print = $type = $acc_no = $p_sr = $blSearch = $sea_road = $transferred = $date_type = '';
 $is_search = false;
 global $connect;
 $results_per_page = 25;
@@ -15,9 +15,9 @@ if ($_GET) {
     $remove = removeFilter('loading-transfer');
     $is_search = true;
     if (isset($_GET['p_id']) && !empty($_GET['p_id'])) {
-        $p_id = mysqli_real_escape_string($connect, $_GET['p_id']);
-        $print_filters[] = 'p_id=' . $p_id;
-        $conditions[] = "p_id = '$p_id'";
+        $p_sr = mysqli_real_escape_string($connect, $_GET['p_id']);
+        $print_filters[] = 'p_id=' . $p_sr;
+        $conditions[] = "p_sr = '$p_sr'";
     }
     $date_type = isset($_GET['date_type']) ? $_GET['date_type'] : '';
     $print_filters[] = 'date_type=' . $date_type;
@@ -63,7 +63,7 @@ if ($_GET) {
 if (count($conditions) > 0) {
     $sql .= " WHERE " . implode(' AND ', $conditions);
 }
-$sql .= " ORDER BY id ASC LIMIT $start_from, $results_per_page";
+$sql .= " ORDER BY id DESC LIMIT $start_from, $results_per_page";
 $query_string = implode('&', $print_filters);
 $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
 ?>
@@ -181,7 +181,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
         <div class="input-group input-group-sm">
             <div class="form-group">
                 <label for="p_id" class="form-label">P/S#</label>
-                <input type="number" name="p_id" value="<?php echo $p_id; ?>" id="p_id" class="form-control form-control-sm mx-1" style="max-width:80px;" placeholder="e.g. 33">
+                <input type="number" name="p_id" value="<?php echo $p_sr; ?>" id="p_id" class="form-control form-control-sm mx-1" style="max-width:80px;" placeholder="e.g. 33">
             </div>
             <div class="form-group">
                 <label for="date_type" class="form-label">Date Type</label>
@@ -277,13 +277,15 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                 $locked = 0;
                 $pIdCounts = [];
                 foreach ($Loadings as $SingleLoading) {
+                    $myAgent = json_decode($SingleLoading['agent_details'], true);
                     $id = $SingleLoading['id'];
                     $pId = $SingleLoading['p_id'];
+                    $p_sr = $SingleLoading['p_sr'];
                     if (empty($SingleLoading['agent_details'])) {
                         $rowColor = 'text-danger';
                         $locked = 0;
-                    } elseif (isset(json_decode($SingleLoading['agent_details'], true)['transferred'])) {
-                        $transferred = json_decode($SingleLoading['agent_details'], true)['transferred'];
+                    } elseif (isset($myAgent['transferred'])) {
+                        $transferred = $myAgent['transferred'];
                         $rowColor = $transferred === true ? 'text-dark' : 'text-warning';
                         $locked = $transferred === true ? 1 : 0;
                     }
@@ -296,12 +298,12 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                 ?>
                     <tr class="text-nowrap">
                         <td class="pointer text-uppercase <?= $rowColor; ?>" onclick="window.location.href= '?view=1&id=<?= $SingleLoading['id']; ?>';">
-                            <?php echo '<b>' . $SingleLoading['type'] . '#', $pId . "</b> (" . $pIdDisplayCount . ")"; ?>
+                            <?php echo '<b>' . $SingleLoading['type'] . '#', $p_sr . "</b> (" . $pIdDisplayCount . ")"; ?>
                             <?php echo $locked ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
                         </td>
-                        <td class="<?php echo $rowColor; ?>"><?= isset(json_decode($SingleLoading['agent_details'], true)['cargo_transfer_warehouse']) ? json_decode($SingleLoading['agent_details'], true)['cargo_transfer_warehouse'] : ''; ?></td>
-                        <td class="<?php echo $rowColor; ?>"><?= isset(json_decode($SingleLoading['agent_details'], true)['ag_id']) ? json_decode($SingleLoading['agent_details'], true)['ag_id'] : ''; ?></td>
-                        <td class="<?php echo $rowColor; ?>"><?= isset(json_decode($SingleLoading['agent_details'], true)['ag_id']) ? json_decode($SingleLoading['agent_details'], true)['ag_name'] : ''; ?></td>
+                        <td class="<?php echo $rowColor; ?>"><?= $myAgent['cargo_transfer_warehouse'] ?? ''; ?></td>
+                        <td class="<?php echo $rowColor; ?>"><?= isset($myAgent['ag_id']) ? (!empty($myAgent['ag_id']) ? $myAgent['ag_id'] : 'NOT EXIST') : ''; ?></td>
+                        <td class="<?php echo $rowColor; ?>"><?= isset($myAgent['ag_name']) ? (!empty($myAgent['ag_name']) ? $myAgent['ag_name'] : 'NOT EXIST') : ''; ?></td>
                         <td class="<?php echo $rowColor; ?>"><?= my_date(json_decode($SingleLoading['loading_details'], true)['loading_date']); ?></td>
                         <td class="<?php echo $rowColor; ?>"><?= json_decode($SingleLoading['loading_details'], true)['loading_port_name']; ?></td>
                         <td class="<?php echo $rowColor; ?>"><?= my_date(json_decode($SingleLoading['receiving_details'], true)['receiving_date']); ?></td>
@@ -417,17 +419,18 @@ if (isset($_POST['TransferToAgent'])) {
     $ag_transfer_ids = mysqli_real_escape_string($connect, $_POST['ag_transfer_ids']);
     $ag_id = mysqli_real_escape_string($connect, $_POST['ag_id']);
     $transferPairs = explode(',', $ag_transfer_ids);
-    if (isset($_POST['AgentNotExist'])) {
-        $_POST['ag_acc_no'] = $_POST['ag_name'] = $_POST['ag_id'] = $_POST['ag_row_id'] = '~~NOT-EXIST~~';
+    if (isset($_POST['agent_exists']) && $_POST['agent_exists'] === 'no') {
+        $_POST['ag_acc_no'] = $_POST['ag_name'] = $_POST['ag_id'] = $_POST['ag_row_id'] = '';
     }
 
     $idConditions = [];
     foreach ($transferPairs as $pair) {
-        list($p_id, $sr_no) = explode('-', trim($pair));
-        $idConditions[] = "(p_id = '$p_id' AND sr_no = '$sr_no')";
+        list($p_sr, $sr_no, $t_type) = explode('-', trim($pair));
+        $idConditions[] = "(p_sr = '$p_sr' AND sr_no = '$sr_no' AND type = '$t_type')";
     }
     $whereClause = implode(' OR ', $idConditions);
     $agentDetails = [
+        'agent_exist' => $_POST['agent_exist'],
         'ag_acc_no' => $_POST['ag_acc_no'],
         'ag_name' => $_POST['ag_name'],
         'ag_id' => $_POST['ag_id'],
@@ -435,10 +438,10 @@ if (isset($_POST['TransferToAgent'])) {
         'cargo_transfer_warehouse' => $_POST['cargo_transfer'],
         'transferred' => true,
     ];
-    $Ttempdata = mysqli_fetch_assoc(fetch('transactions', ['id' => $p_id]));
-    $Ptempdata = mysqli_fetch_assoc(fetch('general_loading', ['p_id' => $p_id, 'sr_no' => $sr_no]));
+    $Ttempdata = mysqli_fetch_assoc(fetch('transactions', ['sr' => $p_sr, 'p_s' => $t_type]));
+    $Ptempdata = mysqli_fetch_assoc(fetch('general_loading', ['p_sr' => $p_sr, 'sr_no' => $sr_no, 'type' => $t_type]));
     $tdata = array_merge(
-        transactionSingle($p_id),
+        transactionSingle($Ttempdata['id']),
         ['sea_road_array' => json_decode($Ttempdata['sea_road'], true)] ?? [],
         ['notify_party_details' => json_decode($Ttempdata['notify_party_details'], true)] ?? [],
         ['third_party_bank' => json_decode($Ttempdata['third_party_bank'], true)] ?? [],
@@ -508,6 +511,11 @@ if (isset($_POST['TransferToAgent'])) {
     if (!recordExists('data_copies', ['unique_code' => $CCWdata['unique_code']])) {
         insert('data_copies', $CCWdata);
     }
+    if (isset($_POST['vat_general']) && $_POST['vat_general'] === 'yes') {
+        if (!recordExists('vat_copies', ['unique_code' => $CCWdata['unique_code']])) {
+            insert('vat_copies', $CCWdata);
+        }
+    }
     if (isset($_POST['warehouse_entry'])) {
         $p_unique_code = explode('~', $_POST['warehouse_entry'])[0];
         $existingLdata = json_decode(
@@ -570,7 +578,7 @@ if (isset($_POST['TransferToAgent'])) {
         $type = 'success';
         $msg = 'Agent Details Added!';
     }
-    // message($type, $url, $msg);
+    message($type, $url, $msg);
 }
 if (isset($_GET['id']) && is_numeric($_GET['id']) && isset($_GET['view']) && $_GET['view'] == 1) {
     $id = mysqli_real_escape_string($connect, $_GET['id']);

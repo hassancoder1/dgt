@@ -35,16 +35,16 @@ $firstRow = $rowCount > 0 ? $rows[0] : null;
     <div class="col-md-10 order-0 content-column">
         <div class="card my-2">
             <div class="card-body">
-                <div class="row">
+                <!-- <div class="row">
                     <div class="col-md-12 pb-2 mb-2">
                         <div class="d-flex align-items-center justify-content-between">
-                            <div><b><?= "Sr#" . $parentRow['sr_no']; ?></b></div>
+                            <div><b><?= ucfirst($parentRow['type']) . "#" . $parentRow['p_sr']; ?></b></div>
                             <div><b>Purchase Date </b><?php echo my_date($parentRow['p_date']); ?></div>
                             <div><b>Type </b><?php echo badge(strtoupper($parentRow['p_type']), 'dark'); ?></div>
                             <div><b>Branch </b><?php echo $parentRow['p_branch']; ?></div>
                         </div>
                     </div>
-                </div>
+                </div> -->
 
                 <div class="row gy-1 border-bottom py-1">
                     <div class="col-md-12 row my-3">
@@ -91,7 +91,7 @@ $firstRow = $rowCount > 0 ? $rows[0] : null;
 
                     <?php if (!empty($parentAgent)): ?>
                         <div class="col-md-3">
-                        <div>
+                            <div>
                                 <?php
                                 // Define the keys you want to display
                                 $allowedKeys = [
@@ -387,7 +387,7 @@ $firstRow = $rowCount > 0 ? $rows[0] : null;
         <div class="align-items-center justify-content-between flex-wrap pt-2">
             <div>
                 <strong><?php echo strtoupper($_fields['p_s_name']) . ' #'; ?></strong>
-                <?php echo $_fields['sr_no']; ?>
+                <?php echo $_fields['sr']; ?>
             </div>
             <div>
                 <strong>User:</strong> <?php echo $_fields['username']; ?>

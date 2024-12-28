@@ -288,7 +288,7 @@ $mypageURL = $pageURL;
                                 <tr class="text-nowrap">
                                     <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $id; ?>)"
                                         data-bs-toggle="modal" data-bs-target="#KhaataDetails">
-                                        <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $id;
+                                        <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $purchase['sr'];
                                         echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?></td>
                                     <td class="<?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['type']); //badge(strtoupper($_fields_single['type']), $purchase['type'] == 'booking' ? 'dark' : 'danger'); 
                                                                             ?></td>
@@ -378,7 +378,7 @@ $mypageURL = $pageURL;
 <?php
 if (isset($_POST['ttrFirstSubmit'])) {
     unset($_POST['ttrFirstSubmit']);
-    $post_json = json_encode($_POST);
+    $post_json = mysqli_real_escape_string($connect, json_encode($_POST));
     $jmaa_khaata_no = mysqli_real_escape_string($connect, $_POST['dr_khaata_no']);
     $jmaa_khaata_id = mysqli_real_escape_string($connect, $_POST['dr_khaata_id']);
     $bnaam_khaata_no = mysqli_real_escape_string($connect, $_POST['cr_khaata_no']);
@@ -393,6 +393,7 @@ if (isset($_POST['ttrFirstSubmit'])) {
         $details = mysqli_real_escape_string($connect, $_POST['details']) . " | Amount: $amount ";
     }
     $p_id = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
+    $p_sr = mysqli_real_escape_string($connect, $_POST['p_sr']);
     $type_post = mysqli_real_escape_string($connect, $_POST['type']);
     $url = $pageURL . '?id=' . $p_id;
     $type = ' P.' . ucfirst(substr($type_post, 0, '1'));
@@ -405,17 +406,17 @@ if (isset($_POST['ttrFirstSubmit'])) {
         $dataArray = array(
             'r_type' => $r_type,
             'transfered_from' => $transfered_from,
-            'transfered_from_id' => $p_id,
+            'transfered_from_id' => $p_sr,
             'branch_id' => $p_data['branch_id'],
             'user_id' => $userId,
             'username' => $userName,
             'r_date' => $transfer_date,
-            'roznamcha_no' => $p_id,
+            'roznamcha_no' => $p_sr,
             'r_name' => $type,
-            'r_no' => $p_id,
+            'r_no' => $p_sr,
             'created_at' => date('Y-m-d H:i:s')
         );
-        $str = " Purchase # " . $p_id;
+        $str = " Purchase # " . $p_sr;
         $done = false;
         if (isset($_POST['r_id'])) {
             $r_ids = $_POST['r_id'];

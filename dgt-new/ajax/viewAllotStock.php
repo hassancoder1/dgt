@@ -3,7 +3,14 @@ require_once '../connection.php';
 $print_url = '';
 if (!empty($_POST['allot'])) {
     $allot = mysqli_real_escape_string($connect, $_POST['allot']);
-    $query = "SELECT * FROM `transaction_items` WHERE allotment_name = '$allot' AND parent_id IN (SELECT id FROM transactions WHERE transfer_level >= 2)";
+    $query = "
+    SELECT ti.*, t.sr 
+    FROM `transaction_items` ti
+    INNER JOIN `transactions` t ON ti.parent_id = t.id
+    WHERE ti.allotment_name = '" . mysqli_real_escape_string($connect, $allot) . "' 
+      AND t.transfer_level >= 2
+";
+
     $result = mysqli_query($connect, $query);
 
     if ($result) {
@@ -21,14 +28,15 @@ if (!empty($_POST['allot'])) {
                 if (!isset($purchase_ids[$key])) {
                     $purchase_ids[$key] = [];
                 }
-                if (!in_array($entry['parent_id'], $purchase_ids[$key])) {
-                    $purchase_ids[$key][] = $entry['parent_id'];
+                if (!in_array($entry['sr'], $purchase_ids[$key])) {
+                    $purchase_ids[$key][] = $entry['sr'];
                 }
 
                 // Add purchase entry to the processed list
                 if (!isset($processedEntries[$key])) {
                     $processedEntries[$key] = [
                         'goods_id' => $entry['goods_id'],
+                        'sr' => $entry['sr'],
                         'size' => $entry['size'],
                         'brand' => $entry['brand'],
                         'origin' => $entry['origin'],
@@ -45,13 +53,13 @@ if (!empty($_POST['allot'])) {
                 $processedEntries[$key]['total_purchased_qty'] += $entry['qty_no'];
                 $processedEntries[$key]['total_purchased_kgs'] += $entry['total_kgs'];
                 $processedEntries[$key]['total_purchased_net_kgs'] += $entry['net_kgs'];
-                $processedEntries[$key]['purchase_ids'][] = $entry['parent_id'];
+                $processedEntries[$key]['purchase_ids'][] = $entry['sr'];
             } elseif ($entry['p_s'] === 's') {
                 if (!isset($sold_ids[$key])) {
                     $sold_ids[$key] = [];
                 }
-                if (!in_array($entry['parent_id'], $sold_ids[$key])) {
-                    $sold_ids[$key][] = $entry['parent_id'];
+                if (!in_array($entry['sr'], $sold_ids[$key])) {
+                    $sold_ids[$key][] = $entry['sr'];
                 }
 
                 // Add sales data to the corresponding purchase entry
@@ -59,13 +67,13 @@ if (!empty($_POST['allot'])) {
                     $processedEntries[$key]['total_sold_qty'] += $entry['qty_no'];
                     $processedEntries[$key]['total_sold_kgs'] += $entry['total_kgs'];
                     $processedEntries[$key]['total_sold_net_kgs'] += $entry['net_kgs'];
-                    $processedEntries[$key]['sale_ids'][] = $entry['parent_id'];
+                    $processedEntries[$key]['sale_ids'][] = $entry['sr'];
                 }
             }
         }
 ?>
         <div class="modal-header d-flex justify-content-between bg-white align-items-center">
-            <h5 class="modal-title" id="staticBackdropLabel">Allotment Details: ( <?= htmlspecialchars($allot); ?> )</h5>
+            <h5 class="modal-title" id="staticBackdropLabel">Allotment Name: ( <?= htmlspecialchars($allot); ?> )</h5>
             <div class="d-flex align-items-center justify-content-end gap-2">
                 <div class="dropdown">
                     <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">

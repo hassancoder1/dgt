@@ -38,7 +38,7 @@ if (isset($Ldata['transfer'][$PSKEY])) {
                                 <th colspan="10" class="bg-dark fs-6 fw-bold text-white">
                                     <div class="d-flex justify-content-between px-2">
                                         <span>
-                                            <?= strtoupper($Tdata['p_s_name']) . ' #' . $Tdata['sr_no']; ?>
+                                            <?= strtoupper($Tdata['p_s_name']) . ' #' . $Tdata['sr']; ?>
                                         </span>
                                         <span>
                                             Type: <?= strtoupper($Tdata['type']); ?>
@@ -70,7 +70,7 @@ if (isset($Ldata['transfer'][$PSKEY])) {
                         </thead>
                         <tbody>
                             <tr>
-                                <td class="text-center fw-bold">P#<?= $Ldata['p_id'] . ' (' . $Ldata['sr_no'] . ')'; ?></td>
+                                <td class="text-center fw-bold">P#<?= $Ldata['p_sr'] . ' (' . $Ldata['sr_no'] . ')'; ?></td>
                                 <td class="text-center"><?php
                                                         if (!empty($Ldata['bl_no'])) {
                                                             echo 'B/L: ' . htmlspecialchars($Ldata['bl_no']);
@@ -83,7 +83,7 @@ if (isset($Ldata['transfer'][$PSKEY])) {
                                 <td class="text-center"><?= $Good['quantity_no'] . ' ' . $Good['quantity_name']; ?></td>
                                 <td class="text-center"><?= $Good['gross_weight']; ?></td>
                                 <td class="text-center"><?= $Good['net_weight']; ?></td>
-                                <td class="text-center"><?= $Good['final_amount']; ?></td>
+                                <td class="text-center"><?= $Good['amount']; ?></td>
                                 <td class="text-center pointer" onclick="fillData('<?= $purchaseEntry; ?>', '<?= implode('~', $saleEntries); ?>', '<?= $_POST['CCWpage']; ?>', 'invoice', '<?= $Ldata['sr_no'] ?>')">
                                     <i class="fa fa-pencil-alt text-primary" title="Edit"></i>
                                 </td>
@@ -117,21 +117,21 @@ if (isset($Ldata['transfer'][$PSKEY])) {
                             </thead>
                             <tbody>
                                 <?php
-                                $totalQuantity = 0;
-                                $totalGrossWeight = 0;
-                                $totalNetWeight = 0;
+                                $totalQuantity = $totalGrossWeight = $totalNetWeight = $totalAmount = 0;
                                 foreach ($Ldata['transfer'][$PSKEY] as $p) {
                                     $data = explode('~', $p);
                                     $spData = json_decode(mysqli_fetch_assoc(fetch('data_copies', ['unique_code' => $data[0]]))['ldata'], true);
                                     $quantity = (float)$spData['good']['quantity_no'];
                                     $grossWeight = (float)$spData['good']['gross_weight'];
                                     $netWeight = (float)$spData['good']['net_weight'];
+                                    $amount = (float)$spData['good']['amount'];
                                     $totalQuantity += $quantity;
                                     $totalGrossWeight += $grossWeight;
                                     $totalNetWeight += $netWeight;
+                                    $totalAmount += $amount;
                                 ?>
                                     <tr>
-                                        <td class="text-center fw-bold">S# <?= decode_unique_code($data[0], 'TID') . ' (' . ($spData['sr_no'] ?? '??') . ')'; ?></td>
+                                        <td class="text-center fw-bold">S# <?= $spData['p_sr'] . ' (' . ($spData['sr_no'] ?? '??') . ')'; ?></td>
                                         <td class="text-center"><?php
                                                                 if (!empty($spData['bl_no'])) {
                                                                     echo 'B/L: ' . htmlspecialchars($spData['bl_no']);
@@ -144,7 +144,7 @@ if (isset($Ldata['transfer'][$PSKEY])) {
                                         <td class="text-center"><?= $quantity . ' ' . $spData['good']['goods_json']['qty_name']; ?></td>
                                         <td class="text-center"><?= $grossWeight; ?></td>
                                         <td class="text-center"><?= $netWeight; ?></td>
-                                        <td class="text-center"><?= $spData['good']['final_amount']; ?></td>
+                                        <td class="text-center"><?= $spData['good']['amount']; ?></td>
                                         <td class="text-center pointer" onclick="fillData('<?= $data[0]; ?>','<?= $purchaseEntry; ?>', '<?= $_POST['CCWpage']; ?>', 'invoice', '<?= $spData['sr_no'] ?? ''; ?>')">
                                             <i class="fa fa-pencil-alt text-primary" title="Edit"></i>
                                         </td>
@@ -159,6 +159,7 @@ if (isset($Ldata['transfer'][$PSKEY])) {
                                     <th class="bg-light text-center fw-bold"><?php echo $totalQuantity; ?></th>
                                     <th class="bg-light text-center fw-bold"><?php echo $totalGrossWeight; ?></th>
                                     <th class="bg-light text-center fw-bold"><?php echo $totalNetWeight; ?></th>
+                                    <th class="bg-light text-center fw-bold"><?php echo $totalAmount; ?></th>
                                     <th class="bg-light"></th>
                                 </tr>
                             </tfoot>
@@ -186,7 +187,7 @@ if (isset($Ldata['transfer'][$PSKEY])) {
     <div class="col-md-2">
         <div class="card p-3 h-100 position-relative">
             <div>
-                <b><?php echo strtoupper($Tdata['p_s_name']) . ' #'; ?> </b><?php echo $Tdata['sr_no']; ?>
+                <b><?php echo strtoupper($Tdata['p_s_name']) . ' #'; ?> </b><?php echo $Tdata['sr']; ?>
             </div>
             <div><b>User </b><?php echo $Tdata['username']; ?></div>
             <div><b>Date </b><?php echo my_date($Tdata['_date']); ?></div>

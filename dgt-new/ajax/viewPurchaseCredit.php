@@ -12,7 +12,8 @@ if ($id > 0) {
     $notify_party = isset($record['notify_party_details']) ? json_decode($record['notify_party_details'], true) : false;
     if ($record['type'] === 'local') {
         $notify_party = '';
-    }if (!empty($_fields)) { ?>
+    }
+    if (!empty($_fields)) { ?>
         <div class="row">
             <div class="col-10 order-0 content-column">
                 <div class="card mb-2">
@@ -21,7 +22,7 @@ if ($id > 0) {
                             <div class="col-md-12 border-bottom px-2 pb-2 mb-2">
                                 <div class="d-flex align-items-center justify-content-between">
                                     <div>
-                                        <b><?php echo strtoupper($_fields['p_s_name']) . ' #'; ?> </b><?php echo $_fields['sr_no']; ?>
+                                        <b><?php echo strtoupper($_fields['p_s_name']) . ' #'; ?> </b><?php echo $_fields['sr']; ?>
                                     </div>
                                     <div><b>User </b><?php echo $_fields['username']; ?></div>
                                     <!-- </div>
@@ -128,7 +129,7 @@ if ($id > 0) {
                                             ?>
                                         <?php endforeach; ?>
                                     </div>
-                                    <?php else: ?>
+                                <?php else: ?>
                                     <div class="col-md-4">
                                         <?php
                                         if ($_fields['sea_road_array']['sea_road'] === 'sea'): ?>
@@ -294,15 +295,22 @@ if ($id > 0) {
                                             echo '<th class="fw-bold text-end">' . round($final_amount, 2) . '</th>';
                                         }
                                         echo '<th></th>';
-                                        echo '</tr>';   
+                                        echo '</tr>';
                                     }
                                     ?>
                                 </tbody>
                             </table>
                         <?php } ?>
                     </div>
-                    <?php if ($record['khaata_tr1'] != '') {
-                        $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $record['id'], 'transfered_from' => 'purchase_' . $record['type']));
+                    <?php
+                    $payments = $_fields['payment_details'];
+                    $total_amount = isset($_fields['items_sum']['sum_final_amount']) ? (float)$_fields['items_sum']['sum_final_amount'] : 0;
+                    $percentage = isset($payments->pct_value) ? (int)$payments->pct_value : 0;
+                    $remaining_percentage = 100 - $percentage;
+                    $partial_amount1 = ($percentage / 100) * $total_amount;
+                    $partial_amount2 = ($remaining_percentage / 100) * $total_amount;
+                    if ($record['khaata_tr1'] != '') {
+                        $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $record['sr'], 'transfered_from' => 'purchase_' . $record['type']));
                         $roz = mysqli_fetch_assoc($rozQ);
                         $roz_arr1 = array(
                             array('Sr#', SuperAdmin() ? $roz['r_id'] . '-' . $roz['branch_serial'] : $roz['branch_serial']),
@@ -421,8 +429,9 @@ if ($id > 0) {
                     <div class="collapse show" id="collapseExample">
                         <input type="hidden" id="balance" value="<?php echo $bal; ?>">
                         <?php
-                        $p_khaata_id = json_decode($record['khaata_tr1'], true)['dr_khaata_no'];
-                        $s_khaata_id = json_decode($record['khaata_tr1'], true)['cr_khaata_no'];
+                        $khaata_tr1 = json_decode($record['khaata_tr1'], true);
+                        $p_khaata_id = $khaata_tr1['dr_khaata_no'];
+                        $s_khaata_id = $khaata_tr1['cr_khaata_no'];
                         $adv_arr = array(
                             'finish' => array('div_class' => '', 'btn_text' => 'Transfer', 'btn_class' => 'btn-primary', 'back' => '', 'purchase_pays_id' => $purchase_pays_id, 'action' => 'insert'),
                             'dr_khaata_no' => $p_khaata_id,
@@ -434,7 +443,7 @@ if ($id > 0) {
                             'opr' => '*',
                             'final_amount' => '',
                             'transfer_date' => date('Y-m-d'),
-                            'report' => ''
+                            'report' => ucfirst($_fields['p_s_name']) . ' ' . ' #' . $_fields['sr'] . ', Type: ' . ucfirst($_fields['type']) . ', Quantity: ' . $qty_no . ' '
                             //'report' => 'ENTRY:' . $rows . ' GOODS:' . $goods . ' COUNTRY:' . $record['country'] . ' ALLOT:' . $record['allot'] . ' T.Qty:' . $qtys . ' T.KGs:' . $totals . ' RATE:' . $rate . ' T.AMNT:' . $amounts . $curr . ' EXCH.:' . $curr2
                         );
                         if ($purchase_pays_id > 0) {
@@ -554,11 +563,12 @@ if ($id > 0) {
                                         </div>
                                     </div>
                                     <input type="hidden" name="p_id_hidden" value="<?php echo $record['id']; ?>">
+                                    <input type="hidden" name="p_sr" value="<?php echo $record['sr']; ?>">
                                     <input type="hidden" name="p_type_hidden" value="<?php echo $purchase_type; ?>">
                                     <input type="hidden" name="purchase_pays_id_hidden" value="<?php echo $adv_arr['finish']['purchase_pays_id']; ?>">
                                     <input type="hidden" name="action" value="<?php echo $adv_arr['finish']['action']; ?>">
                                     <?php if ($purchase_pays_id > 0) {
-                                        $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'transfered_from_id' => $purchase_pays_id, 'transfered_from' => 'purchase_credit'));
+                                        $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'transfered_from_id' => $record['sr'], 'transfered_from' => 'purchase_credit'));
                                         if (mysqli_num_rows($rozQ) > 0) { ?>
                                             <table class="table table-sm table-bordered">
                                                 <thead>

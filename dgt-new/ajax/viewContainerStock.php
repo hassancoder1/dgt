@@ -1,6 +1,6 @@
 <?php
 require_once '../connection.php';
-$print_url = '';
+$print_url = 'print/container-stock-print';
 
 if (!empty($_POST['container'])) {
     $container = mysqli_real_escape_string($connect, $_POST['container']);
@@ -9,6 +9,7 @@ if (!empty($_POST['container'])) {
     $query = "SELECT * FROM data_copies WHERE unique_code LIKE 'p%' AND unique_code NOT LIKE 'pl%' AND JSON_EXTRACT(ldata, '$.good.container_no') = '$container'";
 
     $result = mysqli_query($connect, $query);
+    $print_url .= '?container=' . $container;
 ?>
 
     <div class="modal-header d-flex justify-content-between bg-white align-items-center">
@@ -88,7 +89,7 @@ if (!empty($_POST['container'])) {
                     ?>
                         <tr class="table-primary">
                             <td><?= htmlspecialchars($i); ?></td>
-                            <td>P# <?= decode_unique_code($entry['unique_code'], 'TID'); ?></td>
+                            <td>P# <?= $ldata['p_sr']; ?></td>
                             <td>
                                 <?= goodsName(htmlspecialchars($G['goods_id'])) . ' / ' .
                                     htmlspecialchars($G['size']) . ' / ' .
@@ -114,7 +115,7 @@ if (!empty($_POST['container'])) {
                         ?>
                                 <tr>
                                     <td></td>
-                                    <td>S# <?= htmlspecialchars(decode_unique_code($soldData[0], 'TID')); ?></td>
+                                    <td>S# <?= htmlspecialchars(getTransactionSr(decode_unique_code($soldData[0], 'TID'))); ?></td>
                                     <td>
                                         <?= goodsName(htmlspecialchars($G['goods_id'])) . ' / ' .
                                             htmlspecialchars($G['size']) . ' / ' .

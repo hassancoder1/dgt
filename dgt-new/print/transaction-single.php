@@ -48,9 +48,14 @@ $Ptype = $P['full_advance'] === 'advance' ? strtoupper($P['full_advance']) . " "
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $T_ps . " #" . $T['id'] . $isInvoice; ?> Print</title>
+    <title><?= $T_ps . " #" . $T['sr'] . $isInvoice; ?> Print</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/fonts/lexend.css">
     <style>
+        * {
+            font-family: 'Lexend', serif;
+        }
+
         body {
             font-size: 12px;
             color: black;
@@ -149,7 +154,7 @@ $Ptype = $P['full_advance'] === 'advance' ? strtoupper($P['full_advance']) . " "
                     <h4 class="text-center mb-4 mt-2"><?= $T_ps; ?> Contract</h4>
                 </div>
                 <div class="col-md-4 text-end">
-                    <strong><?= $T_ps; ?> #:</strong> <?= $T['id']; ?><br>
+                    <strong><?= $T_ps; ?> #:</strong> <?= $T['sr']; ?><br>
                     <strong>Date:</strong> <?= $T['_date']; ?><br>
                     <strong>Country:</strong> <?= ucfirst($T['country']); ?><br>
                     <strong>Branch:</strong> <?= branchName(ucwords($T['branch_id'])); ?><br>

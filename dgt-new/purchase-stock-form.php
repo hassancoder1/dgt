@@ -13,7 +13,13 @@ $current_page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['
 $offset = ($current_page - 1) * $rows_per_page;
 
 // Build the SQL query
-$sql = "SELECT * FROM transaction_items WHERE parent_id IN (SELECT id FROM transactions WHERE p_s='p' AND transfer_level >= 2)";
+$sql = "
+    SELECT ti.*, t.sr
+    FROM transaction_items ti
+    INNER JOIN transactions t ON ti.parent_id = t.id
+    WHERE t.p_s = 'p' AND t.transfer_level >= 2
+";
+
 $conditions = [];
 
 // Handle filters
@@ -146,7 +152,7 @@ $total_pages = ceil($total_rows / $rows_per_page);
                         </div>
 
                         <div class="col-md-3 mt-4 d-flex justify-content-space-between align-items-center">
-                        <div>
+                            <div>
                                 <?php if ($total_pages > 1): ?>
                                     <nav aria-label="Page navigation">
                                         <ul class="pagination pagination-sm mb-0">
@@ -227,7 +233,7 @@ $total_pages = ceil($total_rows / $rows_per_page);
                                         <td><?= htmlspecialchars($i); ?></td>
                                         <td class="pointer" onclick="viewPurchase(<?php echo $entry['parent_id']; ?>)"
                                             data-bs-toggle="modal" data-bs-target="#KhaataDetails">
-                                            <b>P#</b> <?= htmlspecialchars($entry['parent_id']); ?> (<?= $entry_count; ?>)
+                                            <b>P#</b> <?= htmlspecialchars($entry['sr']); ?> (<?= $entry_count; ?>)
                                         </td>
                                         <td><?= my_date(htmlspecialchars($entry['created_at'])); ?></td>
                                         <td><?= goodsName(htmlspecialchars($entry['goods_id'])); ?></td>

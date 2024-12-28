@@ -2,23 +2,23 @@
 $page_title = 'Agent Form';
 $pageURL = 'agent-form';
 include("header.php");
-$remove = $start_print = $end_print = $type = $acc_no = $p_id = $sea_road = $blNoSearch = $date_type = '';
+$remove = $start_print = $end_print = $type = $acc_no = $p_sr = $sea_road = $blNoSearch = $date_type = '';
 $is_search = false;
 global $connect;
 $results_per_page = 25;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $start_from = ($page - 1) * $results_per_page;
 $sql = "SELECT * FROM `general_loading`";
-$conditions = [];
+$conditions = ["JSON_EXTRACT(agent_details, '$.agent_exist') = 'yes'"];
 $print_filters = [];
 $user = $_SESSION['username'];
 if ($_GET) {
     $remove = removeFilter('agent-form');
     $is_search = true;
     if (isset($_GET['p_id']) && !empty($_GET['p_id'])) {
-        $p_id = mysqli_real_escape_string($connect, $_GET['p_id']);
-        $print_filters[] = 'p_id=' . $p_id;
-        $conditions[] = "p_id = '$p_id'";
+        $p_sr = mysqli_real_escape_string($connect, $_GET['p_id']);
+        $print_filters[] = 'p_id=' . $p_sr;
+        $conditions[] = "p_sr = '$p_sr'";
     }
     $date_type = isset($_GET['date_type']) ? $_GET['date_type'] : '';
     $print_filters[] = 'date_type=' . $date_type;
@@ -191,7 +191,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
         <div class="input-group input-group-sm">
             <div class="form-group">
                 <label for="p_id" class="form-label">P/S#</label>
-                <input type="number" name="p_id" value="<?php echo $p_id; ?>" id="p_id" class="form-control form-control-sm mx-1" style="max-width:80px;" placeholder="e.g. 33">
+                <input type="number" name="p_id" value="<?php echo $p_sr; ?>" id="p_id" class="form-control form-control-sm mx-1" style="max-width:80px;" placeholder="e.g. 33">
             </div>
             <div class="form-group">
                 <label for="date_type" class="form-label">Date Type</label>
@@ -293,7 +293,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     $billNumber = json_decode($SingleLoading['gloading_info'], true)['billNumber'] ?? '';
                     $agentDetails = json_decode($SingleLoading['agent_details'], true);
                     if (!empty($agentDetails) && isset($agentDetails['transferred']) && $agentDetails['transferred'] === true) {
-                        if (isset($agentDetails['transporter_name']) || $agentDetails['ag_id'] === '~~NOT-EXIST~~') {
+                        if (isset($agentDetails['transporter_name'])) {
                             $rowColor = 'text-dark';
                             $locked = 1;
                         } else {
@@ -304,7 +304,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                         <tr class="text-nowrap">
                             <?php if (SuperAdmin()) { ?>
                                 <td class="pointer text-uppercase <?php echo $rowColor; ?>" onclick="window.location.href= '?lp_id=<?= $SingleLoading['id']; ?>&view=1';">
-                                    <?= '<b>' . $SingleLoading['type'] . '#' . $SingleLoading['p_id'] . "($billNumber)"; ?>
+                                    <?= '<b>' . $SingleLoading['type'] . '#' . $SingleLoading['p_sr'] . "($billNumber)"; ?>
                                     <?php echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
                                 </td>
                             <?php } else { ?>
@@ -425,6 +425,7 @@ if (isset($_POST['AgentFormSubmit'])) {
         }
     }
     $agentD = [
+        'agent_exist' => mysqli_real_escape_string($connect, $agent['agent_exist']),
         'ag_acc_no' => mysqli_real_escape_string($connect, $agent['ag_acc_no']),
         'ag_name' => mysqli_real_escape_string($connect, $agent['ag_name']),
         'ag_id' => mysqli_real_escape_string($connect, $agent['ag_id']),
@@ -452,7 +453,7 @@ if (isset($_POST['AgentFormSubmit'])) {
         $type = 'success';
         $msg = 'Agent Form Updated!';
     }
-    // message($type, $url . "?lp_id=" . $parent_id . '&view=1&action=update&editId=' . $id, $msg);
+    message($type, $url . "?lp_id=" . $parent_id . '&view=1&action=update&editId=' . $id, $msg);
 }
 if (isset($_GET['lp_id']) && is_numeric($_GET['lp_id']) && isset($_GET['view']) && $_GET['view'] == 1) {
     $lp_id = mysqli_real_escape_string($connect, $_GET['lp_id']);

@@ -42,7 +42,7 @@ while ($entry = mysqli_fetch_assoc($entries)) {
     if (!isset($processed_entries[$container_no])) {
         $processed_entries[$container_no] = array_merge([
             'total_purchased_qty' => 0,
-            'p_id' => decode_unique_code($entry['unique_code'], 'TID'),
+            'p_sr' => $ldata['p_sr'],
             'total_purchased_kgs' => 0,
             'total_purchased_net_kgs' => 0,
             'total_sold_qty' => 0,
@@ -183,8 +183,8 @@ while ($entry = mysqli_fetch_assoc($entries)) {
                                 <!-- <span class="text-muted small">
                                     Showing <?php // echo min($offset + 1, $total_rows); 
                                             ?> to <?php // echo min($offset + $rows_per_page, $total_rows); 
-                                                                                                ?> of <?php //  echo $total_rows; 
-                                                                                                                                                                ?> entries
+                                                    ?> of <?php //  echo $total_rows; 
+                                                            ?> entries
                                 </span> -->
                             </div>
                             <div class="d-flex justify-content-end gap-1">
@@ -237,7 +237,7 @@ while ($entry = mysqli_fetch_assoc($entries)) {
                             ?>
                                 <tr class="text-nowrap">
                                     <td><?= htmlspecialchars($i); ?></td>
-                                    <td>P# <?= htmlspecialchars($entry['p_id']); ?></td>
+                                    <td>P# <?= htmlspecialchars($entry['p_sr']); ?></td>
                                     <td class="pointer" onclick="window.location.href = '?view=1&container=<?= $container_no; ?>'"><b><?= htmlspecialchars($container_no); ?></b></td>
                                     <td>
                                         <?= goodsName(htmlspecialchars($entry['goods_id'])) . ' / ' .

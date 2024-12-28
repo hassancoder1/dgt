@@ -147,34 +147,19 @@ function decode_unique_code($unique_code, $keys = 'all')
     exit;
 }
 
-function calcNewValues($quantity, $goodsDetails, $type)
+function calculateValues($qtyNo, $qtyKgs, $emptyKgs, $weight, $rate1, $rate2, $operator, $taxPercent = null)
 {
-    $updatedGoodsDetails = $goodsDetails;
-    function calculateValues($qtyNo, $qtyKgs, $emptyKgs, $weight, $rate1, $rate2, $operator, $taxPercent = null)
-    {
-        $totalKgs = $qtyNo * $qtyKgs;
-        $totalQtyKgs = $qtyNo * $emptyKgs;
-        $netKgs = $totalKgs - $totalQtyKgs;
-        $total = $weight != 0 ? round($netKgs / $weight, 3) : 0;
-        $amount = round($total * $rate1, 3);
-        $finalAmount = $amount;
-        if ($rate2 > 0) {
-            $finalAmount = ($operator === '/') ? ($rate2 != 0 ? round($amount / $rate2, 3) : 0) : round($rate2 * $amount, 3);
-        } elseif (!is_null($taxPercent)) {
-            $taxAmount = round(($amount * $taxPercent) / 100, 2);
-            $finalAmount = $amount + $taxAmount;
-            return [
-                'qty_no' => $qtyNo,
-                'total_kgs' => $totalKgs,
-                'total_qty_kgs' => $totalQtyKgs,
-                'net_kgs' => $netKgs,
-                'total' => $total,
-                'amount' => $amount,
-                'tax_amount' => $taxAmount,
-                'total_with_tax' => $finalAmount,
-                'final_amount' => $finalAmount
-            ];
-        }
+    $totalKgs = $qtyNo * $qtyKgs;
+    $totalQtyKgs = $qtyNo * $emptyKgs;
+    $netKgs = $totalKgs - $totalQtyKgs;
+    $total = $weight != 0 ? round($netKgs / $weight, 3) : 0;
+    $amount = round($total * $rate1, 3);
+    $finalAmount = $amount;
+    if ($rate2 > 0) {
+        $finalAmount = ($operator === '/') ? ($rate2 != 0 ? round($amount / $rate2, 3) : 0) : round($rate2 * $amount, 3);
+    } elseif (!is_null($taxPercent)) {
+        $taxAmount = round(($amount * $taxPercent) / 100, 2);
+        $finalAmount = $amount + $taxAmount;
         return [
             'qty_no' => $qtyNo,
             'total_kgs' => $totalKgs,
@@ -182,11 +167,31 @@ function calcNewValues($quantity, $goodsDetails, $type)
             'net_kgs' => $netKgs,
             'total' => $total,
             'amount' => $amount,
-            'tax_amount' => 0,
-            'total_with_tax' => 0,
+            'tax_amount' => $taxAmount,
+            'total_with_tax' => $finalAmount,
             'final_amount' => $finalAmount
         ];
     }
+    return [
+        'qty_no' => $qtyNo,
+        'total_kgs' => $totalKgs,
+        'total_qty_kgs' => $totalQtyKgs,
+        'net_kgs' => $netKgs,
+        'total' => $total,
+        'amount' => $amount,
+        'tax_amount' => 0,
+        'total_with_tax' => 0,
+        'final_amount' => $finalAmount
+    ];
+}
+function getTransactionSr($t_id)
+{
+    global $connect;
+    return mysqli_fetch_assoc(mysqli_query($connect, "SELECT sr FROM transactions WHERE id=$t_id"))['sr'];
+}
+function calcNewValues($quantity, $goodsDetails, $type)
+{
+    $updatedGoodsDetails = $goodsDetails;
     $goodsJson = isset($updatedGoodsDetails['goods_json']) ? $updatedGoodsDetails['goods_json'] : [];
     if (empty($goodsJson)) {
         throw new Exception('Invalid goods_json structure.');
@@ -381,7 +386,7 @@ function transactionSingle($transaction_id)
         $cr_record = getTransactionAccounts($id, $Type, 'cr');
         $p_s_name = $Type;
         $_fields = [
-            'sr_no' => $id,
+            'sr' => $record['sr'],
             'username' => userName($record['created_by']),
             'branch_id' => $record['branch_id'],
             'p_s' => $record['p_s'],

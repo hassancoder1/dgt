@@ -2133,6 +2133,7 @@ CREATE TABLE `transactions` (
   `khaata_tr1` longtext NOT NULL,
   `_date` date NOT NULL,
   `country` varchar(255) NOT NULL,
+  `delivery_terms` varchar(255) NOT NULL,
   `sea_road` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
   `reports` longtext NOT NULL,
   `third_party_bank` longtext NOT NULL,
@@ -2147,8 +2148,16 @@ CREATE TABLE `transactions` (
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   `created_by` int(11) NOT NULL,
   `updated_at` datetime DEFAULT NULL,
-  `updated_by` int(11) DEFAULT NULL
+  `updated_by` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_sr_per_ps` (`p_s`, `sr`) -- Composite unique key
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- AUTO_INCREMENT for table `transactions`
+--
+ALTER TABLE `transactions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=80;
 
 --
 -- Dumping data for table `transactions`

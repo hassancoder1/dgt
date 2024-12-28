@@ -8,6 +8,7 @@ if (isset($_POST["goods_id"])) {
     $query = "
         SELECT 
             allotment_name,
+            quality_report,
             size, 
             brand, 
             origin, 
@@ -33,6 +34,7 @@ if (isset($_POST["goods_id"])) {
         if (empty($allotment_name)) {
             continue;
         }
+        $quality_report = $row['quality_report'];
         $size = $row['size'];
         $brand = $row['brand'];
         $origin = $row['origin'];
@@ -80,7 +82,8 @@ if (isset($_POST["goods_id"])) {
             'qty_name' => $qty_name,
             'purchased_quantity' => $purchased_quantity,
             'sold_quantity' => $sold_quantity,
-            'remaining_quantity' => $remaining_quantity
+            'remaining_quantity' => $remaining_quantity,
+            'quality_report' => $quality_report
         ];
     }
 

@@ -22,7 +22,7 @@ $parentGLoadingInfo = json_decode($parentRow['gloading_info'], true);
                 <div class="row">
                     <div class="col-md-12 pb-2 mb-2">
                         <div class="d-flex align-items-center justify-content-between">
-                            <div><b><?= "Sr#" . $parentRow['sr_no']; ?></b></div>
+                            <div><b><?= ucfirst($parentRow['type']) . "#" . $parentRow['p_sr']; ?></b></div>
                             <div><b>Purchase Date </b><?php echo my_date($parentRow['p_date']); ?></div>
                             <div><b>Type </b><?php echo badge(strtoupper($parentRow['p_type']), 'dark'); ?></div>
                             <div><b>Branch </b><?php echo $parentRow['p_branch']; ?></div>

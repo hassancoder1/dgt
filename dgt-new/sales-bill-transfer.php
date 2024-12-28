@@ -1,5 +1,5 @@
 <?php
- $page_title = 'Bill Transfer';
+$page_title = 'Bill Transfer';
 $pageURL = 'sales-bill-transfer';
 include("header.php");
 $remove = $size = $brand = $goods_name = $start_print = $end_print = $is_transferred = $s_khaata_id = '';
@@ -21,9 +21,9 @@ if ($_GET) {
     // Filter by start date
     if (isset($_GET['start']) && !empty($_GET['start'])) {
         $start_print = mysqli_real_escape_string($connect, $_GET['start']);
-       // $pageURL .= '&start=' . $start_print;
-       $print_filters[] = 'start=' . $start_print;
-       $conditions[] = "_date >= '$start_print'";
+        // $pageURL .= '&start=' . $start_print;
+        $print_filters[] = 'start=' . $start_print;
+        $conditions[] = "_date >= '$start_print'";
     }
 
     // Filter by end date
@@ -36,7 +36,7 @@ if ($_GET) {
 
     if (isset($_GET['is_transferred']) && $_GET['is_transferred'] !== '') {
         $is_transferred = mysqli_real_escape_string($connect, $_GET['is_transferred']);
-        $print_filters[] = "is_transferred=".$is_transferred;
+        $print_filters[] = "is_transferred=" . $is_transferred;
         if ($is_transferred === '1') {
             $conditions[] = "locked = '1'"; // Only inactive records
         } elseif ($is_transferred === '0') {
@@ -55,17 +55,17 @@ if ($_GET) {
 // If there are any conditions, concatenate them with 'AND'
 if (count($conditions) > 0) {
     $sql .= ' AND ' . implode(' AND ', $conditions);
-}else{
+} else {
     $sql .= " AND (type != 'commission' OR locked = '2') AND locked IN ('1','2')";
 }
 
-$sql .= " ORDER BY id DESC"; 
-if(count($print_filters) > 0){
+$sql .= " ORDER BY id DESC";
+if (count($print_filters) > 0) {
     $pageURL .= "?";
-    foreach($print_filters as $filter){
-        $pageURL .= '&'.$filter;
+    foreach ($print_filters as $filter) {
+        $pageURL .= '&' . $filter;
     }
-}else{
+} else {
     $pageURL .= '?is_tranferred=1';
     $is_transferred = '1';
 }
@@ -120,10 +120,10 @@ $mypageURL = $pageURL;
                                 echo '<option ' . $brand_selected . ' value="' . $g_brand['brand'] . '">' . $g_brand['brand'] . '</option>';
                             } */ ?>
                         </select>-->
-                        <select class="form-select" name="is_transferred">
-    <option <?= isset($is_transferred) && $is_transferred == 1 ? 'selected' : 'selected'; ?> value="1">Transferred</option>
-    <option <?= isset($is_transferred) && $is_transferred == 0 ? 'selected' : ''; ?> value="0">Not Transferred</option>
-</select>
+                <select class="form-select" name="is_transferred">
+                    <option <?= isset($is_transferred) && $is_transferred == 1 ? 'selected' : 'selected'; ?> value="1">Transferred</option>
+                    <option <?= isset($is_transferred) && $is_transferred == 0 ? 'selected' : ''; ?> value="0">Not Transferred</option>
+                </select>
 
 
 
@@ -153,7 +153,8 @@ $mypageURL = $pageURL;
             </div>
         </form>
         <div class="d-flex gap-1">
-            <?php // echo searchInput('1', 'form-control form-control-sm '); ?>
+            <?php // echo searchInput('1', 'form-control form-control-sm '); 
+            ?>
             <?php echo addNew('purchase-add', '', 'btn-sm'); ?>
             <form action="print/<?php echo $mypageURL; ?>" target="_blank" method="get">
                 <input type="hidden" name="start" value="<?php echo $start_print; ?>">
@@ -163,7 +164,7 @@ $mypageURL = $pageURL;
                 <input type="hidden" name="brand" value="<?php echo $brand; ?>"> -->
                 <input type="hidden" name="is_transferred" value="<?php echo $is_transferred; ?>">
                 <input type="hidden" name="s_khaata_id" value="<?php echo $s_khaata_id; ?>">
-                <input type="hidden" name="secret" value="<?=  base64_encode("powered-by-upsol"); ?>">
+                <input type="hidden" name="secret" value="<?= base64_encode("powered-by-upsol"); ?>">
                 <button type="submit" class="btn btn-success btn-sm">
                     <i class="fa fa-print"></i>
                 </button>
@@ -179,151 +180,152 @@ $mypageURL = $pageURL;
                 <div class="table-responsive" style="height: 83vh">
                     <table class="table table-bordered table-hover table-sm fix-head-table mb-0">
                         <thead>
-                        <tr class="text-nowrap">
-                            <th>Bill#</th>
-                            <th>Type</th>
-                            <th>BR.</th>
-                            <th>Date</th>
-                            <th>A/c</th>
-                            <th>A/c Name</th>
-                            <th>Goods Name</th>
-                            <th>Qty</th>
-                            <th>KGs</th>
-                            <th>AMOUNT</th>
-                            <th>PAYMENT TYPE</th>
-                            <th>COUNTRY</th>
-                            <th>ROAD</th>
-                            <th>LOADING COUNTRY | DATE</th>
-                            <th>RECEIVING COUNTRY | DATE</th>
-                            <th>DOCS</th>
-                        </tr>
+                            <tr class="text-nowrap">
+                                <th>Bill#</th>
+                                <th>Type</th>
+                                <th>BR.</th>
+                                <th>Date</th>
+                                <th>A/c</th>
+                                <th>A/c Name</th>
+                                <th>Goods Name</th>
+                                <th>Qty</th>
+                                <th>KGs</th>
+                                <th>AMOUNT</th>
+                                <th>PAYMENT TYPE</th>
+                                <th>COUNTRY</th>
+                                <th>ROAD</th>
+                                <th>LOADING COUNTRY | DATE</th>
+                                <th>RECEIVING COUNTRY | DATE</th>
+                                <th>DOCS</th>
+                            </tr>
                         </thead>
                         <tbody>
-                        <?php $purchases = mysqli_query($connect, $sql);
-                        $row_count = $p_qty_total = $p_kgs_total = 0;
-                        while ($purchase = mysqli_fetch_assoc($purchases)) {
-                            $id = $purchase['id'];
-                            $_fields_single = transactionSingle($id);
+                            <?php $purchases = mysqli_query($connect, $sql);
+                            $row_count = $p_qty_total = $p_kgs_total = 0;
+                            while ($purchase = mysqli_fetch_assoc($purchases)) {
+                                $id = $purchase['id'];
+                                $_fields_single = transactionSingle($id);
 
-                            $is_doc = $purchase['is_doc'];
-                            $locked = $purchase['locked'];
+                                $is_doc = $purchase['is_doc'];
+                                $locked = $purchase['locked'];
 
-                            $cntrs = purchaseSpecificData($id, 'purchase_rows');
-                            $totals = purchaseSpecificData($id, 'product_details');
-                            $Goods = empty($_fields_single['items'][0]) ? '' : goodsName($_fields_single['items'][0]['goods_id']);
+                                $cntrs = purchaseSpecificData($id, 'purchase_rows');
+                                $totals = purchaseSpecificData($id, 'product_details');
+                                $Goods = empty($_fields_single['items'][0]) ? '' : goodsName($_fields_single['items'][0]['goods_id']);
 
-                            $Size = $cntrs > 0 ? '<b>SIZE. </b>' . $totals['Size'][0] . '<br>' : '';
-                            $Brand = $cntrs > 0 ? '<b>BRNAD. </b>' . $totals['Brand'][0] . ' ' : '';
+                                $Size = $cntrs > 0 ? '<b>SIZE. </b>' . $totals['Size'][0] . '<br>' : '';
+                                $Brand = $cntrs > 0 ? '<b>BRNAD. </b>' . $totals['Brand'][0] . ' ' : '';
 
-                            $Qty = empty($_fields_single['items_sum']) ? '' : $_fields_single['items_sum']['sum_qty_no'];
-                            $KGs = empty($_fields_single['items_sum']) ? '' : $_fields_single['items_sum']['sum_total_kgs'];
+                                $Qty = empty($_fields_single['items_sum']) ? '' : $_fields_single['items_sum']['sum_qty_no'];
+                                $KGs = empty($_fields_single['items_sum']) ? '' : $_fields_single['items_sum']['sum_total_kgs'];
 
-                            $sea_road = '';
-                    $sea_road_array = json_decode(getSeaRoadArray($id));
-                    $_fields_sr = ['l_country' => '', 'l_date' => '', 'r_country' => '', 'r_date' => ''];
-                    if (!empty($sea_road_array)) {
-                        $sea_road = $sea_road_array->sea_road ?? '';
-                        $_fields_sr = [];
-                        if ($sea_road === 'sea') {
-                            $_fields_sr = [
-                                'l_country' => $sea_road_array->l_country ?? '',
-                                'l_date'    => $sea_road_array->l_date ?? '',
-                                'r_country' => $sea_road_array->r_country ?? '',
-                                'r_date'    => $sea_road_array->r_date ?? '',
-                                'truck_no' => $sea_road_array->truck_no ?? '',
-                                'truck_name' => $sea_road_array->truck_name ?? '',
-                                'loading_company_name' => $sea_road_array->loading_company_name ?? '',
-                                'loading_date' => $sea_road_array->loading_date ?? '',
-                                'transfer_name' => $sea_road_array->transfer_name ?? ''
-                            ];
-                        } elseif ($sea_road === 'road') {
-                            $_fields_sr = [
-                                'l_country' => $sea_road_array->l_country_road ?? '',
-                                'l_date'    => $sea_road_array->l_date_road ?? '',
-                                'r_country' => $sea_road_array->r_country_road ?? '',
-                                'r_date'    => $sea_road_array->r_date_road ?? '',
-                                'old_company_name' => $sea_road_array->old_company_name ?? '',
-                                'transfer_company_name' => $sea_road_array->transfer_company_name ?? '',
-                                'warehouse_date' => $sea_road_array->warehouse_date ?? '',
-                            ];
-                        }
-                    }
-
-                            if ($is_search) {
-                                // if ($start != '') {
-                                //     if ($purchase['p_date'] < $start) continue;
-                                // }
-                                // if ($end != '') {
-                                //     if ($purchase['p_date'] > $end) continue;
-                                // }
-                                $GoodsKaNaam = $cntrs > 0 ? $totals['Goods'][0] : '';
-                                if ($goods_name != '') {
-                                    if ($goods_name != $GoodsKaNaam) continue;
-                                }
-                                if ($size != '') {
-                                    if ($size != $totals['Size'][0]) continue;
-                                }
-                                if ($brand != '') {
-                                    if ($brand != $totals['Brand'][0]) continue;
-                                }
-
-                                if ($is_transferred != '') {
-                                    if ($is_transferred == '1') {
-                                        if ($locked == 0) continue;
-                                    }
-                                    if ($is_transferred == '0') {
-                                        if ($locked == 1) continue;
+                                $sea_road = '';
+                                $sea_road_array = json_decode(getSeaRoadArray($id));
+                                $_fields_sr = ['l_country' => '', 'l_date' => '', 'r_country' => '', 'r_date' => ''];
+                                if (!empty($sea_road_array)) {
+                                    $sea_road = $sea_road_array->sea_road ?? '';
+                                    $_fields_sr = [];
+                                    if ($sea_road === 'sea') {
+                                        $_fields_sr = [
+                                            'l_country' => $sea_road_array->l_country ?? '',
+                                            'l_date'    => $sea_road_array->l_date ?? '',
+                                            'r_country' => $sea_road_array->r_country ?? '',
+                                            'r_date'    => $sea_road_array->r_date ?? '',
+                                            'truck_no' => $sea_road_array->truck_no ?? '',
+                                            'truck_name' => $sea_road_array->truck_name ?? '',
+                                            'loading_company_name' => $sea_road_array->loading_company_name ?? '',
+                                            'loading_date' => $sea_road_array->loading_date ?? '',
+                                            'transfer_name' => $sea_road_array->transfer_name ?? ''
+                                        ];
+                                    } elseif ($sea_road === 'road') {
+                                        $_fields_sr = [
+                                            'l_country' => $sea_road_array->l_country_road ?? '',
+                                            'l_date'    => $sea_road_array->l_date_road ?? '',
+                                            'r_country' => $sea_road_array->r_country_road ?? '',
+                                            'r_date'    => $sea_road_array->r_date_road ?? '',
+                                            'old_company_name' => $sea_road_array->old_company_name ?? '',
+                                            'transfer_company_name' => $sea_road_array->transfer_company_name ?? '',
+                                            'warehouse_date' => $sea_road_array->warehouse_date ?? '',
+                                        ];
                                     }
                                 }
-                                // if ($s_khaata_id != '') {
-                                //     if ($s_khaata_id != $purchase['s_khaata_id']) continue;
-                                // }
-                            }
-                            $p_qty_total += !empty($totals['Qty']) ? $totals['Qty'] : 0;
-                            $p_kgs_total += !empty($totals['KGs']) ? $totals['KGs'] : 0;
-                            $rowColor = '';
-                            if ($locked == 0) {
-                                $rowColor = $is_doc == 0 ? ' text-danger ' : ' text-warning ';
-                            } ?>
-                            <tr class="text-nowrap">
-                                <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $id; ?>)"
-                                    data-bs-toggle="modal" data-bs-target="#KhaataDetails">
-                                    <?php echo '<b>'.ucfirst($_fields_single['p_s']).'#</b>'.$id; echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : '';echo $locked == 2 ? '<i class="fa fa-lock text-success"></i><i class="fa fa-lock text-success" style="margin-left:-6px;"></i>' : ''; ?></td>
-                                <td class="<?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['type']); //badge(strtoupper($_fields_single['type']), $purchase['type'] == 'booking' ? 'dark' : 'danger'); ?></td>
-                                <td class="<?php echo $rowColor; ?>"><?php echo branchName($_fields_single['branch_id']); ?></td>
-                                <td class="<?php echo $rowColor; ?>"><?php echo my_date($_fields_single['_date']);; ?></td>
-                                <td class="s_khaata_id_row <?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['cr_acc']); ?></td>
-                                <td class="<?php echo $rowColor; ?>"><?php echo $_fields_single['cr_acc_name']; ?></td>
-                                <td class="<?php echo $rowColor; ?>"><?php echo $Goods; ?></td>
-                                <td class="<?php echo $rowColor; ?>"><?php echo $Qty; ?></td>
-                                <td class="<?php echo $rowColor; ?>"><?php echo $KGs; ?></td>
-                                <td class="<?php echo $rowColor; ?>">
-                                    <?php if ($cntrs > 0) {
-                                        echo $totals['Final'] . '<sub>' . $totals['curr2'] . '</sub>';
-                                    } ?>
-                                </td>
-                                <td class="<?php echo $rowColor; ?> px-2"><?= isset($_fields_single['payment_details']->full_advance) ? ucwords($_fields_single['payment_details']->full_advance) : "No Payment Details Available"; ?></td>
-                                <td class="<?php echo $rowColor; ?>"><?php echo $purchase['country']; ?></td>
-                                <?php
-                                if ($sea_road == '') {
-                                    echo '<td class="<?php echo $rowColor; ?>" colspan="3"></td>';
-                                } else {
-                                    echo '<td class="' . $rowColor . '">' . $sea_road . '</td>';
-                                    echo '<td class="' . $rowColor . '">' . $_fields_sr['l_country'] . ' ' . my_date($_fields_sr['l_date']) . '</td>';
-                                    echo '<td class="' . $rowColor . '">' . $_fields_sr['r_country'] . ' ' . my_date($_fields_sr['r_date']) . '</td>';
-                                }
-                                ?>
-                                <td class="<?php echo $rowColor; ?>">
-                                    <?php if ($is_doc == 1) {
-                                        $atts = getAttachments($id, 'purchase_contract');
-                                        foreach ($atts as $att) {
-                                            echo '<a href="attachments/' . $att['attachment'] . '" title="' . $att['created_at'] . '" target="_blank"><i class="fa fa-download text-success"></i></a>';
+
+                                if ($is_search) {
+                                    // if ($start != '') {
+                                    //     if ($purchase['p_date'] < $start) continue;
+                                    // }
+                                    // if ($end != '') {
+                                    //     if ($purchase['p_date'] > $end) continue;
+                                    // }
+                                    $GoodsKaNaam = $cntrs > 0 ? $totals['Goods'][0] : '';
+                                    if ($goods_name != '') {
+                                        if ($goods_name != $GoodsKaNaam) continue;
+                                    }
+                                    if ($size != '') {
+                                        if ($size != $totals['Size'][0]) continue;
+                                    }
+                                    if ($brand != '') {
+                                        if ($brand != $totals['Brand'][0]) continue;
+                                    }
+
+                                    if ($is_transferred != '') {
+                                        if ($is_transferred == '1') {
+                                            if ($locked == 0) continue;
                                         }
-                                    } ?>
-                                </td>
-                            </tr>
+                                        if ($is_transferred == '0') {
+                                            if ($locked == 1) continue;
+                                        }
+                                    }
+                                    // if ($s_khaata_id != '') {
+                                    //     if ($s_khaata_id != $purchase['s_khaata_id']) continue;
+                                    // }
+                                }
+                                $p_qty_total += !empty($totals['Qty']) ? $totals['Qty'] : 0;
+                                $p_kgs_total += !empty($totals['KGs']) ? $totals['KGs'] : 0;
+                                $rowColor = empty($purchase['khaata_tr1']) ? 'text-danger ' : ' text-dark ';
+                            ?>
+                                <tr class="text-nowrap">
+                                    <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $id; ?>)"
+                                        data-bs-toggle="modal" data-bs-target="#KhaataDetails">
+                                        <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $purchase['sr'];
+                                        echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : '';
+                                        echo $locked == 2 ? '<i class="fa fa-lock text-success"></i><i class="fa fa-lock text-success" style="margin-left:-6px;"></i>' : ''; ?></td>
+                                    <td class="<?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['type']); //badge(strtoupper($_fields_single['type']), $purchase['type'] == 'booking' ? 'dark' : 'danger'); 
+                                                                            ?></td>
+                                    <td class="<?php echo $rowColor; ?>"><?php echo branchName($_fields_single['branch_id']); ?></td>
+                                    <td class="<?php echo $rowColor; ?>"><?php echo my_date($_fields_single['_date']);; ?></td>
+                                    <td class="s_khaata_id_row <?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['cr_acc']); ?></td>
+                                    <td class="<?php echo $rowColor; ?>"><?php echo $_fields_single['cr_acc_name']; ?></td>
+                                    <td class="<?php echo $rowColor; ?>"><?php echo $Goods; ?></td>
+                                    <td class="<?php echo $rowColor; ?>"><?php echo $Qty; ?></td>
+                                    <td class="<?php echo $rowColor; ?>"><?php echo $KGs; ?></td>
+                                    <td class="<?php echo $rowColor; ?>">
+                                        <?php if ($cntrs > 0) {
+                                            echo $totals['Final'] . '<sub>' . $totals['curr2'] . '</sub>';
+                                        } ?>
+                                    </td>
+                                    <td class="<?php echo $rowColor; ?> px-2"><?= isset($_fields_single['payment_details']->full_advance) ? ucwords($_fields_single['payment_details']->full_advance) : "No Payment Details Available"; ?></td>
+                                    <td class="<?php echo $rowColor; ?>"><?php echo $purchase['country']; ?></td>
+                                    <?php
+                                    if ($sea_road == '') {
+                                        echo '<td class="<?php echo $rowColor; ?>" colspan="3"></td>';
+                                    } else {
+                                        echo '<td class="' . $rowColor . '">' . $sea_road . '</td>';
+                                        echo '<td class="' . $rowColor . '">' . $_fields_sr['l_country'] . ' ' . my_date($_fields_sr['l_date']) . '</td>';
+                                        echo '<td class="' . $rowColor . '">' . $_fields_sr['r_country'] . ' ' . my_date($_fields_sr['r_date']) . '</td>';
+                                    }
+                                    ?>
+                                    <td class="<?php echo $rowColor; ?>">
+                                        <?php if ($is_doc == 1) {
+                                            $atts = getAttachments($id, 'purchase_contract');
+                                            foreach ($atts as $att) {
+                                                echo '<a href="attachments/' . $att['attachment'] . '" title="' . $att['created_at'] . '" target="_blank"><i class="fa fa-download text-success"></i></a>';
+                                            }
+                                        } ?>
+                                    </td>
+                                </tr>
                             <?php $row_count++;
-                        } ?>
+                            } ?>
                         </tbody>
                     </table>
                     <input type="hidden" id="row_count" value="<?php echo $row_count; ?>">
@@ -341,7 +343,7 @@ $mypageURL = $pageURL;
     $("#p_kgs_total_span").text($("#p_kgs_total").val());
 </script>
 <div class="modal fade" id="KhaataDetails" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
-     role="dialog" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+    role="dialog" aria-labelledby="staticBackdropLabel" aria-hidden="true">
     <div class="modal-dialog modal-fullscreen -modal-xl -modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-body bg-light pt-0" id="viewDetails"></div>
@@ -354,8 +356,13 @@ $mypageURL = $pageURL;
             $.ajax({
                 url: 'ajax/viewSingleTransaction.php',
                 type: 'post',
-                data: {id: id, level: 1, page: "bill-transfer", type: 'sale'},
-                success: function (response) {
+                data: {
+                    id: id,
+                    level: 1,
+                    page: "bill-transfer",
+                    type: 'sale'
+                },
+                success: function(response) {
                     $('#viewDetails').html(response);
                 }
             });
@@ -376,12 +383,13 @@ if (isset($_POST['ttrFirstSubmit'])) {
     $transfer_date = mysqli_real_escape_string($connect, $_POST['transfer_date']);
     $amount = mysqli_real_escape_string($connect, $_POST['amount']);
     $final_amount = mysqli_real_escape_string($connect, $_POST['final_amount']);
-    if(!empty($final_amount)){
-    $details = mysqli_real_escape_string($connect, $_POST['details']) . " | Amount: $amount " . $_POST['currency1'] . " " . $_POST['opr'] . " " . $_POST['rate'] . ' = ' . $final_amount . " " . $_POST['currency2'];
-    }else{
-    $details = mysqli_real_escape_string($connect, $_POST['details']) . " | Amount: $amount ";
+    if (!empty($final_amount)) {
+        $details = mysqli_real_escape_string($connect, $_POST['details']) . " | Amount: $amount " . $_POST['currency1'] . " " . $_POST['opr'] . " " . $_POST['rate'] . ' = ' . $final_amount . " " . $_POST['currency2'];
+    } else {
+        $details = mysqli_real_escape_string($connect, $_POST['details']) . " | Amount: $amount ";
     }
     $p_id = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
+    $p_sr = mysqli_real_escape_string($connect, $_POST['p_sr']);
     $type_post = mysqli_real_escape_string($connect, $_POST['type']);
     $url = $pageURL . '?id=' . $p_id;
     $type = ' S.' . ucfirst(substr($type_post, 0, '1'));
@@ -394,17 +402,17 @@ if (isset($_POST['ttrFirstSubmit'])) {
         $dataArray = array(
             'r_type' => $r_type,
             'transfered_from' => $transfered_from,
-            'transfered_from_id' => $p_id,
+            'transfered_from_id' => $p_sr,
             'branch_id' => $p_data['branch_id'],
             'user_id' => $userId,
             'username' => $userName,
             'r_date' => $transfer_date,
-            'roznamcha_no' => $p_id,
+            'roznamcha_no' => $p_sr,
             'r_name' => $type,
-            'r_no' => $p_id,
+            'r_no' => $p_sr,
             'created_at' => date('Y-m-d H:i:s')
         );
-        $str = " Sale # " . $p_id;
+        $str = " Sale # " . $p_sr;
         $done = false;
         if (isset($_POST['r_id'])) {
             $r_ids = $_POST['r_id'];
@@ -515,42 +523,41 @@ if (isset($_POST['transferPurchase'])) {
     if ($locked) {
         $type = 'success';
         $msg = 'Purchase Successfully transferred.';
-    }else{
+    } else {
         $type = 'failed';
         $msg = 'Purchase transfer Failed.';
     }
     messageNew($type, $pageURL, $msg);
-} 
- if (isset($_GET['t_id']) && is_numeric($_GET['t_id'])) {/*&& isset($_GET['view']) && $_GET['view'] == 1*/
+}
+if (isset($_GET['t_id']) && is_numeric($_GET['t_id'])) {/*&& isset($_GET['view']) && $_GET['view'] == 1*/
     $t_id = mysqli_real_escape_string($connect, $_GET['t_id']);
     echo "<script>jQuery(document).ready(function ($) {  $('#KhaataDetails').modal('show');});</script>";
     echo "<script>jQuery(document).ready(function ($) {  viewPurchase($t_id); });</script>";
-} 
+}
 ?>
 
 <script>
     $(document).ready(function() {
-    // Function to get the query parameter value
-    function getQueryParameter(name) {
-        const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get(name);
-    }
-
-    // Get the value of 's_khaata_id' parameter from the URL
-    var s_khaata_id = getQueryParameter('s_khaata_id').toUpperCase();
-
-    // Iterate over all the <td> elements with class 's_khaata_id_row'
-    $('td.s_khaata_id_row').each(function() {
-        // Get the text content of the current <td>
-        var cellText = $(this).text().trim();
-        console.log(cellText);
-        console.log(s_khaata_id);
-
-        // If the text doesn't match the 's_khaata_id' parameter, hide the parent <tr>
-        if (cellText !== s_khaata_id && s_khaata_id !== '') {
-            $(this).closest('tr').hide();
+        // Function to get the query parameter value
+        function getQueryParameter(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
         }
-    });
-});
 
+        // Get the value of 's_khaata_id' parameter from the URL
+        var s_khaata_id = getQueryParameter('s_khaata_id').toUpperCase();
+
+        // Iterate over all the <td> elements with class 's_khaata_id_row'
+        $('td.s_khaata_id_row').each(function() {
+            // Get the text content of the current <td>
+            var cellText = $(this).text().trim();
+            console.log(cellText);
+            console.log(s_khaata_id);
+
+            // If the text doesn't match the 's_khaata_id' parameter, hide the parent <tr>
+            if (cellText !== s_khaata_id && s_khaata_id !== '') {
+                $(this).closest('tr').hide();
+            }
+        });
+    });
 </script>
