@@ -1,7 +1,7 @@
 <?php
 $page_title = 'P/S GENERAL TRANSFER';
 include("header.php");
-$pageURL = "vat-purchase-sale-general-transfer";
+$pageURL = "vat-ps-direct";
 $print_url = 'print/' . $pageURL;
 $_GET['CCWpage'] = 'all';
 $allot = $goods_id = $size = $brand = $origin = $date_from = $date_to = '';
@@ -65,74 +65,95 @@ if ($_GET) {
 }
 
 $where_clause = !empty($conditions) ? ' WHERE ' . implode(' AND ', $conditions) : '';
-$sql = "SELECT * FROM vat_copies $where_clause";
+$sql = "SELECT * FROM transactions $where_clause";
 $data = mysqli_query($connect, $sql);
+$direct = mysqli_query($connect, "SELECT * FROM vat_direct");
+$directEntries = [];
+while ($direct_one = mysqli_fetch_assoc($direct)) {
+    $directEntries[$direct_one['unique_code']] = $direct_one;
+}
 $entries = [];
 while ($one = mysqli_fetch_assoc($data)) {
-    if ($one['id'] !== null) {
-        $entries[] = $one;
-    }
+    $entries[] = array_merge(
+        transactionSingle($one['id']),
+        ['sea_road_array' => json_decode($one['sea_road'], true)] ?? [],
+        ['notify_party_details' => json_decode($one['notify_party_details'], true)] ?? [],
+        ['third_party_bank' => json_decode($one['third_party_bank'], true)] ?? [],
+        ['reports' => json_decode($one['reports'], true)] ?? [],
+        ["id" => $one['id'], "p_sr" => $one['sr']]
+    );
 }
-
-
 $i = 1;
-$redEntries = $yellowEntries = $darkEntries = [];
-$totalAmount = $totalTax = $totalWithTax = 0; // Totals for purchase entries
-$soldAmount = $soldTax = $soldWithTax = 0; // Totals for sold entries
-$remainingAmount = $remainingTax = $remainingWithTax = 0; // Remaining totals
 $sortedEntries = [];
+$totalAmount = $totalTax = $totalWithTax = 0;
+$soldAmount = $soldTax = $soldWithTax = 0;
 foreach ($entries as $entry) {
-    $ldata = json_decode($entry['ldata'], true);
-    $tdata = json_decode($entry['tdata'], true);
-    // $ldata = json_decode(str_replace(['\\', '"{', '}"'], ['', '{', '}'], $entry['ldata']), true);
-
-    $TotalQty = $ldata['good']['quantity_no'] ?? 0; // Total quantity in the entry
-    $RemQty = $ldata['good']['goods_json']['qty_no'] ?? 0; // Remaining quantity
-    $SoldQty = $TotalQty - $RemQty; // Calculate sold quantity
-
-    $appendDash = isset($tdata['p_s']) && $tdata['p_s'] === 's'; // 's' indicates a sale entry
-
-    // // Categorize entries into red, yellow, or dark
-    // if ($SoldQty === 0) {
-    //     // No sales, entirely unsold
-    //     $entry['row_color'] = 'text-danger'; // Red for unsold
-    //     $redEntries[] = $entry;
-    // } elseif ($RemQty > 0) {
-    //     // Partially sold
-    //     $entry['row_color'] = 'text-warning'; // Yellow for partially sold
-    //     $yellowEntries[] = $entry;
-    // } else {
-    //     // Fully sold
-    $entry['row_color'] = 'text-danger'; // Dark for fully sold
-    //     $darkEntries[] = $entry;
-    // }
-
-    // Aggregate totals based on purchase or sale
-    if (!$appendDash) {
-        $entry['row_color'] = 'text-success'; // Dark for fully sold
-        // Purchase entry
-        $totalAmount += $ldata['good']['amount'];
-        $totalTax += (float)$ldata['good']['tax_amount'];
-        $totalWithTax += $ldata['good']['total_with_tax'] === 0 ? $ldata['good']['amount'] : $ldata['good']['total_with_tax'];
-    } else {
-        // Sale entry
-        $soldAmount += $ldata['good']['amount'];
-        $soldTax += (float)$ldata['good']['tax_amount'];
-        $soldWithTax += $ldata['good']['total_with_tax'] === 0 ? $ldata['good']['amount'] : $ldata['good']['total_with_tax'];
+    if (empty($entry['items'])) continue;
+    foreach ($entry['items'] as $item) {
+        $unique_code = $entry['p_s'] . $entry['type'][0] . (isset($entry['sea_road_array']['route']) ? ($entry['sea_road_array']['route'] === 'local' ? 'ld' : 'wr') : ($entry['sea_road_array']['sea_road'] === 'sea' ? 'se' : 'rd')) . '_' . $entry['id'] . '_' . $item['id'];
+        if ($item['show_in_vat'] === 'no') {
+            continue;
+        }
+        if (array_key_exists($unique_code, $directEntries)) {
+            $entry = json_decode($directEntries[$unique_code]['tdata'], true);
+            $item = $entry['good'];
+            $isPurchase = !isset($entry['p_s']) || $entry['p_s'] !== 's';
+            $rowColor = $isPurchase ? 'text-success' : 'text-danger';
+            $amount = floatval($item['amount'] ?? 0);
+            $taxAmount = floatval($item['tax_amount'] ?? 0);
+            $totalWithTaxAmount = floatval($item['total_with_tax'] ?? $amount);
+            if ($isPurchase) {
+                $totalAmount += $amount;
+                $totalTax += $taxAmount;
+                $totalWithTax += $totalWithTaxAmount;
+            } else {
+                $soldAmount += $amount;
+                $soldTax += $taxAmount;
+                $soldWithTax += $totalWithTaxAmount;
+            }
+            $sortedEntries[] = [
+                'row_color' => $rowColor,
+                'unique_code' => $unique_code,
+                'tdata' => $directEntries[$unique_code]['tdata']
+            ];
+            continue;
+        }
+        $isPurchase = !isset($entry['p_s']) || $entry['p_s'] !== 's';
+        $rowColor = $isPurchase ? 'text-success' : 'text-danger';
+        $amount = floatval($item['amount'] ?? 0);
+        $taxAmount = floatval($item['tax_amount'] ?? 0);
+        $totalWithTaxAmount = floatval($item['total_with_tax'] ?? $amount);
+        if ($isPurchase) {
+            $totalAmount += $amount;
+            $totalTax += $taxAmount;
+            $totalWithTax += $totalWithTaxAmount;
+        } else {
+            $soldAmount += $amount;
+            $soldTax += $taxAmount;
+            $soldWithTax += $totalWithTaxAmount;
+        }
+        $sortedEntries[] = [
+            "row_color" => $rowColor,
+            "unique_code" => $unique_code,
+            "tdata" => json_encode(array_merge($entry, ['good' => $item]))
+        ];
     }
-    $sortedEntries[] = $entry;
 }
-
-// Calculate remaining values
 $remainingAmount = $totalAmount - $soldAmount;
 $remainingTax = $totalTax - $soldTax;
 $remainingWithTax = $totalWithTax - $soldWithTax;
-
-// Merge categorized entries for further use or display
-// $sortedEntries = array_merge($redEntries, $yellowEntries, $darkEntries);
-
+$totals = [
+    "total_amount" => $totalAmount,
+    "total_tax" => $totalTax,
+    "total_with_tax" => $totalWithTax,
+    "sold_amount" => $soldAmount,
+    "sold_tax" => $soldTax,
+    "sold_with_tax" => $soldWithTax,
+    "remaining_amount" => $remainingAmount,
+    "remaining_tax" => $remainingTax,
+    "remaining_with_tax" => $remainingWithTax
+];
 ?>
-
 <div class="fixed-top">
     <?php require_once('nav-links.php'); ?>
 </div>
@@ -305,6 +326,7 @@ $remainingWithTax = $totalWithTax - $soldWithTax;
                         <thead class="table-light">
                             <tr>
                                 <th>#</th>
+                                <th>Type</th>
                                 <th>Date</th>
                                 <th>Acc</th>
                                 <th>Allot</th>
@@ -336,16 +358,14 @@ $remainingWithTax = $totalWithTax - $soldWithTax;
                             }
 
                             foreach ($sortedEntries as $entry) {
-                                $ldata = json_decode($entry['ldata'], true);
                                 $tdata = json_decode($entry['tdata'], true);
-                                $quantity = $ldata['good']['quantity_no'] ?? 0;
-                                $netWeight = $ldata['good']['net_weight'] ?? 0;
-                                $grossWeight = $ldata['good']['gross_weight'] ?? 0;
-                                $amount = $ldata['good']['amount'] ?? 0;
-                                $tax = $ldata['good']['tax_amount'] ?? 0;
-                                $total = $ldata['good']['total_with_tax'] === 0 ? $ldata['good']['amount'] : $ldata['good']['total_with_tax'];
+                                $quantity = $tdata['good']['qty_no'] ?? 0;
+                                $netWeight = $tdata['good']['net_kgs'] ?? 0;
+                                $grossWeight = $tdata['good']['total_kgs'] ?? 0;
+                                $amount = $tdata['good']['amount'] ?? 0;
+                                $tax = $tdata['good']['tax_amount'] ?? 0;
+                                $total = $tdata['good']['total_with_tax'] === 0 ? $tdata['good']['amount'] : $tdata['good']['total_with_tax'];
                                 $appendDash = isset($tdata['p_s']) && $tdata['p_s'] === 's';
-                                // Fetch company name and weight for $tdata['cr_acc']
                                 $CompanyWeightAcc = $tdata['p_s'] === 'p' ? $tdata['cr_acc'] : $tdata['dr_acc'];
                                 $companyName = $weight = '';
                                 if (isset($khaataMap[$CompanyWeightAcc])) {
@@ -361,23 +381,24 @@ $remainingWithTax = $totalWithTax - $soldWithTax;
                                 }
                             ?>
                                 <tr class="text-nowrap">
-                                    <td class="<?= $entry['row_color']; ?> pointer" onclick="window.location.href='<?= $pageURL; ?>?view=1&unique_code=<?= $entry['unique_code']; ?>&print_type=contract&CCWpage=all&sr_no=<?= $ldata['sr_no']; ?>'">
-                                        <b><?= ucfirst($ldata['type']); ?>#</b> <?= htmlspecialchars($ldata['p_sr']); ?> (<?= htmlspecialchars($ldata['sr_no']); ?>)
+                                    <td class="<?= $entry['row_color']; ?> pointer" onclick="window.location.href='<?= $pageURL; ?>?view=1&unique_code=<?= $entry['unique_code']; ?>&print_type=contract&CCWpage=all&sr_no=<?= $tdata['good']['sr']; ?>'">
+                                        <b><?= ucfirst($tdata['p_s']); ?>#</b> <?= htmlspecialchars($tdata['sr']); ?> (<?= htmlspecialchars($tdata['good']['sr']); ?>)
                                     </td>
+                                    <td class="fw-bold"><?= ucfirst(htmlspecialchars($tdata['type'] ?? 'N/A')); ?></td>
                                     <td class="fw-bold"><?= my_date(htmlspecialchars($tdata['_date'] ?? 'N/A')); ?></td>
                                     <td class="fw-bold"><?= !empty($companyName) ? $companyName : 'N/A'; ?></td>
-                                    <td class="<?= $entry['row_color']; ?>"><?= htmlspecialchars($ldata['good']['goods_json']['allotment_name'] ?? 'N/A'); ?></td>
-                                    <td class="<?= $entry['row_color']; ?>"><?= htmlspecialchars($ldata['transfer']['warehouse_transfer'] ?? 'N/A'); ?></td>
-                                    <td class="<?= $entry['row_color']; ?>"><?= goodsName(htmlspecialchars($ldata['good']['goods_id'])); ?></td>
-                                    <td class="<?= $entry['row_color']; ?>"><?= htmlspecialchars($ldata['good']['size'] ?? 'N/A'); ?></td>
-                                    <td class="<?= $entry['row_color']; ?>"><?= htmlspecialchars($ldata['good']['brand'] ?? 'N/A'); ?></td>
-                                    <td class="<?= $entry['row_color']; ?>"><?= htmlspecialchars($ldata['good']['origin'] ?? 'N/A'); ?></td>
+                                    <td class="<?= $entry['row_color']; ?>"><?= htmlspecialchars($tdata['good']['allotment_name'] ?? 'N/A'); ?></td>
+                                    <td class="<?= $entry['row_color']; ?>"><?= htmlspecialchars($tdata['transfer']['warehouse_transfer'] ?? 'N/A'); ?></td>
+                                    <td class="<?= $entry['row_color']; ?>"><?= goodsName(htmlspecialchars($tdata['good']['goods_id'])); ?></td>
+                                    <td class="<?= $entry['row_color']; ?>"><?= htmlspecialchars($tdata['good']['size'] ?? 'N/A'); ?></td>
+                                    <td class="<?= $entry['row_color']; ?>"><?= htmlspecialchars($tdata['good']['brand'] ?? 'N/A'); ?></td>
+                                    <td class="<?= $entry['row_color']; ?>"><?= htmlspecialchars($tdata['good']['origin'] ?? 'N/A'); ?></td>
                                     <td class="<?= $entry['row_color']; ?>"><?= ($appendDash ? '-' : '+') . htmlspecialchars($quantity); ?></td>
                                     <td class="<?= $entry['row_color']; ?>"><?= ($appendDash ? '-' : '+') . htmlspecialchars($netWeight); ?></td>
                                     <td class="<?= $entry['row_color']; ?>"><?= ($appendDash ? '-' : '+') . htmlspecialchars($grossWeight); ?></td>
-                                    <td class="<?= $entry['row_color']; ?>"><?= htmlspecialchars($ldata['good']['goods_json']['rate1'] ?? 'N/A') . ' ' . htmlspecialchars($ldata['good']['goods_json']['price'] ?? 'N/A'); ?></td>
+                                    <td class="<?= $entry['row_color']; ?>"><?= htmlspecialchars($tdata['good']['goods_json']['rate1'] ?? 'N/A') . ' ' . htmlspecialchars($tdata['good']['goods_json']['price'] ?? 'N/A'); ?></td>
                                     <td class="<?= $entry['row_color']; ?>"><?= ($appendDash ? '-' : '+') . htmlspecialchars($amount); ?></td>
-                                    <td class="<?= $entry['row_color']; ?>"><?= ($appendDash ? '-' : '+') . htmlspecialchars($tax); ?></td>
+                                    <td class="<?= $entry['row_color']; ?>"><?= ($appendDash ? '-' : '+') . htmlspecialchars(!empty($tax) ? $tax : 0); ?></td>
                                     <td class="<?= $entry['row_color']; ?>"><?= ($appendDash ? '-' : '+') . htmlspecialchars($total); ?></td>
                                 </tr>
                             <?php
@@ -407,7 +428,7 @@ $remainingWithTax = $totalWithTax - $soldWithTax;
     function viewPurchase(unique_code, print_party_2, warehouse_type, print_type, sr_no) {
         if (unique_code) {
             $.ajax({
-                url: 'ajax/GetCustomEditEntry.php',
+                url: 'ajax/editVATDirect.php',
                 type: 'post',
                 data: {
                     unique_code: unique_code,
@@ -442,12 +463,8 @@ if (isset($_GET['unique_code']) && isset($_GET['view']) && $_GET['view'] == 1) {
 
 if (isset($_POST['reSubmit'])) {
     unset($_POST['reSubmit']);
-
-    // Decode tdata and ldata JSON strings into PHP arrays
+    echo "SDSDSDS";
     $tdata = json_decode($_POST['tdata'], true);
-    $ldata = json_decode($_POST['ldata'], true);
-
-    // Recursive function to update JSON structure
     function updateNestedJson(&$data, $key, $value)
     {
         foreach ($data as $k => &$v) {
@@ -458,38 +475,32 @@ if (isset($_POST['reSubmit'])) {
             }
         }
     }
-
-    // Iterate through POST keys to update tdata and ldata
     foreach ($_POST as $key => $value) {
-        if ($key !== 'tdata' && $key !== 'ldata') { // Exclude JSON strings
-            // Update tdata
+        if ($key !== 'tdata') {
             if (array_key_exists($key, $tdata)) {
                 $tdata[$key] = $value;
             } else {
                 updateNestedJson($tdata, $key, $value);
             }
-
-            // Update ldata
-            if (array_key_exists($key, $ldata)) {
-                $ldata[$key] = $value;
-            } else {
-                updateNestedJson($ldata, $key, $value);
-            }
         }
     }
-
-    $ldata['good'] = calcNewValues([$_POST['quantity_no'], $_POST['qty_no']], $ldata['good'], 'both');
-    $ldata['edited'] = true;
+    $tdata['edited'] = true;
     $data = [
-        'data_for' => mysqli_real_escape_string($connect, $_POST['warehouse_transfer']),
+        'unique_code' => $_POST['unique_code'],
         'tdata' => mysqli_real_escape_string($connect, json_encode($tdata)),
-        'ldata' => mysqli_real_escape_string($connect, json_encode($ldata))
     ];
-
-    $done = update('vat_copies', $data, ['unique_code' => $_POST['unique_code']]);
-    if ($done) {
-        $message = 'Record Updated!';
-        messageNew('success', 'vat-purchase-sale-general-transfer', $message);
+    if (!recordExists('vat_direct', ['unique_code' => $_POST['unique_code']])) {
+        $done = insert('vat_direct', $data);
+        if ($done) {
+            $message = 'Record Added!';
+            messageNew('success', 'vat-ps-direct', $message);
+        }
+    } else {
+        $done = update('vat_direct', $data, ['unique_code' => $_POST['unique_code']]);
+        if ($done) {
+            $message = 'Record Updated!';
+            messageNew('success', 'vat-ps-direct', $message);
+        }
     }
 }
 

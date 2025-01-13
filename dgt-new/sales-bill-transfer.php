@@ -202,8 +202,20 @@ $mypageURL = $pageURL;
                         <tbody>
                             <?php $purchases = mysqli_query($connect, $sql);
                             $row_count = $p_qty_total = $p_kgs_total = 0;
+                            $commission = [];
+                            $commission_items_query = fetch('commission_items');
+                            while ($commission_item = mysqli_fetch_assoc($commission_items_query)) {
+                                $commission[] = $commission_item;
+                            }
+                            $commission_item_amt = 0;
                             while ($purchase = mysqli_fetch_assoc($purchases)) {
                                 $id = $purchase['id'];
+                                $p_sr = $purchase['sr'];
+                                foreach ($commission as $com) {
+                                    if ($com['sale_id'] == $id) { // Check if the commission item matches the purchase ID
+                                        $commission_item_amt += (float)$com['final_amount']; // Add the quantity to the total
+                                    }
+                                }
                                 $_fields_single = transactionSingle($id);
 
                                 $is_doc = $purchase['is_doc'];
@@ -301,7 +313,8 @@ $mypageURL = $pageURL;
                                     <td class="<?php echo $rowColor; ?>"><?php echo $KGs; ?></td>
                                     <td class="<?php echo $rowColor; ?>">
                                         <?php if ($cntrs > 0) {
-                                            echo $totals['Final'] . '<sub>' . $totals['curr2'] . '</sub>';
+                                            echo $purchase['type'] == 'commission' ? $commission_item_amt : $totals['Final'] . '<sub>' . $totals['curr2'] . '</sub>';
+                                            $commission_item_amt = 0;
                                         } ?>
                                     </td>
                                     <td class="<?php echo $rowColor; ?> px-2"><?= isset($_fields_single['payment_details']->full_advance) ? ucwords($_fields_single['payment_details']->full_advance) : "No Payment Details Available"; ?></td>
@@ -402,14 +415,14 @@ if (isset($_POST['ttrFirstSubmit'])) {
         $dataArray = array(
             'r_type' => $r_type,
             'transfered_from' => $transfered_from,
-            'transfered_from_id' => $p_sr,
+            'transfered_from_id' => $p_id,
             'branch_id' => $p_data['branch_id'],
             'user_id' => $userId,
             'username' => $userName,
             'r_date' => $transfer_date,
-            'roznamcha_no' => $p_sr,
+            'roznamcha_no' => $p_id,
             'r_name' => $type,
-            'r_no' => $p_sr,
+            'r_no' => $p_id,
             'created_at' => date('Y-m-d H:i:s')
         );
         $str = " Sale # " . $p_sr;
@@ -492,6 +505,19 @@ if (isset($_POST['ttrFirstSubmit'])) {
     }
     message($msgType, $url, $msg);
 }
+if (isset($_POST['deleteTransaction'])) {
+    $type = 'danger';
+    $msg = 'DB Failed';
+    $url_ = "purchases";
+    $p_id_hidden = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
+    $done = mysqli_query($connect, "DELETE FROM `purchase_details` WHERE parent_id='$p_id_hidden'");
+    $done = mysqli_query($connect, "DELETE FROM `purchases` WHERE id='$p_id_hidden'");
+    if ($done) {
+        $msg = " Deleted Booking Purchase #" . $_POST['p_sr'];
+        $type = "success";
+    }
+    message($type, $url_, $msg);
+}
 if (isset($_POST['t_id_hidden_attach'])) {
     $type = 'danger';
     $msg = 'DB Failed';
@@ -513,21 +539,6 @@ if (isset($_POST['t_id_hidden_attach'])) {
         }
     }
     messageNew($type, $url_, $msg);
-}
-if (isset($_POST['transferPurchase'])) {
-    $type = 'danger';
-    $msg = 'DB Failed';
-    $p_id_hidden = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
-    $data = array('locked' => 1);
-    $locked = update('transactions', $data, array('id' => $p_id_hidden));
-    if ($locked) {
-        $type = 'success';
-        $msg = 'Purchase Successfully transferred.';
-    } else {
-        $type = 'failed';
-        $msg = 'Purchase transfer Failed.';
-    }
-    messageNew($type, $pageURL, $msg);
 }
 if (isset($_GET['t_id']) && is_numeric($_GET['t_id'])) {/*&& isset($_GET['view']) && $_GET['view'] == 1*/
     $t_id = mysqli_real_escape_string($connect, $_GET['t_id']);

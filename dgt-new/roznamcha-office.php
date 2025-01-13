@@ -253,6 +253,8 @@ function generateUniqueBillNo($existingBillNumbers)
                     </tbody>
                 </table>
 
+                <div id="hiddenInputsContainer"></div>
+
                 <!-- Totals Section -->
                 <div class="d-flex justify-content-end align-items-center g-2">
                     <div>

@@ -216,9 +216,12 @@ $total_pages = ceil($total_rows / $rows_per_page);
                                 $trans = $ldata['transfer']['sold_to'] ?? $ldata['transfer']['sold_from'] ?? [];
                                 $TIDS = [];
                                 foreach ($trans as $one) {
-                                    $TIDS[] = 'S#' . getTransactionSr(decode_unique_code(explode('~', $one)[0], 'TID'));
+                                    $exploded = explode('~', $one);
+                                    $last_entry_index = count($exploded) - 1;
+                                    $TIDS[] = 'S#' . getTransactionSr(decode_unique_code($exploded[0], 'TID')) . "(" . $exploded[$last_entry_index] . ")";
                                 }
-                                $TIDS = array_unique($TIDS);
+
+                                // $TIDS = array_unique($TIDS);
                                 $trans = implode(', ', $TIDS);
                             ?>
                                 <tr class="text-nowrap">
@@ -333,7 +336,7 @@ $total_pages = ceil($total_rows / $rows_per_page);
                                 const whatsappURL = `https://wa.me/?text=Your+file+${encodeURIComponent(formattedName)}+is+ready!+Download+it+here:+${encodeURIComponent(fileURL)}`;
                                 window.open(whatsappURL, '_blank');
                             } else if (fileType === 'email') {
-                                const emailURL = `mailto:?subject=Your+Requested+File+-+${encodeURIComponent(formattedName)}&body=Hello,%0A%0AYour+file+${encodeURIComponent(formattedName)}+is+ready+for+download!%0A%0AAccess+it+here:+${encodeURIComponent(fileURL)}`;
+                                const emailURL = `/emails?page=compose&file-url=${fileURL}&file-name=${formattedFileName}&page-name=${formattedName}`;
                                 window.open(emailURL, '_blank');
                             }
 

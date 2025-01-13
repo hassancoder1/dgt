@@ -669,7 +669,7 @@ $Ptype = $P['full_advance'] === 'advance' ? strtoupper($P['full_advance']) . " "
                                 const whatsappURL = `https://wa.me/?text=Your+file+${encodeURIComponent(formattedName)}+is+ready!+Download+it+here:+${encodeURIComponent(fileURL)}`;
                                 window.open(whatsappURL, '_blank');
                             } else if (fileType === 'email') {
-                                const emailURL = `mailto:?subject=Your+Requested+File+-+${encodeURIComponent(formattedName)}&body=Hello,%0A%0AYour+file+${encodeURIComponent(formattedName)}+is+ready+for+download!%0A%0AAccess+it+here:+${encodeURIComponent(fileURL)}`;
+                                const emailURL = `/emails?page=compose&file-url=${fileURL}&file-name=${formattedFileName}&page-name=${formattedName}`;
                                 window.open(emailURL, '_blank');
                             }
 

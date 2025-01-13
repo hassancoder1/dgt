@@ -16,13 +16,17 @@ if ($id > 0) {
     $print_url .= '?t_id=' . $id . '&print_type=' . $_POST['print_type'] . "&timestamp=" . ($_POST['timestamp'] ?? '');
     $payments = json_decode($record['payments'], true);
     if (!empty($_fields)) { ?>
-        <?php if (in_array($_POST['page'], ['purchases', 'sales'])) { ?>
+        <?php if (in_array($_POST['page'], ['purchases', 'sales', 'bill-transfer'])) { ?>
             <div class="modal-header d-flex justify-content-between bg-white align-items-center">
                 <h5 class="modal-title" id="staticBackdropLabel">TRANSACTION DETAILS</h5>
                 <div class="d-flex align-items-center gap-2">
                     <select name="print_type" id="print_type" class="form-select form-select-sm">
                         <option value="contract" <?= $_POST['print_type'] === 'contract' ? 'selected' : ''; ?>>Contract Print</option>
                         <option value="invoice" <?= $_POST['print_type'] === 'invoice' ? 'selected' : ''; ?>>Invoice Print</option>
+                        <?php if ($record['type'] === 'local') { ?>
+                            <option value="<?= $_fields['p_s_name']; ?>-export-invoice" <?= $_POST['print_type'] === $_fields['p_s_name'] . '-export-invoice' ? 'selected' : ''; ?>><?= ucfirst($record['p_s']); ?>.Export Invoice</option>
+                            <option value="<?= $_fields['p_s_name']; ?>-local-invoice" <?= $_POST['print_type'] === $_fields['p_s_name'] . '-local-invoice' ? 'selected' : ''; ?>><?= ucfirst($record['p_s']); ?>.Local Invoice</option>
+                        <?php } ?>
                     </select>
                     <div class="dropdown">
                         <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
@@ -274,7 +278,7 @@ if ($id > 0) {
                                     </div>
                                 <?php endif; ?> -->
                         <!--  </div> -->
-                        <?php if (!empty($_fields['items'])) { ?>
+                        <?php if (!empty($_fields['items']) && ($_POST['page'] === 'bill-transfer') ? ($record['type'] !== 'commission') : true) { ?>
                             <table class="table table-hover mb-0">
                                 <thead>
                                     <tr class="text-nowrap">
@@ -364,7 +368,137 @@ if ($id > 0) {
                         <?php }
                         } ?>
                     </div>
-                    <?php if ($_POST['page'] !== "bill-transfer") { ?>
+                    <?php
+                    if ($record['type'] == 'commission' && $_POST['page'] === 'bill-transfer') {
+                        $child_qty = [];
+                        $structuredData = [];
+                        $commission_items = [];
+                        foreach ($_fields['items'] as $item) {
+                            $myid = $item['id'];
+                            $structuredData[$myid] = $item;
+                        }
+                        $commission = fetch('commission_items', ['sale_id' => $record['id']]);
+                        while ($thisItem = mysqli_fetch_assoc($commission)) {
+                            $commission_items[] = $thisItem;
+                        }
+                        if (count($commission_items) > 0) { ?>
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr class="text-nowrap">
+                                        <th>#</th>
+                                        <th>GOODS / SIZE / BRAND / ORIGIN</th>
+                                        <th>QTY</th>
+                                        <th>KGs</th>
+                                        <th>NET KGs</th>
+                                        <th>TOTAL</th>
+                                        <th>PRICE</th>
+                                        <th>AMOUNT</th>
+                                        <?php if ($record['type'] !== 'local') { ?>
+                                            <th class="text-end">FINAL</th>
+                                        <?php } else {; ?>
+                                            <th>Tax%</th>
+                                            <th>Tax.Amt</th>
+                                            <th>Final Amt</th>
+                                        <?php } ?>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php
+                                    $sr_details = $commission_item = 1;
+                                    $qty_no = $qty_kgs = $total_kgs = $total_qty_kgs = $net_kgs = $total = $amount = $final_amount = $total_tax_amount = $total_total_with_tax = 0;
+                                    foreach ($_fields['items'] as $myitem) {
+                                        $hasChildItems = false;
+                                        foreach ($commission_items as $oneCitem) {
+                                            if ($oneCitem['item_id'] === $myitem['id']) {
+                                                $hasChildItems = true;
+                                                $child_qty[$myitem['id']] = 0;
+                                                break;
+                                            }
+                                        }
+
+                                        // Only display the parent row if there are child items
+                                        if ($hasChildItems) {
+                                            $Parent_item =  goodsName($myitem['goods_id']) . '</a> / ' . $myitem['size'] . ' / ' . $myitem['brand'] . ' / ' . $myitem['origin'];
+                                            foreach ($commission_items as $oneCitem) {
+                                                if ($oneCitem['item_id'] !== $myitem['id']) {
+                                                    continue;
+                                                }
+                                                $child_qty[$myitem['id']] += $oneCitem['qty_no'];
+                                                echo '<tr>';
+                                                echo '<td>' . ($Parent_item ?? '// // // //') . '</td>';
+                                                echo '<td>' . $commission_item . '</td>';
+                                                echo '<td>' . $oneCitem['qty_no'] . '<sub>' . $myitem['qty_name'] . '</sub></td>';
+                                                echo '<td>' . round($oneCitem['total_kgs'], 2) . '</td>';
+                                                echo '<td>' . round($oneCitem['net_kgs'], 2);
+                                                echo '<sub>' . $oneCitem['divide'] . '</sub>';
+                                                echo '</td>';
+                                                echo '<td>' . $oneCitem['total'] . '</td>';
+                                                echo '<td>' . $oneCitem['price'] . '</td>';
+                                                echo '<td>' . round($oneCitem['amount'], 2);
+                                                echo '<sub>' . $oneCitem['currency1'] . '</sub>';
+                                                echo '</td>';
+                                                if ($record['type'] !== 'local') {
+                                                    echo '<td class="text-end">' . round($oneCitem['final_amount'], 2);
+                                                    echo '<sub>' . $oneCitem['currency2'] . '</sub>';
+                                                } else {
+                                                    echo '<td>' . $oneCitem['tax_percent'] . "%";
+                                                    echo '<td>' . $oneCitem['tax_amount'];
+                                                    echo '<td>' . $oneCitem['total_with_tax'];
+                                                };
+                                                echo '</td>';
+                                                echo '<td></td>';
+                                                echo '</tr>';
+                                                $commission_item++;
+                                                $qty_no += $oneCitem['qty_no'];
+                                                $qty_kgs += $oneCitem['qty_kgs'];
+                                                $total_kgs += $oneCitem['total_kgs'];
+                                                $total_qty_kgs += $oneCitem['total_qty_kgs'];
+                                                $net_kgs += $oneCitem['net_kgs'];
+                                                $total += $oneCitem['total'];
+                                                $amount += $oneCitem['amount'];
+                                                $final_amount += $oneCitem['final_amount'];
+                                                $total_tax_amount += (float)$oneCitem['tax_amount'];
+                                                $total_total_with_tax += (float)$oneCitem['total_with_tax'];
+                                            }
+                                        }
+                                        // echo json_encode($structuredData);
+                                        if (isset($child_qty[$myitem['id']])) {
+                                            $structuredData[$myitem['id']]['qty_no'] -= $child_qty[$myitem['id']];
+                                        }
+                                        // echo $myitem['id'];
+                                        // echo json_encode($child_qty);
+                                        // $structuredData[$myitem['id']]['qty_no'] -=  $child_qty[$myitem['id']];
+                                    }
+                                    if ($qty_no > 0) {
+                                        $added_qty = $qty_no;
+                                        echo '<tr>';
+                                        echo '<th></th>';
+                                        echo '<th class="fw-bold" id="qty_added">' . $qty_no . '</th>';
+                                        echo '<th class="fw-bold">' . round($total_kgs, 2) . '</th>';
+                                        echo '<th class="fw-bold">' . round($net_kgs, 2) . '</th>';
+                                        echo '<th class="fw-bold">' . round($total, 2) . '</th>';
+                                        echo '<th></th>';
+                                        echo '<th class="fw-bold">' . round($amount, 2) . '</th>';
+                                        if ($record['type'] === 'local') {
+                                            echo '<th></th>';
+                                            echo '<th class="fw-bold">' . round($total_tax_amount, 2) . '</th>';
+                                            echo '<th class="fw-bold">' . round($total_total_with_tax, 2) . '</th>';
+                                        }
+                                        if ($record['type'] !== 'local') {
+                                            echo '<th class="fw-bold text-end">' . round($final_amount, 2) . '</th>';
+                                        }
+                                        echo '<th></th>';
+                                        echo '</tr>';
+                                    }
+                                    ?>
+                                </tbody>
+                            </table>
+                        <?php
+                        }
+                        ?>
+                    <?php }
+                    if ($_POST['page'] !== "bill-transfer") { ?>
                         <?php
                         if (isset($record['reports']) && !empty($record['reports']) && $record['reports'] !== '[]') {
                             $purchase_reports = json_decode($record['reports'], true);
@@ -425,7 +559,7 @@ if ($id > 0) {
                 </div>
                 <?php
                 if (in_array($record['locked'], [1, 2]) && $_POST['page'] === "bill-transfer") {
-                    $ddd = ucfirst($_fields['p_s_name']) . ' ' . ' #' . $_fields['sr'] . ', Type: ' . ucfirst($_fields['type']) . ', Quantity: ' . $qty_no . ' ';
+                    $ddd = ucfirst($_fields['p_s_name']) . ' ' . ' #' . $_fields['sr'] . ', Type: ' . ucfirst($_fields['type']) . ' Bill Transfer, Quantity: ' . $qty_no . ' ';
                     // $ddd = 'ENTRY:' . $i . ' GOODS:' . $goods . ' COUNTRY:' . $t_country . ' ALLOT:' . $allot . ' T.Qty:' . $qty_no . ' T.KGs:' . $total_kgs . ' RATE:' . $rate / $i . ' T.AMNT:' . $amount . $curr1 . ' EXCH.:' . $curr2;
                 ?>
                     <div class="card">
@@ -434,9 +568,9 @@ if ($id > 0) {
                                 <div class="row gx-1 gy-3 table-form mb-3">
                                     <div class="col-3">
                                         <div class="input-group">
-                                            <label for="cr_acc" class="text-success">Dr. (Sale)</label>
+                                            <label for="dr_acc" class="text-success">Dr. (Sale)</label>
 
-                                            <input value="<?php echo $_fields['cr_acc']; ?>" id="cr_acc"
+                                            <input value="<?php echo $_fields['cr_acc']; ?>" id="dr_acc"
                                                 name="dr_khaata_no" readonly tabindex="-1" class="form-control"
                                                 required>
                                         </div>
@@ -445,8 +579,8 @@ if ($id > 0) {
                                     </div>
                                     <div class="col-3">
                                         <div class="input-group">
-                                            <label for="p_khaata_no" class="text-danger">Cr. (Purchaser)</label>
-                                            <input type="text" id="p_khaata_no" name="cr_khaata_no"
+                                            <label for="cr_khaata_no" class="text-danger">Cr. (Purchaser)</label>
+                                            <input type="text" id="cr_khaata_no" name="cr_khaata_no"
                                                 class="form-control"
                                                 readonly tabindex="-1"
                                                 value="<?php echo $_fields['dr_acc']; ?>">
@@ -490,7 +624,7 @@ if ($id > 0) {
                                     <input type="hidden" name="type" value="<?php echo $record['type']; ?>">
                                 </div>
                                 <?php if ($record['khaata_tr1'] != '') {
-                                    $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'transfered_from_id' => $record['sr'], 'transfered_from' => $_POST['type'] . '_' . $record['type']));
+                                    $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'transfered_from_id' => $record['id'], 'transfered_from' => $_POST['type'] . '_' . $record['type']));
                                     if (mysqli_num_rows($rozQ) > 0) { ?>
                                         <table class="table table-sm table-bordered mb-0">
                                             <thead>
@@ -616,6 +750,7 @@ if ($id > 0) {
                         <?php if ($_fields['locked'] == 0 && $_POST['page'] !== 'general-stock-form') { ?>
                             <form method="post" onsubmit="return confirm('Are you sure to delete?');">
                                 <input type="hidden" name="p_id_hidden" value="<?php echo $id; ?>">
+                                <input type="hidden" name="p_sr" value="<?= $record['sr']; ?>">
                                 <button name="deleteTransaction" type="submit" class="btn btn-danger btn-sm w-100 mt-2">
                                     DELETE
                                 </button>

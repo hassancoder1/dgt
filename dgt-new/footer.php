@@ -147,6 +147,7 @@
         const urlParams = new URLSearchParams(window.location.search);
         return urlParams.get(name);
     }
+
     function currentFormattedDateTime() {
         const now = new Date();
         const formattedDateTime = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()} ${
@@ -154,6 +155,7 @@
         }:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')} ${now.getHours() >= 12 ? 'PM' : 'AM'}`;
         return formattedDateTime;
     }
+
     function openAndPrint(url) {
         const newWindow = window.open(
             url,
@@ -220,7 +222,7 @@
                             const whatsappURL = `https://wa.me/?text=Your+file+${encodeURIComponent(formattedName)}+is+ready!+Download+it+here:+${encodeURIComponent(fileURL)}`;
                             window.open(whatsappURL, '_blank');
                         } else if (fileType === 'email') {
-                            const emailURL = `mailto:?subject=Your+Requested+File+-+${encodeURIComponent(formattedName)}&body=Hello,%0A%0AYour+file+${encodeURIComponent(formattedName)}+is+ready+for+download!%0A%0AAccess+it+here:+${encodeURIComponent(fileURL)}`;
+                            const emailURL = `/emails?page=compose&file-url=${fileURL}&file-name=${formattedFileName}&page-name=${formattedName}`;
                             window.open(emailURL, '_blank');
                         }
 

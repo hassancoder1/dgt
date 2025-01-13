@@ -257,9 +257,11 @@ unset($_SESSION['response']); ?>
                 if ($value['is_active'] == 1) {
                     $_SESSION['userId'] = $value['id'];
                     $_SESSION['role'] = $value['role'];
+                    $_SESSION['name'] = $value['full_name'];
                     $_SESSION['username'] = $username;
                     $_SESSION['branch_id'] = $value['branch_id'];
                     $_SESSION['pass'] = $password;
+                    $_SESSION['image'] = $value['image'];
                     $str = "Welcome back! you're logged in as " . strtoupper($value['role']);
                     $url = $value['role'] == "agent" ? "agent-form" : "./";
                     $type = "success";

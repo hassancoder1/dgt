@@ -430,14 +430,14 @@ if (isset($_POST['tRemSubmit'])) {
         $dataArray = array(
             'r_type' => $r_type,
             'transfered_from' => $transfered_from,
-            'transfered_from_id' => $p_sr,
+            'transfered_from_id' => $purchase_pays_id,
             'branch_id' => $p_data['branch_id'],
             'user_id' => $p_data['created_by'],
             'username' => $userName,
             'r_date' => $transfer_date,
-            'roznamcha_no' => $p_sr,
+            'roznamcha_no' => $purchase_pays_id,
             'r_name' => $type,
-            'r_no' => $p_sr,
+            'r_no' => $p_id,
             'details' => $details
         );
         $str = ucfirst($p_data['type']) . " Purchase#" . $p_sr . " ";
@@ -502,7 +502,7 @@ if (isset($_POST['tRemSubmit'])) {
                     $dataArray['dr_cr'] = 'cr';
                     $str .= "<span class='badge bg-dark mx-2'>Cr." . $bnaam_khaata_no . "</span>";
                 }
-                $dataArray['transfered_from_id'] = $p_sr;
+                $dataArray['transfered_from_id'] = $purchase_pays_id;
                 $transferred = insert('roznamchaas', $dataArray);
             }
         }
@@ -547,32 +547,10 @@ if (isset($_POST['deleteRemPaymentAndRozSubmit'])) {
     $done = update('transactions', array('transfer_level' => 4, '`from`' => 'bill-transfer'), array('id' => $p_id_hidden));
 
     if ($pays_del) {
-        $msg = " Payment Deleted for Purchase #" . $p_id_hidden;
+        $msg = " Payment Deleted for Purchase #" . $_POST['p_sr'];
         $type = "success";
     }
     message($type, $url_, $msg);
-}
-if (isset($_POST['t_id_hidden_attach'])) {
-    $type = 'danger';
-    $msg = 'DB Failed';
-    $ppp_id = mysqli_real_escape_string($connect, $_POST['t_id_hidden_attach']);
-    $url_ = $pageURL . "?t_id=" . $ppp_id . "&attach=1";
-    $dato = array('is_doc' => 1);
-    foreach ($_FILES["attachments"]["tmp_name"] as $key => $tmp_name) {
-        if ($_FILES['attachments']['error'][$key] == 4 || ($_FILES['attachments']['size'][$key] == 0 && $_FILES['attachments']['error'][$key] == 0)) {
-        } else {
-            $att = saveAttachment($ppp_id, 'purchase_contract', basename($_FILES["attachments"]["name"][$key]));
-            $location = 'attachments/' . basename($_FILES["attachments"]["name"][$key]);
-            $moved = move_uploaded_file($_FILES["attachments"]["tmp_name"][$key], $location);
-            $dd = update('transactions', $dato, array('id' => $ppp_id));
-            if ($moved && $dd) {
-                $type = 'success';
-                $msg = 'Attachment Saved ';
-                $msg .= $att ? basename($_FILES["attachments"]["name"][$key]) . ', ' : '';
-            }
-        }
-    }
-    messageNew($type, $url_, $msg);
 }
 
 if (isset($_GET['p_id']) && is_numeric($_GET['p_id']) && isset($_GET['view']) && $_GET['view'] == 1) {
@@ -584,15 +562,6 @@ if (isset($_GET['p_id']) && is_numeric($_GET['p_id']) && isset($_GET['view']) &&
     }
     echo "<script>jQuery(document).ready(function ($) {  $('#KhaataDetails').modal('show');});</script>";
     echo "<script>jQuery(document).ready(function ($) {  viewPurchase($p_id,$purchase_pays_id); });</script>";
-}
-
-if (isset($_POST['purchaseReports'])) {
-    $type = 'danger';
-    $msg = 'DB Failed';
-    $p_id_hidden = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
-    $reportType = mysqli_real_escape_string($connect, $_POST['reportType']);
-    $report = mysqli_real_escape_string($connect, $_POST['reportBox']);
-    purchaseReports($p_id_hidden, $reportType, $report);
 }
 ?>
 

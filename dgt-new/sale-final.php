@@ -56,7 +56,7 @@ if ($_GET) {
 if (count($conditions) > 0) {
     $sql .= ' AND ' . implode(' AND ', $conditions);
 }
-$sql .= " AND locked IN ('1','2')  AND transfer_level >= '6'";
+$sql .= " AND locked IN ('1', '2')  AND transfer_level >= '6'";
 
 $sql .= " ORDER BY id DESC";
 if (count($print_filters) > 0) {
@@ -275,7 +275,7 @@ $mypageURL = $pageURL;
                                     $type = '';
                                     $trans_from = "Bill Transfer";
                                 }
-                                if ($purchase['from'] !== 'bill-transfer') {
+                                if ($purchase['from'] !== 'bill-transfer' && $purchase['from'] !== 'sale-commission') {
                                     $paid_final = purchaseSpecificData($id, $type . '_paid_total', 'amount');
                                     $paid_final = (float)$paid_final;
                                     $bal = (float)$my_amount - $paid_final;
@@ -294,6 +294,15 @@ $mypageURL = $pageURL;
                                 } else {
                                     $rowColor = '';
                                     $bal = (int)$payments['p_total_amount'] - (int)$payments['p_total_amount'];
+                                    if ($purchase['from'] === 'sale-commission') {
+                                        $com_items = fetch('commission_items', ['sale_id' => $id]);
+                                        $totalPaid = $totalAmt = 0;
+                                        while ($com_item = mysqli_fetch_assoc($com_items)) {
+                                            $totalAmt += $com_item['final_amount'];
+                                            $totalPaid += !empty($com_item['transferred']) ? json_decode($com_item['transferred'], true)['transfer_amount'] : 0;
+                                        }
+                                        $bal = $totalAmt - $totalPaid;
+                                    }
                                 }
                             ?>
                                 <tr class="text-nowrap">
@@ -323,7 +332,7 @@ $mypageURL = $pageURL;
                                     <td class="<?php echo $rowColor; ?>">
                                         <?php echo isset($payments['partial_amount2']) ? $payments['partial_amount2'] : "No Advance Alloted"; ?>
                                     </td> -->
-                                    <td class="text-success"><?= round((float)$payments['p_total_amount'], 2); ?></td>
+                                    <td class="text-success"><?= $purchase['from'] === 'sale-commission' ? $totalAmt : round((float)$payments['p_total_amount'], 2); ?></td>
                                     <td class="text-danger"><?= round($bal, 2); ?></td>
                                     <td class="<?php echo $rowColor; ?>"><?= $trans_from; ?></td> <!-- Transferred From -->
 

@@ -101,44 +101,44 @@ $total_pages = ceil($total_rows / $rows_per_page);
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <h5 class="card-title fw-bold text-success"><?= $CCWPage; ?></h5>
-                        <?php if($CCWPage === 'All WareHouses'){?>
-                        <div class="dropdown hide-on-print">
-                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fa fa-print"></i>
-                            </button>
-                            <ul class="dropdown-menu mt-2" aria-labelledby="dropdownMenuButton">
-                                <li>
-                                    <a class="dropdown-item" href="<?= $print_url; ?>" target="_blank">
-                                        <i class="fas text-secondary fa-eye me-2"></i> Print Preview
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="javascript:void(0);" onclick="openAndPrint('<?= $print_url; ?>')">
-                                        <i class="fas text-secondary fa-print me-2"></i> Print
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="#" onclick="getFileThrough('pdf', '<?= $print_url; ?>')">
-                                        <i id="pdfIcon" class="fas text-secondary fa-file-pdf me-2"></i> Download PDF
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="#" onclick="getFileThrough('word', '<?= $print_url; ?>')">
-                                        <i id="wordIcon" class="fas text-secondary fa-file-word me-2"></i> Download Word File
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="#" onclick="getFileThrough('whatsapp', '<?= $print_url; ?>')">
-                                        <i id="whatsappIcon" class="fa text-secondary fa-whatsapp me-2"></i> Send in WhatsApp
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="#" onclick="getFileThrough('email', '<?= $print_url; ?>')">
-                                        <i id="emailIcon" class="fas text-secondary fa-envelope me-2"></i> Send In Email
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
+                        <?php if ($CCWPage === 'All WareHouses') { ?>
+                            <div class="dropdown hide-on-print">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fa fa-print"></i>
+                                </button>
+                                <ul class="dropdown-menu mt-2" aria-labelledby="dropdownMenuButton">
+                                    <li>
+                                        <a class="dropdown-item" href="<?= $print_url; ?>" target="_blank">
+                                            <i class="fas text-secondary fa-eye me-2"></i> Print Preview
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="javascript:void(0);" onclick="openAndPrint('<?= $print_url; ?>')">
+                                            <i class="fas text-secondary fa-print me-2"></i> Print
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="#" onclick="getFileThrough('pdf', '<?= $print_url; ?>')">
+                                            <i id="pdfIcon" class="fas text-secondary fa-file-pdf me-2"></i> Download PDF
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="#" onclick="getFileThrough('word', '<?= $print_url; ?>')">
+                                            <i id="wordIcon" class="fas text-secondary fa-file-word me-2"></i> Download Word File
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="#" onclick="getFileThrough('whatsapp', '<?= $print_url; ?>')">
+                                            <i id="whatsappIcon" class="fa text-secondary fa-whatsapp me-2"></i> Send in WhatsApp
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="#" onclick="getFileThrough('email', '<?= $print_url; ?>')">
+                                            <i id="emailIcon" class="fas text-secondary fa-envelope me-2"></i> Send In Email
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
                         <?php } ?>
                     </div>
                     <div class="row mb-3">
@@ -296,9 +296,12 @@ $total_pages = ceil($total_rows / $rows_per_page);
                                 $trans = $ldata['transfer']['sold_to'] ?? $ldata['transfer']['sold_from'] ?? [];
                                 $TIDS = [];
                                 foreach ($trans as $one) {
-                                    $TIDS[] = 'S#' . getTransactionSr(decode_unique_code(explode('~', $one)[0], 'TID'));
+                                    $exploded = explode('~', $one);
+                                    $last_entry_index = count($exploded) - 1;
+                                    $TIDS[] = 'S#' . getTransactionSr(decode_unique_code($exploded[0], 'TID')) . "(" . $exploded[$last_entry_index] . ")";
                                 }
-                                $TIDS = array_unique($TIDS);
+
+                                // $TIDS = array_unique($TIDS);
                                 $trans = implode(', ', $TIDS);
                             ?>
                                 <tr class="text-nowrap">
@@ -426,7 +429,8 @@ if (isset($_POST['reSubmit'])) {
             $ldata['agent'][$key] = $value;
         }
     }
-
+    $ldata['good'] = calcNewValues([$_POST['quantity_no'], $_POST['qty_no']], $ldata['good'], 'both');
+    $ldata['edited'] = true;
     $data = [
         'data_for' => mysqli_real_escape_string($connect, $_POST['warehouse_transfer']),
         'tdata' => mysqli_real_escape_string($connect, json_encode($tdata)),

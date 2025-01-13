@@ -57,7 +57,7 @@ $topArray = array(
                     echo addNew('roznamcha-add', '', 'btn-sm'); ?>
                     <?php if ($r_id_hidden > 0) { ?>
                         <a href="<?php echo 'print/roznamcha-single?r_id=' . base64_encode($r_id_hidden) . '&secret=' . base64_encode('powered-by-upsol'); ?>"
-                           target="_blank" class="btn btn-sm btn-success">
+                            target="_blank" class="btn btn-sm btn-success">
                             <i class="fa fa-print"></i> Print
                         </a>
                     <?php } ?>
@@ -119,7 +119,7 @@ $topArray = array(
                             <div class="input-group position-relative">
                                 <label for="khaata_no">A/c No.</label>
                                 <input type="text" id="khaata_no" name="khaata_no" class="form-control bg-transparent"
-                                       required autofocus value="<?php echo $khaata_no; ?>">
+                                    required autofocus value="<?php echo $khaata_no; ?>">
                                 <small class="error-response top-0" id="response"></small>
                             </div>
                             <input type="hidden" name="khaata_id" id="khaata_id">
@@ -136,21 +136,21 @@ $topArray = array(
                                 </select>
                                 <label for="r_date">Date</label>
                                 <input id="r_date" name="r_date" value="<?php echo $r_date; ?>"
-                                       type="date" class="form-control">
+                                    type="date" class="form-control">
                             </div>
                         </div>
                         <div class="col-md-2">
                             <div class="input-group">
                                 <label for="roznamcha_no">Roznamcha#</label>
                                 <input value="<?php echo $roznamcha_no; ?>" type="text" id="roznamcha_no"
-                                       name="roznamcha_no" class="form-control" required>
+                                    name="roznamcha_no" class="form-control" required>
                             </div>
                         </div>
                         <div class="col-md-2 bill-inputs cash-inputs business-inputs">
                             <div class="input-group">
                                 <label for="r_name">Name</label>
                                 <input value="<?php echo $r_name; ?>" type="text" id="r_name" name="r_name"
-                                       class="form-control" required>
+                                    class="form-control">
                             </div>
                         </div>
                         <div class="col-md-2 bank-inputs">
@@ -169,7 +169,7 @@ $topArray = array(
                             <div class="input-group">
                                 <label for="r_no">No.</label>
                                 <input value="<?php echo $r_no; ?>" type="text" id="r_no" name="r_no"
-                                       class="form-control" required>
+                                    class="form-control" required>
                             </div>
                         </div>
                         <div class="col-md-2 bill-inputs cash-inputs bank-inputs">
@@ -200,16 +200,16 @@ $topArray = array(
                         </div>
                         <div class="col-md-3 bank-inputs">
                             <div class="input-group">
-                                <label for=r_date_payment">Pay Date</label>
+                                <label for="r_date_payment">Pay Date</label>
                                 <input id="r_date_payment" name="r_date_payment"
-                                       value="<?php echo $r_date_payment; ?>" type="date"
-                                       class="form-control">
+                                    value="<?php echo $r_date_payment; ?>" type="date"
+                                    class="form-control">
                             </div>
                         </div>
                         <div class="col-md-1 bill-inputs cash-inputs">
                             <div class="form-check mt-md-1">
                                 <input type="checkbox" class="form-check-input" id="is_qty" name="is_qty"
-                                       value="1" <?php echo $is_qty == 1 ? 'checked' : ''; ?> >
+                                    value="1" <?php echo $is_qty == 1 ? 'checked' : ''; ?>>
                                 <label class="form-check-label" for="is_qty">Qty?</label>
                             </div>
                         </div>
@@ -217,16 +217,16 @@ $topArray = array(
                             <div class="input-group">
                                 <label for="qty">Qty</label>
                                 <input value="<?php echo $qty; ?>" type="text" id="qty" name="qty"
-                                       class="form-control currency" autocomplete="off"
-                                       onkeyup="calculateAmount(this)">
+                                    class="form-control currency" autocomplete="off"
+                                    onkeyup="calculateAmount(this)">
                             </div>
                         </div>
                         <div class="col-md-2 toggleQty bill-inputs-cash-inputs">
                             <div class="input-group">
                                 <label for="per_price">Per Price</label>
                                 <input value="<?php echo $per_price; ?>" type="text" id="per_price" name="per_price"
-                                       class="form-control currency" autocomplete="off"
-                                       onkeyup="calculateAmount(this)">
+                                    class="form-control currency" autocomplete="off"
+                                    onkeyup="calculateAmount(this)">
                             </div>
                         </div>
                         <div class="col-md-3 toggleQty bill-inputs-cash-inputs">
@@ -245,14 +245,14 @@ $topArray = array(
                             <div class="input-group">
                                 <label for="mobile">Name</label>
                                 <input value="<?php echo $c_name; ?>" type="text" id="c_name" name="c_name"
-                                       class="form-control">
+                                    class="form-control">
                             </div>
                         </div>
                         <div class="col-md-2 cash-inputs">
                             <div class="input-group">
                                 <label for="mobile">Mobile</label>
                                 <input value="<?php echo $mobile; ?>" type="text" id="mobile" name="mobile"
-                                       class="form-control">
+                                    class="form-control">
                             </div>
                         </div>
                         <div class="col-md-3 cash-inputs">
@@ -283,7 +283,7 @@ $topArray = array(
                             <div class="input-group">
                                 <label for="amount" class="bold">Amount</label>
                                 <input value="<?php echo $amount; ?>" type="text" id="amount" name="amount"
-                                       class="form-control currency" required>
+                                    class="form-control currency" required>
                             </div>
                         </div>
                     </div>
@@ -292,7 +292,7 @@ $topArray = array(
                             <div class="input-group">
                                 <label for="details">Details</label>
                                 <input value="<?php echo $details; ?>" type="text" id="details" name="details"
-                                       class="form-control" required>
+                                    class="form-control" required>
                             </div>
                         </div>
                     </div>
@@ -393,7 +393,7 @@ $topArray = array(
 } ?>
 <script>
     disableButton('recordSubmit');
-    $(document).on('keyup', "#khaata_no", function (e) {
+    $(document).on('keyup', "#khaata_no", function(e) {
         fetchKhaata();
     });
     fetchKhaata();
@@ -404,9 +404,11 @@ $topArray = array(
         $.ajax({
             url: 'ajax/fetchSingleKhaata.php',
             type: 'post',
-            data: {khaata_no: khaata_no},
+            data: {
+                khaata_no: khaata_no
+            },
             dataType: 'json',
-            success: function (response) {
+            success: function(response) {
                 if (response.success === true) {
                     enableButton('recordSubmit');
                     khaata_id.val(response.messages['khaata_id']);
@@ -439,9 +441,9 @@ $topArray = array(
     }
 </script>
 <script type="text/javascript">
-    $(document).ready(function () {
+    $(document).ready(function() {
         toggleContainers();
-        $("#r_type").change(function () {
+        $("#r_type").change(function() {
             toggleContainers();
             getBranchSerial();
         });
@@ -450,9 +452,9 @@ $topArray = array(
     });
 </script>
 <script>
-    $(document).ready(function () {
+    $(document).ready(function() {
         //getBranchSerial();
-        $('#branch_id').on('change', function () {
+        $('#branch_id').on('change', function() {
             getBranchSerial();
         });
     });
@@ -463,8 +465,11 @@ $topArray = array(
         $.ajax({
             url: 'ajax/getBranchSerial.php',
             type: 'post',
-            data: {branch_id: branch_id, r_type: r_type},
-            success: function (response) {
+            data: {
+                branch_id: branch_id,
+                r_type: r_type
+            },
+            success: function(response) {
                 $('#branch_sr').html(response);
             }
         });
@@ -497,7 +502,6 @@ $topArray = array(
         // Replace this with your implementation of href_link2
         return '<a href="' + key + '">' + text + '</a>';
     }
-
 </script>
 <script>
     function calculateAmount(e) {
@@ -569,4 +573,3 @@ $topArray = array(
         return $('#r_type').find(":selected").val();
     }
 </script>
-

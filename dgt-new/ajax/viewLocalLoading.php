@@ -322,9 +322,7 @@ if ($id > 0) {
                                     $last_record['report'] = $updateRow['report'];
                                     $Goods = isset($updateRow['goods_details']) ? json_decode($updateRow['goods_details'], true) : [];
                                     $Transfer = isset($updateRow['transfer_details']) ? json_decode($updateRow['transfer_details'], true) : [];
-                                    echo '<input type="hidden" name="action" value="update">';
-                                    echo '<input type="hidden" name="id" value="' . $updateRow['id'] . '">';
-                                    $action = isset($_POST['action']) ? $_POST['action'] : '';
+                                    $action = 'update';
                                 } elseif ($ActiveUIDRow) {
                                     $action = 'new';
                                     $last_record['uid'] = $ActiveUIDRow['uid'];
@@ -354,12 +352,18 @@ if ($id > 0) {
                                 }
                                 ?>
                                 <div style="width:100%; display: flex; justify-content: space-between; margin-bottom: 2px;">
-                                    <?php if ($action === 'update') { ?>
+                                    <?php if ($action === 'update') {
+                                        echo '<input type="hidden" name="action" value="update">';
+                                        echo '<input type="hidden" name="id" value="' . $updateRow['id'] . '">';
+                                        $action = isset($_POST['action']) ? $_POST['action'] : '';
+                                    ?>
                                         <h5 class="fw-bold">Update Loading <span class="text-success">"<?= ucwords($sea_road['route']); ?>"</span> Transfer</h5>
                                         <?php if (!isset(json_decode($updateRow['lloading_info'], true)['child_ids'])) { ?>
-                                            <a href="local-loading?deleteLoadingEntry=true&lp_id=<?= $updateRow['id']; ?>&p_id=<?= $id ?>" class="btn btn-danger btn-sm">Delete This Entry</a>
+                                            <a href="local-loading?deleteLoadingEntry=true&lp_id=<?= $updateRow['id']; ?>&p_id=<?= $id ?>&unique_code=<?= $record['p_s'] . $record['type'][0] . ($sea_road['route'] === 'local' ? 'ld' : 'wr') . '_' . $record['id'] . '_' . $updateRow['id']; ?>" class="btn btn-danger btn-sm">Delete This Entry</a>
                                         <?php }
-                                    } else { ?>
+                                    } else {
+                                        echo '<input type="hidden" name="action" value="new">';
+                                        ?>
                                         <h5 class="fw-bold">Loading <span class="text-success">"<?= ucwords($sea_road['route']); ?>"</span> Transfer</h5>
                                         <?php };
                                     if (!$ActiveUIDRow): if ($firstRow): ?>
@@ -677,7 +681,7 @@ if ($id > 0) {
                                     <!-- Quantity No -->
                                     <div class="col-md-1">
                                         <label for="quantity_no" class="form-label">Qty No</label>
-                                        <input type="number" name="quantity_no" value="<?= $Goods['quantity_no']; ?>" id="quantity_no" required class="form-control form-control-sm" step="0.01" onkeyup="autoCalc('#quantity_no', '#gross_weight', '#net_weight', Rate, emptyKgs)">
+                                        <input type="text" name="quantity_no" value="<?= $Goods['quantity_no']; ?>" id="quantity_no" required class="form-control form-control-sm" onkeyup="autoCalc('#quantity_no', '#gross_weight', '#net_weight', Rate, emptyKgs)">
                                         <input type="hidden" name="rate" id="rate" value="">
                                         <input type="hidden" name="empty_kgs" id="empty_kgs" value="">
                                     </div>
@@ -685,12 +689,12 @@ if ($id > 0) {
                                     <!-- Gross Weight -->
                                     <div class="col-md-1">
                                         <label for="gross_weight" class="form-label">G.Weight</label>
-                                        <input type="number" name="gross_weight" value="<?= $Goods['gross_weight']; ?>" id="gross_weight" required class="form-control form-control-sm" step="0.01">
+                                        <input type="text" name="gross_weight" value="<?= $Goods['gross_weight']; ?>" id="gross_weight" required class="form-control form-control-sm">
                                     </div>
                                     <!-- Net Weight -->
                                     <div class="col-md-1">
                                         <label for="net_weight" class="form-label">N.Weight</label>
-                                        <input type="number" name="net_weight" value="<?= $Goods['net_weight']; ?>" id="net_weight" required class="form-control form-control-sm" step="0.01">
+                                        <input type="text" name="net_weight" value="<?= $Goods['net_weight']; ?>" id="net_weight" required class="form-control form-control-sm">
                                     </div>
                                 </div>
 
@@ -915,8 +919,8 @@ if ($id > 0) {
                                             <input type="radio" name="warehouseEntry" 
                                                 value="${entry.unique_code}~${entry.goods_id}~${entry.goods_name}~${entry.quantity_no}~${entry.quantity_name}~${entry.gross_weight}~${entry.net_weight}" />
                                         </td>
-                                        <td class="d-none">P#${entry.p_id} (${entry.sr_no}) => ${entry.goods_name} (${entry.quantity_no}) ${entry.quantity_name}</td>
-                                        <td>P#${entry.p_id} (${entry.sr_no})</td>
+                                        <td class="d-none">P#${entry.p_sr} (${entry.sr_no}) => ${entry.goods_name} (${entry.quantity_no}) ${entry.quantity_name}</td>
+                                        <td>P#${entry.p_sr} (${entry.sr_no})</td>
                                         <td>${entry.allot}</td>
                                         <td>${entry.goods_name}</td>
                                         <td>${entry.size}</td>

@@ -5,6 +5,7 @@ $level = $_POST['level'];
 if ($id > 0) {
     $records = fetch('transactions', array('id' => $id));
     $record = mysqli_fetch_assoc($records);
+    $sea_road = json_decode($record['sea_road'], true);
     $_fields = transactionSingle($id);
     $notify_party = isset($record['notify_party_details']) ? json_decode($record['notify_party_details'], true) : false;
     if (!empty($_fields)) {
@@ -350,9 +351,8 @@ if ($id > 0) {
                                     $Shipping = isset($updateRow['shipping_details']) ? json_decode($updateRow['shipping_details'], true) : [];
                                     $Loading = isset($updateRow['loading_details']) ? json_decode($updateRow['loading_details'], true) : [];
                                     $Receiving = isset($updateRow['receiving_details']) ? json_decode($updateRow['receiving_details'], true) : [];
-                                    echo '<input type="hidden" name="action" value="update">';
-                                    echo '<input type="hidden" name="id" value="' . $updateRow['id'] . '">';
-                                    $action = isset($_POST['action']) ? $_POST['action'] : '';
+                                    $action = 'update';
+                                    $unique_code = $record['p_s'] . $record['type'][0] . ($sea_road['sea_road'] === 'sea' ? 'se' : 'rd') . '_' . $record['id'] . '_' . $updateRow['id'];
                                 } elseif ($ActiveBlRow) {
                                     $action = 'new';
                                     $last_record['bl_no'] = $ActiveBlRow['bl_no'];
@@ -381,12 +381,19 @@ if ($id > 0) {
                                 }
                                 ?>
                                 <div style="width:100%; display: flex; justify-content: space-between; margin-bottom: 2px;">
-                                    <?php if ($action === 'update') { ?>
+                                    <?php if ($action === 'update') {
+                                        echo '<input type="hidden" name="action" value="update">';
+                                        echo '<input type="hidden" name="unique_code" value="' . $unique_code . '">';
+                                        echo '<input type="hidden" name="id" value="' . $updateRow['id'] . '">';
+                                        $action = isset($_POST['action']) ? $_POST['action'] : '';
+                                    ?>
                                         <h5 class="text-primary">Update Information</h5>
                                         <?php if (!isset(json_decode($updateRow['gloading_info'], true)['child_ids'])) { ?>
-                                            <a href="general-loading?deleteLoadingEntry=true&lp_id=<?= $updateRow['id']; ?>&p_id=<?= $id ?>" class="btn btn-danger btn-sm">Delete This Entry</a>
+                                            <a href="general-loading?deleteLoadingEntry=true&lp_id=<?= $updateRow['id']; ?>&p_id=<?= $id ?>&unique_code=<?= $unique_code; ?>" class="btn btn-danger btn-sm">Delete This Entry</a>
                                         <?php }
-                                    } else { ?>
+                                    } else {
+                                        echo '<input type="hidden" name="action" value="new">';
+                                        ?>
                                         <h5 class="text-primary">General Information</h5>
                                     <?php };
                                     if (!$ActiveBlRow): ?>
@@ -673,7 +680,7 @@ if ($id > 0) {
                                     <!-- Quantity No -->
                                     <div class="col-md-1">
                                         <label for="quantity_no" class="form-label">Qty No</label>
-                                        <input type="number" name="quantity_no" value="<?= $Goods['quantity_no']; ?>" id="quantity_no" required class="form-control form-control-sm" step="0.01" onkeyup="autoCalc('#quantity_no', '#gross_weight', '#net_weight', Rate, emptyKgs)">
+                                        <input type="text" name="quantity_no" value="<?= $Goods['quantity_no']; ?>" id="quantity_no" required class="form-control form-control-sm" onkeyup="autoCalc('#quantity_no', '#gross_weight', '#net_weight', Rate, emptyKgs)">
                                         <input type="hidden" name="rate" id="rate" value="">
                                         <input type="hidden" name="empty_kgs" id="empty_kgs" value="">
                                     </div>
@@ -681,12 +688,12 @@ if ($id > 0) {
                                     <!-- Gross Weight -->
                                     <div class="col-md-1">
                                         <label for="gross_weight" class="form-label">G.Weight</label>
-                                        <input type="number" name="gross_weight" value="<?= $Goods['gross_weight']; ?>" id="gross_weight" required class="form-control form-control-sm" step="0.01">
+                                        <input type="text" name="gross_weight" value="<?= $Goods['gross_weight']; ?>" id="gross_weight" required class="form-control form-control-sm">
                                     </div>
                                     <!-- Net Weight -->
                                     <div class="col-md-1">
                                         <label for="net_weight" class="form-label">N.Weight</label>
-                                        <input type="number" name="net_weight" value="<?= $Goods['net_weight']; ?>" id="net_weight" required class="form-control form-control-sm" step="0.01">
+                                        <input type="text" name="net_weight" value="<?= $Goods['net_weight']; ?>" id="net_weight" required class="form-control form-control-sm">
                                     </div>
 
                                     <!-- Container No -->

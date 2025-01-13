@@ -406,14 +406,14 @@ if (isset($_POST['ttrFirstSubmit'])) {
         $dataArray = array(
             'r_type' => $r_type,
             'transfered_from' => $transfered_from,
-            'transfered_from_id' => $p_sr,
+            'transfered_from_id' => $p_id,
             'branch_id' => $p_data['branch_id'],
             'user_id' => $userId,
             'username' => $userName,
             'r_date' => $transfer_date,
-            'roznamcha_no' => $p_sr,
+            'roznamcha_no' => $p_id,
             'r_name' => $type,
-            'r_no' => $p_sr,
+            'r_no' => $p_id,
             'created_at' => date('Y-m-d H:i:s')
         );
         $str = " Purchase # " . $p_sr;
@@ -504,7 +504,7 @@ if (isset($_POST['deleteTransaction'])) {
     $done = mysqli_query($connect, "DELETE FROM `purchase_details` WHERE parent_id='$p_id_hidden'");
     $done = mysqli_query($connect, "DELETE FROM `purchases` WHERE id='$p_id_hidden'");
     if ($done) {
-        $msg = " Deleted Booking Purchase #" . $p_id_hidden;
+        $msg = " Deleted Booking Purchase #" . $_POST['p_sr'];
         $type = "success";
     }
     message($type, $url_, $msg);
@@ -530,21 +530,6 @@ if (isset($_POST['t_id_hidden_attach'])) {
         }
     }
     messageNew($type, $url_, $msg);
-}
-if (isset($_POST['transferPurchase'])) {
-    $type = 'danger';
-    $msg = 'DB Failed';
-    $p_id_hidden = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
-    $data = array('locked' => 1);
-    $locked = update('transactions', $data, array('id' => $p_id_hidden));
-    if ($locked) {
-        $type = 'success';
-        $msg = 'Purchase Successfully transferred.';
-    } else {
-        $type = 'failed';
-        $msg = 'Purchase transfer Failed.';
-    }
-    messageNew($type, $pageURL, $msg);
 }
 if (isset($_GET['t_id']) && is_numeric($_GET['t_id'])) {/*&& isset($_GET['view']) && $_GET['view'] == 1*/
     $t_id = mysqli_real_escape_string($connect, $_GET['t_id']);

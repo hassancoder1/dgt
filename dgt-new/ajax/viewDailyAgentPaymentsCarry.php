@@ -223,23 +223,23 @@ $firstRow = $rowCount > 0 ? $rows[0] : null;
                 <form method="post">
                     <div class="row gx-1 gy-3 table-form mb-3 <?= $rozCondition ? 'd-none transfer-form' : '' ?>">
                         <div class="col-2">
-                            <div class="input-group">
-                                <label for="cr_acc" class="text-success">Ag.Acc</label>
-                                <input value="<?= $parentAgent['ag_acc_no']; ?>" id="cr_acc"
-                                    name="dr_khaata_no" readonly tabindex="-1" class="form-control"
-                                    required>
-                                <input type="hidden" name="dr_khaata_id" value="<?= $AgKhaata['id']; ?>">
+                            <small class="fw-bold text-danger" id="p_response"></small>
+                            <div class="input-group position-relative">
+                                <label for="khaata_no1" class="text-success">Ag. A/c</label>
+                                <input name="dr_khaata_no" id="khaata_no1" required class="form-control bg-transparent"
+                                    value="<?= $parentAgent['ag_acc_no']; ?>">
                             </div>
+                            <input type="hidden" name="dr_khaata_id" id="p_khaata_id" value="<?= $AgKhaata['id']; ?>">
                         </div>
+
                         <div class="col-2">
-                            <div class="input-group">
-                                <label for="p_khaata_no" class="text-danger">Cr.Acc</label>
-                                <input type="text" id="p_khaata_no" name="cr_khaata_no"
-                                    class="form-control"
-                                    readonly tabindex="-1"
+                            <small class="fw-bold text-danger" id="p_response"></small>
+                            <div class="input-group position-relative">
+                                <label for="khaata_no2" class="text-danger">Cr. A/c</label>
+                                <input name="cr_khaata_no" id="khaata_no2" required class="form-control bg-transparent"
                                     value="<?php echo $_fields['dr_acc']; ?>">
-                                <input type="hidden" name="cr_khaata_id" value="<?php echo $_fields['dr_acc_id'] ?>">
                             </div>
+                            <input type="hidden" name="cr_khaata_id" id="s_khaata_id" value="<?php echo $_fields['dr_acc_id'] ?>">
                         </div>
                         <div class="col-md-2">
                             <div class="input-group">
@@ -506,4 +506,83 @@ $firstRow = $rowCount > 0 ? $rows[0] : null;
                 }
             }
         }
+
+        function fetchKhaata(inputField, khaataId, responseId, prefix, khaataImageId, recordSubmitId) {
+            let khaata_no = $(inputField).val();
+            $.ajax({
+                url: 'ajax/fetchSingleKhaata.php',
+                type: 'post',
+                data: {
+                    khaata_no: khaata_no
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success === true) {
+                        enableButton(recordSubmitId);
+                        $(khaataId).val(response.messages['khaata_id']);
+                        $(prefix + '_khaata_no').text(khaata_no);
+                        $(prefix + '_khaata_name').text(response.messages['khaata_name']);
+                        $(prefix + '_b_name').text(response.messages['b_name']);
+                        $(prefix + '_c_name').text(response.messages['name']);
+                        $(prefix + '_business_name').text(response.messages['business_name']);
+                        $(prefix + '_address').text(response.messages['address']);
+                        $(prefix + '_comp_name').text(response.messages['comp_name']);
+                        var details = {
+                            indexes: response.messages['indexes'],
+                            vals: response.messages['vals']
+                        };
+                        $(prefix + '_contacts').html(displayKhaataDetails(details));
+                        $(khaataImageId).attr("src", response.messages['image']);
+                        $(recordSubmitId).prop('disabled', false);
+                        lastAmount();
+                        $(responseId).text('');
+                    }
+                    if (response.success === false) {
+                        disableButton(recordSubmitId);
+                        $(responseId).text('INVALID');
+                        $(prefix + '_khaata_no').text('---');
+                        $(prefix + '_khaata_name').text('---');
+                        $(prefix + '_c_name').text('---');
+                        $(prefix + '_b_name').text('---');
+                        $(prefix + '_comp_name').text('---');
+                        $(prefix + '_business_name').text('---');
+                        $(prefix + '_address').text('---');
+                        $(prefix + '_contacts').text('');
+                        $(khaataImageId).attr("src", 'assets/images/logo-placeholder.png');
+                        $(khaataId).val(0);
+                    }
+                }
+            });
+        }
+
+        function displayKhaataDetails(details) {
+            var html = ''; // Initialize an empty string to store HTML
+
+            if (details.indexes && details.vals) {
+                var indexes = JSON.parse(details.indexes);
+                var vals = JSON.parse(details.vals);
+
+                if (Array.isArray(indexes) && Array.isArray(vals)) {
+                    var count = Math.min(indexes.length, vals.length);
+
+                    for (var i = 0; i < count; i++) {
+                        var key = indexes[i];
+                        var value = vals[i];
+                        // Construct the HTML string
+                        html += '<b class="text-dark">' + (key) + '</b>' + value + '<br>';
+                    }
+                }
+            }
+
+            return html; // Return the constructed HTML string
+        }
+
+        $(document).on('keyup', "#khaata_no1", function(e) {
+            fetchKhaata("#khaata_no1", "#p_khaata_id", "#p_response", "#p", "#p_khaata_image", "recordSubmit");
+        });
+        fetchKhaata("#khaata_no1", "#p_khaata_id", "#p_response", "#p", "#p_khaata_image", "recordSubmit");
+        $(document).on('keyup', "#khaata_no2", function(e) {
+            fetchKhaata("#khaata_no2", "#s_khaata_id", "#s_response", "#s", "#s_khaata_image", "recordSubmit");
+        });
+        fetchKhaata("#khaata_no2", "#s_khaata_id", "#s_response", "#s", "#s_khaata_image", "recordSubmit");
     </script>

@@ -100,9 +100,10 @@ while ($SPid = mysqli_fetch_assoc($pIDQ)) {
     echo "</style>";
     ?>
     <style>
-        *{
+        * {
             font-family: 'Lexend', serif;
         }
+
         body {
             font-size: 13px;
             background-color: #f8f9fa;
@@ -193,7 +194,7 @@ while ($SPid = mysqli_fetch_assoc($pIDQ)) {
                         <img src="../assets/images/logo.png" alt="logo" class="img-fluid">
                     </div>
                     <h6 class="fw-bold mt-2">DAMAAN GENERAL TRADING LLC</h6>
-                    <p class="text-muted">Booking Ref.: <?= ucfirst($firstBl['type']).'#'.$firstBl['p_sr'] . " (" . $blOrders[$firstBl['bl_no']] . ")" ?> - B/L Number: #<?= $firstBl['bl_no']; ?></p>
+                    <p class="text-muted">Booking Ref.: <?= ucfirst($firstBl['type']) . '#' . $firstBl['p_sr'] . " (" . $blOrders[$firstBl['bl_no']] . ")" ?> - B/L Number: #<?= $firstBl['bl_no']; ?></p>
                 </div>
 
                 <div class="border p-2 mb-2">
@@ -211,17 +212,17 @@ while ($SPid = mysqli_fetch_assoc($pIDQ)) {
                     <div class="col-6">
                         <div class="border p-2">
                             <h6 class="fw-bold">Loading</h6>
-                            <p class="mb-0"><b>Date:</b> 07-Nov-24</p>
-                            <p class="mb-0"><b>Country:</b> Pakistan</p>
-                            <p><b>Border:</b> Kasim</p>
+                            <p class="mb-0"><b>Date:</b> <?= htmlspecialchars($fLoading['loading_date']); ?></p>
+                            <p class="mb-0"><b>Country:</b> <?= htmlspecialchars($fLoading['loading_country']); ?></p>
+                            <p><b><?= $fShipping['transfer_by'] === 'sea' ? 'Port' : 'Border'; ?>:</b> <?= htmlspecialchars($fLoading['loading_port_name']); ?></p>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="border p-2">
                             <h6 class="fw-bold">Receiving</h6>
-                            <p class="mb-0"><b>Date:</b> 07-Nov-24</p>
-                            <p class="mb-0"><b>Country:</b> Pakistan</p>
-                            <p><b>Border:</b> Kasim</p>
+                            <p class="mb-0"><b>Date:</b> <?= htmlspecialchars($fReceiving['receiving_date']); ?></p>
+                            <p class="mb-0"><b>Country:</b> <?= htmlspecialchars($fReceiving['receiving_country']); ?></p>
+                            <p><b><?= $fShipping['transfer_by'] === 'sea' ? 'Port' : 'Border'; ?>:</b> <?= htmlspecialchars($fReceiving['receiving_port_name']); ?></p>
                         </div>
                     </div>
                 </div>

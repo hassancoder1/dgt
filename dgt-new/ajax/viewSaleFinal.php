@@ -292,7 +292,7 @@ if ($id > 0) {
                     $partial_amount2 = ($remaining_percentage / 100) * $total_amount;
                     if ($record['from'] == 'sale-credit') {
                         if ($record['khaata_tr1'] != '') {
-                            $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $record['sr'], 'transfered_from' => 'sale_' . $record['type']));
+                            $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $record['id'], 'transfered_from' => 'sale_' . $record['type']));
                             $roz = mysqli_fetch_assoc($rozQ);
                             $roz_arr1 = array(
                                 array('Sr#', SuperAdmin() ? $roz['r_id'] . '-' . $roz['branch_serial'] : $roz['branch_serial']),
@@ -317,7 +317,7 @@ if ($id > 0) {
                         $bal = $total_amount - $crdt_paid_final;
                     } else {
                         if ($record['khaata_tr1'] != '') {
-                            $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $record['sr'], 'transfered_from' => 'sale_' . $record['type']));
+                            $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $record['id'], 'transfered_from' => 'sale_' . $record['type']));
                             $roz = mysqli_fetch_assoc($rozQ);
                             $roz_arr1 = array(
                                 array('Sr#', SuperAdmin() ? $roz['r_id'] . '-' . $roz['branch_serial'] : $roz['branch_serial']),
@@ -533,7 +533,7 @@ if ($id > 0) {
                                         echo '<td class="border border-dark">' . $i++ . '</td>';
                                         echo '<td class="border border-dark">' . my_date($item['created_at']) . '</td>';
 
-                                        echo '<td class="border border-dark"><a href="sale-remaining?view=1&p_id=' . $record['id'] . '&purchase_pays_id=' . $item['id'] . '">' . $item['dr_khaata_no'] . '</a></td>';
+                                        echo '<td class="border border-dark"><a href="sale-advance?view=1&p_id=' . $record['id'] . '&purchase_pays_id=' . $item['id'] . '">' . $item['dr_khaata_no'] . '</a></td>';
                                         echo '<td class="border border-dark">' . $item['cr_khaata_no'] . '</td>';
                                         echo '<td class="border border-dark">' . $item['report'] . '</td>';
                                         echo '<td class="border border-dark">' . round($item['amount']) . '<sub>' . $item['currency1'] . '</sub></td>';
@@ -546,7 +546,7 @@ if ($id > 0) {
                         </div>
                         <!-- Remaining Entries -->
                         <?php if ($record['khaata_tr1'] != '') {
-                            $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $record['sr'], 'transfered_from' => 'sale_' . $record['type']));
+                            $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $record['id'], 'transfered_from' => 'sale_' . $record['type']));
                             $roz = mysqli_fetch_assoc($rozQ);
 
                             // Arrays to hold row data
@@ -650,7 +650,7 @@ if ($id > 0) {
                         <?php
                     } else {
                         if ($record['khaata_tr1'] != '') {
-                            $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'transfered_from_id' => $record['sr'], 'transfered_from' => 'sale_' . $record['type']));
+                            $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'transfered_from_id' => $record['id'], 'transfered_from' => 'sale_' . $record['type']));
                             if (mysqli_num_rows($rozQ) > 0) { ?>
                                 <div class="p-2">
                                     <table class="table table-sm table-bordered mb-0">
@@ -822,12 +822,13 @@ if ($id > 0) {
                             // } else {
                             //     disableButton('recordSubmit');
                             // }
-                            if (balance >= 1) {
+                            if (balance >= 1 || <?= $purchase_pays_id > 0 ? 1 : 0; ?>) {
                                 // if (final_amount <= balance + 0.5) {
                                 //     enableButton('recordSubmit');
                                 // } else {
                                 //     disableButton('recordSubmit');
                                 // }
+                                enableButton('recordSubmit');
                             } else {
                                 disableButton('recordSubmit');
                             }

@@ -1095,11 +1095,15 @@ function getSeaRoadArray($transaction_id)
     }
 }
 
-function purchaseSpecificData($purchaseId, $type, $GetValue = 'final_amount')
+function purchaseSpecificData($purchaseId, $type, $GetValue = 'final_amount', $isCommission = false)
 {
     $query = fetch('transactions', array('id' => $purchaseId));
     $purchase = mysqli_fetch_assoc($query);
-    $pur_d_q = fetch('transaction_items', array('parent_id' => $purchaseId));
+    if ($isCommission) {
+        $pur_d_q = fetch('commission_items', array('sale_id' => $purchaseId));
+    } else {
+        $pur_d_q = fetch('transaction_items', array('parent_id' => $purchaseId));
+    }
     $count_pd = mysqli_num_rows($pur_d_q);
     $data = '';
     switch ($type) {

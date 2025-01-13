@@ -218,17 +218,17 @@ $AGCombine = array_combine(isset($AGCompany['indexes1']) ? $AGCompany['indexes1'
                     <div class="col-6">
                         <div class="border p-2">
                             <h6 class="fw-bold">Loading</h6>
-                            <p class="mb-0"><b>Date:</b> 07-Nov-24</p>
-                            <p class="mb-0"><b>Country:</b> Pakistan</p>
-                            <p><b>Border:</b> Kasim</p>
+                            <p class="mb-0"><b>Date:</b> <?= htmlspecialchars($fLoading['loading_date']); ?></p>
+                            <p class="mb-0"><b>Country:</b> <?= htmlspecialchars($fLoading['loading_country']); ?></p>
+                            <p><b><?= $fShipping['transfer_by'] === 'sea' ? 'Port' : 'Border'; ?>:</b> <?= htmlspecialchars($fLoading['loading_port_name']); ?></p>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="border p-2">
                             <h6 class="fw-bold">Receiving</h6>
-                            <p class="mb-0"><b>Date:</b> 07-Nov-24</p>
-                            <p class="mb-0"><b>Country:</b> Pakistan</p>
-                            <p><b>Border:</b> Kasim</p>
+                            <p class="mb-0"><b>Date:</b> <?= htmlspecialchars($fReceiving['receiving_date']); ?></p>
+                            <p class="mb-0"><b>Country:</b> <?= htmlspecialchars($fReceiving['receiving_country']); ?></p>
+                            <p><b><?= $fShipping['transfer_by'] === 'sea' ? 'Port' : 'Border'; ?>:</b> <?= htmlspecialchars($fReceiving['receiving_port_name']); ?></p>
                         </div>
                     </div>
                 </div>

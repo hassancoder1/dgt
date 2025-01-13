@@ -40,15 +40,7 @@ $_fields = [
     'transaction_accounts_dr_id' => 0,
     'transaction_accounts_cr_id' => 0
 ];
-$query = "SELECT COALESCE(MAX(sr), 0) + 1 AS next_sr FROM transaction_items WHERE p_s = 'p'";
-if (isset($_GET['id'])) {
-    $myid = $_GET['id'];
-    $query .= " AND parent_id='$myid'";
-}
-$result = mysqli_query($connect, $query);
-$row = mysqli_fetch_assoc($result);
-$next_items_sr = $row['next_sr'] ?? 1;
-$item_fields = ['p_s' => 'p', 'sr' => $next_items_sr, 'quality_report' => '', 'goods_id' => 0, 'size' => '', 'brand' => '', 'origin' => '', 'qty_name' => '', 'qty_no' => 0, 'qty_kgs' => 0, 'total_kgs' => 0, 'empty_kgs' => 0, 'total_qty_kgs' => 0, 'net_kgs' => 0, 'divide' => '', 'weight' => 0, 'total' => 0, 'price' => '', 'currency1' => '', 'rate1' => 0, 'amount' => 0, 'currency2' => 'AED', 'rate2' => '', 'opr' => '*', 'final_amount' => 0, 'tax_percent' => '', 'tax_amount' => '', 'total_with_tax' => ''];
+
 $sea_road = [
     'sea_road' => 'sea',
     'l_country_road' => '',
@@ -193,12 +185,20 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
             'receiving_date' => ''
         ];
     }
-
+    $query = "SELECT COALESCE(MAX(sr), 0) + 1 AS next_sr FROM transaction_items WHERE p_s = 'p'";
+    if (isset($_GET['id'])) {
+        $myid = $_GET['id'];
+        $query .= " AND parent_id='$myid'";
+    }
+    $result = mysqli_query($connect, $query);
+    $row = mysqli_fetch_assoc($result);
+    $next_items_sr = $row['next_sr'] ?? 1;
+    $item_fields = ['p_s' => 'p', 'sr' => $next_items_sr, 'quality_report' => '', 'goods_id' => 0, 'size' => '', 'brand' => '', 'origin' => '', 'qty_name' => '', 'qty_no' => 0, 'qty_kgs' => 0, 'total_kgs' => 0, 'empty_kgs' => 0, 'total_qty_kgs' => 0, 'net_kgs' => 0, 'divide' => '', 'weight' => 0, 'total' => 0, 'price' => '', 'currency1' => '', 'rate1' => 0, 'amount' => 0, 'currency2' => 'AED', 'rate2' => '', 'opr' => '*', 'final_amount' => 0, 'tax_percent' => '', 'tax_amount' => '', 'total_with_tax' => '', 'show_in_vat' => $record['type'] === 'local' ? 'yes' : 'no'];
     if (isset($_GET['item_id']) && $_GET['item_id'] > 0) {
         $item_id = mysqli_real_escape_string($connect, $_GET['item_id']);
         $records2 = fetch('transaction_items', array('id' => $item_id));
         $record2 = mysqli_fetch_assoc($records2);
-        $item_fields = ['p_s' => $record2['p_s'], 'sr' => $record2['sr'], 'quality_report' => $record2['quality_report'], 'allotment_name' => $record2['allotment_name'], 'goods_id' => $record2['goods_id'], 'size' => $record2['size'], 'brand' => $record2['brand'], 'origin' => $record2['origin'], 'qty_name' => $record2['qty_name'], 'qty_no' => $record2['qty_no'], 'qty_kgs' => $record2['qty_kgs'], 'total_kgs' => $record2['total_kgs'], 'empty_kgs' => $record2['empty_kgs'], 'total_qty_kgs' => $record2['total_qty_kgs'], 'net_kgs' => $record2['net_kgs'], 'divide' => $record2['divide'], 'weight' => $record2['weight'], 'total' => $record2['total'], 'price' => $record2['price'], 'currency1' => $record2['currency1'], 'rate1' => $record2['rate1'], 'amount' => $record2['amount'], 'currency2' => $record2['currency2'], 'rate2' => $record2['rate2'], 'opr' => $record2['opr'], 'final_amount' => $record2['final_amount'], 'tax_percent' => $record2['tax_percent'], 'tax_amount' => $record2['tax_amount'], 'total_with_tax' => $record2['total_with_tax']];
+        $item_fields = ['p_s' => $record2['p_s'], 'sr' => $record2['sr'], 'quality_report' => $record2['quality_report'], 'allotment_name' => $record2['allotment_name'], 'goods_id' => $record2['goods_id'], 'size' => $record2['size'], 'brand' => $record2['brand'], 'origin' => $record2['origin'], 'qty_name' => $record2['qty_name'], 'qty_no' => $record2['qty_no'], 'qty_kgs' => $record2['qty_kgs'], 'total_kgs' => $record2['total_kgs'], 'empty_kgs' => $record2['empty_kgs'], 'total_qty_kgs' => $record2['total_qty_kgs'], 'net_kgs' => $record2['net_kgs'], 'divide' => $record2['divide'], 'weight' => $record2['weight'], 'total' => $record2['total'], 'price' => $record2['price'], 'currency1' => $record2['currency1'], 'rate1' => $record2['rate1'], 'amount' => $record2['amount'], 'currency2' => $record2['currency2'], 'rate2' => $record2['rate2'], 'opr' => $record2['opr'], 'final_amount' => $record2['final_amount'], 'tax_percent' => $record2['tax_percent'], 'tax_amount' => $record2['tax_amount'], 'total_with_tax' => $record2['total_with_tax'], 'show_in_vat' => $record2['show_in_vat']];
     }
 
     $bank_details = json_decode(decodeSpecialCharacters($record['third_party_bank']), true);
@@ -763,14 +763,23 @@ echo '<script>let purchaseReports = [];</script>';
                         <div class="row gy-3">
                             <div class="col-md-4">
                                 <div class="row gx-1 gy-3">
+                                    <div><b>Sr# </b> <?php echo $item_fields['sr']; ?></div>
                                     <div class="col-md-7">
-                                        <div><b>Sr# </b> <?php echo $item_fields['sr']; ?></div>
-                                        <div class="row g-0">
+                                        <div class="input-group">
                                             <label for="allotment_name" class="col-md-6 col-form-label text-nowrap">Allotment Name</label>
                                             <div class="col-md-6">
                                                 <input value="<?= isset($item_fields['allotment_name']) ? $item_fields['allotment_name'] : ''; ?>" id="allotment_name"
                                                     name="allotment_name" class="form-control" required>
                                             </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <div class="input-group">
+                                            <label for="show_in_vat">VAT?</label>
+                                            <select class="form-select" name="show_in_vat" id="show_in_vat" required>
+                                                <option value="no" <?= $item_fields['show_in_vat'] === 'no' ? 'selected' : ''; ?>>No</option>
+                                                <option value="yes" <?= $item_fields['show_in_vat'] === 'yes' ? 'selected' : ''; ?>>Yes</option>
+                                            </select>
                                         </div>
                                     </div>
                                     <div class="col-md-7">
@@ -829,7 +838,7 @@ echo '<script>let purchaseReports = [];</script>';
                                     <div class="col-md-12">
                                         <div class="input-group">
                                             <label for="quality_report">Report</label>
-                                            <textarea type="text" name="quality_report" id="quality_report" class="form-control" rows="2" required><?= $item_fields['quality_report']; ?></textarea>
+                                            <textarea type="text" name="quality_report" id="quality_report" class="form-control" rows="2"><?= $item_fields['quality_report']; ?></textarea>
                                         </div>
                                     </div>
                                 </div>
@@ -885,7 +894,7 @@ echo '<script>let purchaseReports = [];</script>';
                                                 for="divide">DIVIDE</label>
                                             <div class="col-sm">
                                                 <select id="divide" name="divide" class="form-select">
-                                                    <?php $divides = array('TON' => 'TON', 'KGs' => 'KG', 'CARTON' => 'CARTON');
+                                                    <?php $divides = array('D/TON' => 'D/TON', 'D/KGs' => 'D/KG', 'D/CARTON' => 'D/CARTON', 'D/PP BAGS' => 'D/PP BAGS');
                                                     foreach ($divides as $item => $val) {
                                                         $d_sel = $item_fields['divide'] == $val ? 'selected' : '';
                                                         echo '<option ' . $d_sel . ' value="' . $val . '">' . $item . '</option>';
@@ -911,7 +920,7 @@ echo '<script>let purchaseReports = [];</script>';
                                                 for="price">PRICE</label>
                                             <div class="col-sm">
                                                 <select id="price" name="price" class="form-select">
-                                                    <?php $prices = array('TON PRICE' => 'TON', 'KGs PRICE' => 'KG', 'CARTON PRICE' => 'CARTON');
+                                                    <?php $prices = array('P/TON' => 'P/TON', 'P/KGs' => 'P/KG', 'P/CARTON' => 'P/CARTON', 'P/PP BAGS' => 'P/PP BAGS');
                                                     foreach ($prices as $item => $val) {
                                                         $pr_sel = $item_fields['price'] == $val ? 'selected' : '';
                                                         echo '<option ' . $pr_sel . ' value="' . $val . '">' . $item . '</option>';
@@ -1359,7 +1368,7 @@ echo '<script>let purchaseReports = [];</script>';
 <script type="text/javascript">
     $(document).ready(function() {
         finalAmount();
-        $('#qty_no,#qty_kgs,#empty_kgs,#weight,#rate1,#rate2,#opr').on('keyup', function() {
+        $('#qty_no,#qty_kgs,#empty_kgs,#weight,#rate1,#rate2,#opr').on('change', function() {
             finalAmount();
         });
 
@@ -1566,10 +1575,11 @@ if (isset($_POST['recordSubmit'])) {
             insert('good_details', ['goods_id' => $_POST['goods_id'], 'size' => $_POST['size'], 'brand' => strtoupper($_POST['brand']), 'origin' => $_POST['origin']]);
         }
         $pageURL .= '?id=' . $hidden_id . '&type=' . $record['type'];
+
         $data = array(
             'sr' =>  mysqli_real_escape_string($connect, $_POST['sr']),
             'allotment_name' => mysqli_real_escape_string($connect, $_POST['allotment_name']),
-            'quality_report' => mysqli_real_escape_string($connect, $_POST['quality_report']),
+            'quality_report' => mysqli_real_escape_string($connect, preg_replace('/[\n\r\t]+/', ', ', $_POST['quality_report'])),
             'goods_id' => mysqli_real_escape_string($connect, $_POST['goods_id']),
             'size' => mysqli_real_escape_string($connect, $_POST['size']),
             'brand' => mysqli_real_escape_string($connect, $_POST['brand']),
@@ -1594,6 +1604,7 @@ if (isset($_POST['recordSubmit'])) {
             'tax_percent' => mysqli_real_escape_string($connect, $_POST['tax_percent']),
             'tax_amount' => mysqli_real_escape_string($connect, $_POST['tax_amount']),
             'total_with_tax' => mysqli_real_escape_string($connect, $_POST['total_with_tax']),
+            'show_in_vat' => mysqli_real_escape_string($connect, $_POST['show_in_vat']),
             'final_amount' => mysqli_real_escape_string($connect, (isset($_POST['total_with_tax']) && !empty($_POST['total_with_tax']) ? $_POST['total_with_tax'] : $_POST['final_amount'])),
         );
         if ($hidden_item_id > 0) {

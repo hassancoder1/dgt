@@ -5,7 +5,7 @@ include("header.php");
 $remove = $start_print = $end_print = $type = $acc_no = $p_sr = $blSearch = $sea_road = $transferred = $date_type = '';
 $is_search = false;
 global $connect;
-$results_per_page = 25;
+$results_per_page = 100;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $start_from = ($page - 1) * $results_per_page;
 $sql = "SELECT * FROM `general_loading`";
@@ -85,9 +85,9 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     unset($query_params['page']);
                     $base_url = $url_parts['path'] . '?' . http_build_query($query_params);
 
-                    $count_sql = "SELECT COUNT(id) AS total FROM `general_loading`";
+                    $count_sql = "SELECT COUNT(id) AS total FROM `general_loading` WHERE JSON_EXTRACT(gloading_info, '$.child_ids') IS NOT NULL";
                     if (count($conditions) > 0) {
-                        $count_sql .= " WHERE " . implode(' AND ', $conditions);
+                        $count_sql .= " AND " . implode(' AND ', $conditions);
                     }
                     $count_result = mysqli_query($connect, $count_sql);
                     $row = mysqli_fetch_assoc($count_result);
@@ -371,8 +371,8 @@ if (isset($_POST['UpdatePermission'])) {
     $PermissionIDs = explode(',', $update_permission_ids);
     $idConditions = [];
     foreach ($PermissionIDs as $pair) {
-        list($p_id, $sr_no) = explode('-', trim($pair));
-        $idConditions[] = "(p_id = '$p_id' AND sr_no = '$sr_no')";
+        list($p_id, $sr_no, $t_type) = explode('-', trim($pair));
+        $idConditions[] = "(p_id = '$p_id' AND sr_no = '$sr_no' AND type = '$t_type')";
     }
     $whereClause = implode(' OR ', $idConditions);
     $query = "SELECT id, agent_details FROM general_loading WHERE $whereClause";
@@ -406,12 +406,6 @@ if (isset($_POST['UpdatePermission'])) {
         message('danger', '', 'No matching records found.');
     }
 }
-function safeJsonEncode($data)
-{
-    global $connect;
-    return mysqli_real_escape_string($connect, json_encode($data));
-}
-
 if (isset($_POST['TransferToAgent'])) {
     $msg = 'DB Error';
     $msgType = 'danger';
@@ -422,13 +416,6 @@ if (isset($_POST['TransferToAgent'])) {
     if (isset($_POST['agent_exists']) && $_POST['agent_exists'] === 'no') {
         $_POST['ag_acc_no'] = $_POST['ag_name'] = $_POST['ag_id'] = $_POST['ag_row_id'] = '';
     }
-
-    $idConditions = [];
-    foreach ($transferPairs as $pair) {
-        list($p_sr, $sr_no, $t_type) = explode('-', trim($pair));
-        $idConditions[] = "(p_sr = '$p_sr' AND sr_no = '$sr_no' AND type = '$t_type')";
-    }
-    $whereClause = implode(' OR ', $idConditions);
     $agentDetails = [
         'agent_exist' => $_POST['agent_exist'],
         'ag_acc_no' => $_POST['ag_acc_no'],
@@ -438,97 +425,121 @@ if (isset($_POST['TransferToAgent'])) {
         'cargo_transfer_warehouse' => $_POST['cargo_transfer'],
         'transferred' => true,
     ];
-    $Ttempdata = mysqli_fetch_assoc(fetch('transactions', ['sr' => $p_sr, 'p_s' => $t_type]));
-    $Ptempdata = mysqli_fetch_assoc(fetch('general_loading', ['p_sr' => $p_sr, 'sr_no' => $sr_no, 'type' => $t_type]));
-    $tdata = array_merge(
-        transactionSingle($Ttempdata['id']),
-        ['sea_road_array' => json_decode($Ttempdata['sea_road'], true)] ?? [],
-        ['notify_party_details' => json_decode($Ttempdata['notify_party_details'], true)] ?? [],
-        ['third_party_bank' => json_decode($Ttempdata['third_party_bank'], true)] ?? [],
-        ['reports' => json_decode($Ttempdata['reports'], true)] ?? []
-    );
-    $transferData = array_merge(
-        json_decode($Ptempdata['loading_details'], true),
-        json_decode($Ptempdata['receiving_details'], true),
-        json_decode($Ptempdata['shipping_details'], true),
-        ['warehouse_transfer' => $_POST['cargo_transfer']],
-        isset($_POST['warehouse_entry']) ? ['sold_from' => [$_POST['warehouse_entry']]] : []
-    );
-    $dummyTmp = $Ptempdata;
-    unset(
-        $Ptempdata['loading_details'],
-        $Ptempdata['receiving_details'],
-        $Ptempdata['shipping_details'],
-        $Ptempdata['agent_details'],
-        $Ptempdata['gloading_info'],
-        $Ptempdata['importer_details'],
-        $Ptempdata['exporter_details'],
-        $Ptempdata['notify_party_details'],
-        $Ptempdata['goods_details']
-    );
-    $tempG = json_decode($dummyTmp['goods_details'], true);
-    $ldata = array_merge(
-        $Ptempdata,
-        [
-            'transfer' => $transferData,
-            'info' => json_decode($dummyTmp['gloading_info'], true),
-            'importer' => json_decode($dummyTmp['importer_details'], true),
-            'exporter' => json_decode($dummyTmp['exporter_details'], true),
-            'notify' => json_decode($dummyTmp['notify_party_details'], true),
-            'good' => array_merge(
-                $tempG,
-                [
-                    'goods_json' => array_merge(
-                        $tempG['goods_json'],
-                        [
-                            'qty_no' => (isset($_POST['warehouse_entry']) ? 0 : $tempG['quantity_no']),
-                            // 'qty_no' => $tempG['quantity_no'],
+    $idConditions = [];
+    foreach ($transferPairs as $index => $pair) {
+        list($p_sr, $sr_no, $t_type) = explode('-', trim($pair));
+        $idConditions[] = "(p_sr = '$p_sr' AND sr_no = '$sr_no' AND type = '$t_type')";
 
-                            'qty_name' => $tempG['quantity_name'],
-                            'total_kgs' => (isset($_POST['warehouse_entry']) ? 0 : $tempG['gross_weight']),
-                            'net_kgs' => (isset($_POST['warehouse_entry']) ? 0 : $tempG['net_weight']),
-                            // 'total_kgs' => $tempG['gross_weight'],
-                            // 'net_kgs' => $tempG['net_weight'],
-                            'rate1' => $tempG['rate'],
-                            'empty_kgs' => $tempG['empty_kgs'],
-                            'size' => $tempG['size'],
-                            'brand' => $tempG['brand'],
-                            'origin' => $tempG['origin'],
-                            'goods_id' => $tempG['goods_id'],
-                        ]
-                    )
-                ]
-            ),
-            'agent' => $agentDetails,
-        ]
-    );
-    $CCWdata = [
-        'data_for' => $transferData['warehouse_transfer'],
-        'unique_code' => $_POST['unique_code'] . $_POST['currentLoading'],
-        'tdata' => safeJsonEncode($tdata),
-        'ldata' => safeJsonEncode($ldata),
-    ];
-    if (!recordExists('data_copies', ['unique_code' => $CCWdata['unique_code']])) {
-        insert('data_copies', $CCWdata);
-    }
-    if (isset($_POST['vat_general']) && $_POST['vat_general'] === 'yes') {
-        if (!recordExists('vat_copies', ['unique_code' => $CCWdata['unique_code']])) {
-            insert('vat_copies', $CCWdata);
+        // |||||||||||||||||||||||||||||\
+        $Ttempdata = mysqli_fetch_assoc(fetch('transactions', ['sr' => $p_sr, 'p_s' => $t_type]));
+        $Ptempdata = mysqli_fetch_assoc(fetch('general_loading', ['p_sr' => $p_sr, 'sr_no' => $sr_no, 'type' => $t_type]));
+        $tdata = array_merge(
+            transactionSingle($Ttempdata['id']),
+            ['sea_road_array' => json_decode($Ttempdata['sea_road'], true)] ?? [],
+            ['notify_party_details' => json_decode($Ttempdata['notify_party_details'], true)] ?? [],
+            ['third_party_bank' => json_decode($Ttempdata['third_party_bank'], true)] ?? [],
+            ['reports' => json_decode($Ttempdata['reports'], true)] ?? []
+        );
+        $transferData = array_merge(
+            json_decode($Ptempdata['loading_details'], true),
+            json_decode($Ptempdata['receiving_details'], true),
+            json_decode($Ptempdata['shipping_details'], true),
+            ['warehouse_transfer' => $_POST['cargo_transfer']],
+            isset($_POST['warehouse_entry'.$index]) ? ['sold_from' => [$_POST['warehouse_entry'.$index]]] : []
+        );
+        $dummyTmp = $Ptempdata;
+        unset(
+            $Ptempdata['loading_details'],
+            $Ptempdata['receiving_details'],
+            $Ptempdata['shipping_details'],
+            $Ptempdata['agent_details'],
+            $Ptempdata['gloading_info'],
+            $Ptempdata['importer_details'],
+            $Ptempdata['exporter_details'],
+            $Ptempdata['notify_party_details'],
+            $Ptempdata['goods_details']
+        );
+        $tempG = json_decode($dummyTmp['goods_details'], true);
+        $ldata = array_merge(
+            $Ptempdata,
+            [
+                'transfer' => $transferData,
+                'info' => json_decode($dummyTmp['gloading_info'], true),
+                'importer' => json_decode($dummyTmp['importer_details'], true),
+                'exporter' => json_decode($dummyTmp['exporter_details'], true),
+                'notify' => json_decode($dummyTmp['notify_party_details'], true),
+                'good' => array_merge(
+                    $tempG,
+                    [
+                        'goods_json' => array_merge(
+                            $tempG['goods_json'],
+                            [
+                                'qty_no' => (isset($_POST['warehouse_entry'.$index]) ? 0 : $tempG['quantity_no']),
+                                // 'qty_no' => $tempG['quantity_no'],
+
+                                'qty_name' => $tempG['quantity_name'],
+                                'total_kgs' => (isset($_POST['warehouse_entry'.$index]) ? 0 : $tempG['gross_weight']),
+                                'net_kgs' => (isset($_POST['warehouse_entry'.$index]) ? 0 : $tempG['net_weight']),
+                                // 'total_kgs' => $tempG['gross_weight'],
+                                // 'net_kgs' => $tempG['net_weight'],
+                                'rate1' => $tempG['rate'],
+                                'empty_kgs' => $tempG['empty_kgs'],
+                                'size' => $tempG['size'],
+                                'brand' => $tempG['brand'],
+                                'origin' => $tempG['origin'],
+                                'goods_id' => $tempG['goods_id'],
+                            ]
+                        )
+                    ]
+                ),
+                'agent' => $agentDetails,
+            ]
+        );
+        $my_unique_code = $_POST['unique_code'] . $Ptempdata['id'];
+        $CCWTables = ['data_copies'];
+        $CCWTables = array_merge($CCWTables, (isset($_POST['vat_general']) && $_POST['vat_general'] === 'yes' ? ['vat_copies'] : []));
+        foreach ($CCWTables as $myTable) {
+            $CCWdata = [
+                'data_for' => $_POST['cargo_transfer'],
+                'unique_code' => $my_unique_code,
+                'tdata' => mysqli_real_escape_string($connect, json_encode($tdata)),
+                'ldata' => $ldata,
+            ];
+            if (!recordExists($myTable, ['unique_code' => $CCWdata['unique_code']])) {
+                $CCWdata['ldata'] = mysqli_real_escape_string($connect, json_encode($CCWdata['ldata']));
+                insert($myTable, $CCWdata);
+            } else {
+                $fetchedLdata = json_decode(mysqli_fetch_assoc(fetch($myTable, ['unique_code' => $CCWdata['unique_code']]))['ldata'], true);
+                if (isset($fetchedLdata['edited']) && $fetchedLdata['edited'] === true) {
+                    continue;
+                }
+                $sold_to_from_key = isset($fetchedLdata['transfer']['sold_to']) ? 'sold_to' : (isset($fetchedLdata['transfer']['sold_from']) ? 'sold_from' : '');
+                if ($fetchedLdata['ldata']['good']['quantity_no'] !== $fetchedLdata['ldata']['good']['goods_json']['qty_no']) {
+                    $CCWdata['ldata']['good']['goods_json'] = $fetchedLdata['good']['goods_json'];
+                }
+                $CCWdata['ldata']['good']['goods_json'] = $fetchedLdata['good']['goods_json'];
+                if (!empty($sold_to_from_key)) {
+                    $CCWdata['ldata']['transfer'][$sold_to_from_key] = $fetchedLdata['transfer'][$sold_to_from_key];
+                }
+                $CCWdata['ldata'] = mysqli_real_escape_string($connect, json_encode($CCWdata['ldata']));
+                update($myTable, $CCWdata, ['unique_code' => $CCWdata['unique_code']]);
+            }
+        }
+        if (isset($_POST['warehouse_entry'.$index])) {
+            $p_unique_code = explode('~', $_POST['warehouse_entry'.$index])[0];
+            $existingLdata = json_decode(
+                mysqli_fetch_assoc(fetch('data_copies', ['unique_code' => $p_unique_code]))['ldata'],
+                true
+            );
+            $existingLdata['transfer']['sold_to'][] = $my_unique_code . '~' . $tempG['goods_id'] . '~' . goodsName($tempG['goods_id']) . '~' . $tempG['quantity_no'] . '~' . $tempG['quantity_name'] . '~' . $tempG['gross_weight'] . '~' . $tempG['net_weight'] . '~' . $transferData['warehouse_transfer'] . '~' . $sr_no;
+            $tempQtyNo = $tempG['quantity_no'];
+            $existingLdata['good']['goods_json']['qty_no'] -= $tempQtyNo;
+            $updatedGood = calcNewValues($existingLdata['good']['goods_json']['qty_no'], $existingLdata['good'], 'rems');
+            $existingLdata['good'] = $updatedGood;
+            update('data_copies', ['ldata' => mysqli_real_escape_string($connect, json_encode($existingLdata))], ['unique_code' => $p_unique_code]);
         }
     }
-    if (isset($_POST['warehouse_entry'])) {
-        $p_unique_code = explode('~', $_POST['warehouse_entry'])[0];
-        $existingLdata = json_decode(
-            mysqli_fetch_assoc(fetch('data_copies', ['unique_code' => $p_unique_code]))['ldata'],
-            true
-        );
-        $existingLdata['transfer']['sold_to'][] = $_POST['unique_code'] . $_POST['currentLoading'] . '~' . $tempG['goods_id'] . '~' . goodsName($tempG['goods_id']) . '~' . $tempG['quantity_no'] . '~' . $tempG['quantity_name'] . '~' . $tempG['gross_weight'] . '~' . $tempG['net_weight'] . '~' . $transferData['warehouse_transfer'] . '~' . $sr_no;
-        $tempQtyNo = $tempG['quantity_no'];
-        $existingLdata['good']['goods_json']['qty_no'] -= $tempQtyNo;
-        $updatedGood = calcNewValues($existingLdata['good']['goods_json']['qty_no'], $existingLdata['good'], 'rems');
-        $existingLdata['good'] = $updatedGood;
-        update('data_copies', ['ldata' => safeJsonEncode($existingLdata)], ['unique_code' => $p_unique_code]);
-    }
+    $whereClause = implode(' OR ', $idConditions);
 
     $parentCheckQuery = "
         SELECT id, gloading_info, JSON_EXTRACT(gloading_info, '$.child_ids') AS child_ids
@@ -560,7 +571,7 @@ if (isset($_POST['TransferToAgent'])) {
         $existingGloadingData['billNumber'] = $billNumber;
     }
     $gloadingInfo = json_encode($existingGloadingData);
-    $agentDetails = safeJsonEncode($agentDetails);
+    $agentDetails = mysqli_real_escape_string($connect, json_encode($agentDetails));
     if ($parentId) {
         $parentUpdateQuery = "
             UPDATE general_loading
@@ -578,7 +589,7 @@ if (isset($_POST['TransferToAgent'])) {
         $type = 'success';
         $msg = 'Agent Details Added!';
     }
-    message($type, $url, $msg);
+    // message($type, $url, $msg);
 }
 if (isset($_GET['id']) && is_numeric($_GET['id']) && isset($_GET['view']) && $_GET['view'] == 1) {
     $id = mysqli_real_escape_string($connect, $_GET['id']);

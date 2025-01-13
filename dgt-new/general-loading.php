@@ -462,11 +462,11 @@ if (isset($_POST['GLoadingSubmit'])) {
     WHERE bl_no = '$bl_no' 
     AND JSON_EXTRACT(gloading_info, '$.child_ids') IS NOT NULL
 "));
-    if ($parent_bl_data && $parent_bl_data['id'] !== $_POST['id']) {
+    if ($parent_bl_data && (isset($_POST['action']) ? ($parent_bl_data['id'] !== $_POST['id']) : true)) {
         $data = json_decode($parent_bl_data['gloading_info'], true);
         $existing_child_ids = isset($data['child_ids']) ? $data['child_ids'] : '';
         $existing_child_ids_count = isset($data['child_ids_count']) ? $data['child_ids_count'] : 0;
-        if ($_GET['action'] === 'update') {
+        if ($_POST['action'] === 'update') {
             $child_ids = $existing_child_ids;
             $child_ids_count = $existing_child_ids_count;
         } else {
@@ -579,7 +579,87 @@ if (isset($_POST['GLoadingSubmit'])) {
         'shipping_details' => json_encode($shipping_details),
         'attachments' => json_encode($uploadedFiles)
     ];
-    if (isset($_POST['action']) && isset($_POST['id'])) {
+    if ($_POST['action'] === 'update' && isset($_POST['id'])) {
+        $my_unique_code = $_POST['unique_code'];
+        $myTable = 'data_copies';
+        $Ttempdata = mysqli_fetch_assoc(fetch('transactions', ['id' => $p_id]));
+        $tdata = array_merge(
+            transactionSingle($p_id),
+            ['sea_road_array' => json_decode($Ttempdata['sea_road'], true)] ?? [],
+            ['notify_party_details' => json_decode($Ttempdata['notify_party_details'], true)] ?? [],
+            ['third_party_bank' => json_decode($Ttempdata['third_party_bank'], true)] ?? [],
+            ['reports' => json_decode($Ttempdata['reports'], true)] ?? []
+        );
+        $transferData = array_merge(
+            json_decode($data['loading_details'], true),
+            json_decode($data['receiving_details'], true),
+            json_decode($data['shipping_details'], true)
+        );
+        $tempG = $goods_details;
+        $TempData = $data;
+        unset(
+            $TempData['loading_details'],
+            $TempData['receiving_details'],
+            $TempData['shipping_details'],
+            $TempData['agent_details'],
+            $TempData['gloading_info'],
+            $TempData['importer_details'],
+            $TempData['exporter_details'],
+            $TempData['notify_party_details'],
+            $TempData['goods_details']
+        );
+        $ldata = array_merge(
+            $TempData,
+            [
+                'transfer' => $transferData,
+                'info' => json_decode($data['gloading_info'], true),
+                'importer' => json_decode($data['importer_details'], true),
+                'exporter' => json_decode($data['exporter_details'], true),
+                'notify' => json_decode($data['notify_party_details'], true),
+                'good' => array_merge(
+                    $tempG,
+                    [
+                        'goods_json' => array_merge(
+                            $tempG['goods_json'],
+                            [
+                                'qty_no' => $tempG['quantity_no'],
+                                'qty_name' => $tempG['quantity_name'],
+                                'total_kgs' => $tempG['gross_weight'],
+                                'net_kgs' => $tempG['net_weight'],
+                                'rate1' => $tempG['rate'],
+                                'empty_kgs' => $tempG['empty_kgs'],
+                                'size' => $tempG['size'],
+                                'brand' => $tempG['brand'],
+                                'origin' => $tempG['origin'],
+                                'goods_id' => $tempG['goods_id'],
+                            ]
+                        )
+                    ]
+                ),
+            ]
+        );
+        $CCWdata = [
+            'unique_code' => $my_unique_code,
+            'tdata' => mysqli_real_escape_string($connect, json_encode($tdata)),
+            'ldata' => $ldata,
+        ];
+        if (recordExists($myTable, ['unique_code' => $CCWdata['unique_code']])) {
+            $fetchedLdata = json_decode(mysqli_fetch_assoc(fetch($myTable, ['unique_code' => $CCWdata['unique_code']]))['ldata'], true);
+            if (!isset($fetchedLdata['edited']) && $fetchedLdata['edited'] !== true) {
+                $sold_to_from_key = isset($fetchedLdata['transfer']['sold_to']) ? 'sold_to' : (isset($fetchedLdata['transfer']['sold_from']) ? 'sold_from' : '');
+                if ($fetchedLdata['ldata']['good']['quantity_no'] !== $fetchedLdata['ldata']['good']['goods_json']['qty_no']) {
+                    $CCWdata['ldata']['good']['goods_json'] = $fetchedLdata['good']['goods_json'];
+                }
+                $CCWdata['ldata']['transfer']['warehouse_transfer'] = $fetchedLdata['transfer']['warehouse_transfer'];
+                $CCWdata['ldata']['agent'] = $fetchedLdata['agent'];
+                if (!empty($sold_to_from_key)) {
+                    $CCWdata['ldata']['transfer'][$sold_to_from_key] = $fetchedLdata['transfer'][$sold_to_from_key];
+                }
+                $CCWdata['ldata'] = mysqli_real_escape_string($connect, json_encode($CCWdata['ldata']));
+                update($myTable, $CCWdata, ['unique_code' => $CCWdata['unique_code']]);
+            }
+        }
+
         $url_ = "general-loading?p_id=" . $p_id . "&view=1";
         if ($data['attachments'] == '[]') {
             unset($data['attachments']);
@@ -608,6 +688,7 @@ if (isset($_GET['deleteLoadingEntry']) && isset($_GET['lp_id']) && !empty($_GET[
     $msg = 'DB Failed';
     $childEntryId = mysqli_real_escape_string($connect, $_GET['lp_id']);
     $p_id = mysqli_real_escape_string($connect, $_GET['p_id']);
+    $unique_code = mysqli_real_escape_string($connect, $_GET['unique_code']);
     $url_ = "general-loading?view=1&p_id=" . $p_id;
 
     // Step 1: Get the parent ID from the record being deleted
@@ -654,16 +735,24 @@ if (isset($_GET['deleteLoadingEntry']) && isset($_GET['lp_id']) && !empty($_GET[
     // Step 5: Delete the current record
     $deleteQuery = "DELETE FROM `general_loading` WHERE id='$childEntryId'";
     $done = mysqli_query($connect, $deleteQuery);
-
-    if ($done) {
-        $msg = "Loading Entry Deleted for Purchase #" . $p_id;
+    $done1 = "DELETE FROM `data_copies` WHERE unique_code='$unique_code'";
+    $done2 = "DELETE FROM `vat_copies` WHERE unique_code='$unique_code'";
+    $done1_result = mysqli_query($connect, $done1);
+    $done2_result = mysqli_query($connect, $done2);
+    if ($done1_result || $done2_result) {
+        $Mydone = true;
+    } else {
+        $Mydone = false;
+    }
+    if ($done && $Mydone) {
+        $msg = "Loading Entry Deleted!";
         $type = "success";
     } else {
         $msg = "Failed to delete loading entry.";
     }
 
     // Redirect or display message
-    message($type, $url_, $msg);
+    // message($type, $url_, $msg);
 }
 
 

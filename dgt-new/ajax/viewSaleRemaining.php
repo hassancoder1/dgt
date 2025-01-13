@@ -214,7 +214,7 @@ if ($id > 0) {
                                 <?php endif; ?>
                             </div>
                         <?php endif; ?>
-                        <?php if (!empty($_fields['items'])) { ?>
+                        <?php if (!empty($_fields['items']) && $record['type'] != 'commission') { ?>
                             <table class="table table-hover mb-0">
                                 <thead>
                                     <tr class="text-nowrap">
@@ -231,7 +231,7 @@ if ($id > 0) {
                                         <?php } else {; ?>
                                             <th>Tax%</th>
                                             <th>Tax.Amt</th>
-                                            <th>Amt+Tax</th>
+                                            <th>Final Amt</th>
                                         <?php } ?>
                                         <th></th>
                                     </tr>
@@ -264,6 +264,9 @@ if ($id > 0) {
                                             echo '<td>' . $details['total_with_tax'];
                                         };
                                         echo '</td>';
+                                        if ($record['type'] === 'commission' && $_POST['page'] === 'sales-commission-form') {
+                                            echo '<td><a href="commission-good-edit?id=' . $record['id'] . '&item_id=' . $details['id'] . '&type=' . $record['type'] . '&editfor=sale-commission"><i class="fa fa-pencil text-primary fs-6 pointer"></i></a></td>';
+                                        }
                                         echo '</tr>';
                                         $sr_details++;
                                         $qty_no += $details['qty_no'];
@@ -278,597 +281,810 @@ if ($id > 0) {
                                         $total_total_with_tax += (float)$details['total_with_tax'];
                                     }
                                     $prepareGoodsReport = '';
-                                    if ($qty_no > 0) {
-                                        echo '<tr>';
-                                        echo '<th colspan="2"></th>';
-                                        echo '<th class="fw-bold">' . $qty_no . '</th>';
-                                        echo '<th class="fw-bold">' . round($total_kgs, 2) . '</th>';
-                                        echo '<th class="fw-bold">' . round($net_kgs, 2) . '</th>';
-                                        echo '<th class="fw-bold">' . round($total, 2) . '</th>';
-                                        echo '<th></th>';
-                                        echo '<th class="fw-bold">' . round($amount, 2) . '</th>';
-                                        if ($record['type'] === 'local') {
-                                            echo '<th></th>';
-                                            echo '<th class="fw-bold">' . round($total_tax_amount, 2) . '</th>';
-                                            echo '<th class="fw-bold">' . round($total_total_with_tax, 2) . '</th>';
-                                        }
-                                        if ($record['type'] !== 'local') {
-                                            echo '<th class="fw-bold text-end">' . round($final_amount, 2) . '</th>';
-                                        }
-                                        echo '<th></th>';
-                                        echo '</tr>';
-                                    }
                                     ?>
                                 </tbody>
                             </table>
-                        <?php } ?>
+
+                            <?php if ($qty_no > 0) { ?>
+                                <div class="row mt-2">
+                                    <div class="col-4 offset-8 text-end">
+                                        <strong>Quantity:</strong> <?= $qty_no; ?><br>
+                                        <strong>Total Gross Weight:</strong> <?= round($total_kgs, 2); ?><br>
+                                        <strong>Total Net Weight:</strong> <?= round($net_kgs, 2); ?><br>
+                                        <strong>Total Amount:</strong> <?= round($total, 2); ?><br>
+                                        <strong>Sub-Total:</strong> <?= round($amount, 2); ?><br>
+                                        <?php if ($record['type'] === 'local') { ?>
+                                            <strong>Total Tax:</strong> <?= round($total_tax_amount, 2); ?><br>
+                                            <strong>Total with Tax:</strong> <?= round($total_total_with_tax, 2); ?><br>
+                                        <?php } else { ?>
+                                            <strong>Final Amount:</strong> <?= round($final_amount, 2); ?><br>
+                                        <?php } ?>
+                                    </div>
+                                </div>
+                            <?php }
+                        } else { ?>
                     </div>
                     <?php
-                    $payments = json_decode($record['payments'], true);
-                    $total_amount = isset($_fields['items_sum']['sum_final_amount']) ? (float)$_fields['items_sum']['sum_final_amount'] : 0;
-                    $percentage = isset($payments['pct_value']) ? (int)$payments['pct_value'] : 0;
-                    $remaining_percentage = 100 - $percentage;
-                    $partial_amount1 = ($percentage / 100) * $total_amount;
-                    $partial_amount2 = ($remaining_percentage / 100) * $total_amount;
-                    if ($record['khaata_tr1'] != '') {
-                        $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $record['sr'], 'transfered_from' => 'sale_' . $record['type']));
-                        $roz = mysqli_fetch_assoc($rozQ);
-                        $roz_arr1 = array(
-                            array('Sr#', SuperAdmin() ? $roz['r_id'] . '-' . $roz['branch_serial'] : $roz['branch_serial']),
-                            array('Date', $roz['r_date']),
-                            array('ID', $roz['username']),
-                            array('Branch', branchName($roz['branch_id'])),
-                        );
-                        $roz_arr2 = array(
-                            array('Roz.#', $roz['roznamcha_no']),
-                            array('Name', $roz['r_name']),
-                            array('No', $roz['r_no']),
-                        );
-                        $roz_arr3 = array(
-                            array('Dr.', $roz['amount']),
-                            //array('Cr.', 0),
-                        );
-                        $roz_arr4 = array(
-                            array('Total Amount', round($final_amount, 2)),
-                            array('Percent', $percentage . '%'),
-                            array('Advance', round($partial_amount1, 2)),
-                        );
-                    }
-                    $adv_paid_final = purchaseSpecificData($record['id'], 'adv_paid_total', 'amount');
-                    $balADV = $partial_amount1 - $adv_paid_final;
-                    $rem_paid_final = purchaseSpecificData($record['id'], 'rem_paid_total', 'amount');
-                    $balREM = $partial_amount2 - $rem_paid_final;
-                    ?>
-                    <hr class="my-0">
-                    <div class="m-3">
-                        <b>Details</b>
-                        <table class="table mb-2 table-hover table-sm">
+                            $child_qty = [];
+                            $structuredData = [];
+                            $commission_items = [];
+                            foreach ($_fields['items'] as $item) {
+                                $myid = $item['id'];
+                                $structuredData[$myid] = $item;
+                            }
+                            $commission = fetch('commission_items', ['sale_id' => $record['id']]);
+                            while ($thisItem = mysqli_fetch_assoc($commission)) {
+                                $commission_items[] = $thisItem;
+                            }
+                            if (count($commission_items) > 0) { ?>
+                        <table class="table table-hover mb-0">
                             <thead>
-                                <tr>
-                                    <th class="border bg-warning border-dark">Sr#</th>
-                                    <th class="border bg-warning border-dark">Date</th>
-                                    <!-- <th class="border bg-warning border-dark">ID</th> -->
-                                    <!-- <th class="border bg-warning border-dark">Branch</th> -->
-                                    <!-- <th class="border bg-warning border-dark">Roz#</th> -->
-                                    <th class="border bg-warning border-dark">No</th>
-                                    <th class="border bg-warning border-dark">Total Amount</th>
-                                    <th class="border bg-warning border-dark">Adv Percent</th>
-                                    <th class="border bg-warning border-dark">Advance</th>
-                                    <th class="border bg-warning border-dark text-success">Total</th>
-                                    <th class="border bg-warning border-dark text-danger">BALANCE</th>
-                                    <th class="border bg-warning border-dark">Transferred</th>
-                                    <th class="border bg-warning border-dark">Remaining</th>
-                                    <th class="border bg-warning border-dark text-success">Total</th>
-                                    <th class="border bg-warning border-dark text-danger">BALANCE</th>
-                                    <th class="border bg-warning border-dark">Transferred</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="border border-dark"><?php echo $roz_arr1[0][1]; ?></td> <!-- Sr# -->
-                                    <td class="border border-dark"><?php echo $roz_arr1[1][1]; ?></td> <!-- Date -->
-                                    <!-- <td class="border border-dark"><?php echo $roz_arr1[2][1]; ?></td> ID -->
-                                    <!-- <td class="border border-dark"><?php echo $roz_arr1[3][1]; ?></td> Branch -->
-                                    <!-- <td class="border border-dark"><?php echo $roz_arr2[0][1]; ?></td> Roz# -->
-                                    <td class="border border-dark"><?php echo $roz_arr2[1][1]; ?></td> <!-- Name -->
-                                    <td class="border border-dark"><?php echo $roz_arr4[0][1]; ?></td> <!-- Total Amount -->
-                                    <td class="border border-dark"><?php echo $roz_arr4[1][1]; ?></td> <!-- Percent -->
-                                    <td class="border border-dark"><?php echo $roz_arr4[2][1]; ?></td> <!-- Advance -->
-                                    <td class="border border-dark text-success"><?php echo round($adv_paid_final); ?></td> <!-- Total -->
-                                    <td class="border border-dark text-danger"><?php echo round($balADV); ?></td> <!-- BALANCE -->
-                                    <td class="border border-dark">
-                                        <?php
-                                        if ($balADV <= 10 && $record['transfer_level'] < 3) {
-                                            update('transactions', array('transfer_level' => 3), array('id' => $record['id']));
-
-                                        ?><script>
-                                                window.location.href = '<?= "sale-remaining?view=1&p_id=" . $id ?>';
-                                            </script><?php
-                                                    }
-
-                                                    if ($balADV <= 10) {
-                                                        if ($record['transfer_level'] > 2 && $record['transfer_level'] < 4) { ?>
-                                                <form method="post" onsubmit="return confirm('Transfer to Remaining 80% Form.\n Press OK to transfer')">
-                                                    <input type="hidden" name="p_id_hidden" value="<?php echo $record['id']; ?>">
-                                                    <button name="transferAdvanceToRem" type="submit" class="btn btn-dark btn-sm">
-                                                        TRANSFER
-                                                    </button>
-                                                </form>
-                                        <?php } else {
-                                                            echo '<i class="fa fa-check-double text-success"></i> Yes';
-                                                        }
-                                                    } else {
-                                                        echo '<i class="fa fa-times text-danger"></i> No';
-                                                    }
-                                        ?>
-                                    </td>
-                                    <td class="border border-dark"><?php echo $partial_amount2; ?></td> <!-- Remaining -->
-                                    <td class="border border-dark text-success"><?php echo round($rem_paid_final); ?></td> <!-- RemTotal -->
-                                    <td class="border border-dark text-danger"><?php echo round($balREM); ?></td> <!-- RemBALANCE -->
-
-                                    <td class="border border-dark">
-                                        <?php
-                                        if ($balREM <= 10 && $record['transfer_level'] < 5) {
-                                            update('transactions', array('transfer_level' => 5), array('id' => $record['id']));
-                                        ?><script>
-                                                window.location.href = '<?= "sale-remaining?view=1&p_id=" . $id ?>';
-                                            </script><?php
-                                                    }
-
-                                                    if ($balREM <= 10) {
-                                                        if ($record['transfer_level'] > 4 && $record['transfer_level'] < 6) { ?>
-                                                <form method="post" onsubmit="return confirm('Transfer to Remaining.\n Press OK to transfer')">
-                                                    <input type="hidden" name="p_id_hidden" value="<?php echo $record['id']; ?>">
-                                                    <button name="transferRemToFull" type="submit" class="btn btn-dark btn-sm">
-                                                        TRANSFER
-                                                    </button>
-                                                </form>
-                                        <?php } else {
-                                                            echo '<i class="fa fa-check-double text-success"></i> Yes';
-                                                        }
-                                                    } else {
-                                                        echo '<i class="fa fa-times text-danger"></i> No';
-                                                    } ?>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="mx-3">
-                        <b class="mt-2">Advance Transactions Details</b>
-                        <table class="table mb-2 table-hover table-sm">
-                            <thead>
-                                <tr>
-                                    <th class="border border-dark">#</th>
-                                    <th class="border border-dark">Date</th>
-                                    <th class="border border-dark">Dr. A/c</th>
-                                    <th class="border border-dark">Cr. A/c</th>
-                                    <th class="border border-dark">Report</th>
-                                    <th class="border border-dark">Amount</th>
-                                    <th class="border border-dark">Rate</th>
-                                    <th class="border border-dark">Final</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php $adv_paid = purchaseSpecificData($record['id'], 'adv');
-                                $i = 1;
-                                foreach ($adv_paid as $item) {
-                                    // $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $record['sr'], 'transfered_from' => 'purchase_' . $record['type']));
-                                    // $roz = mysqli_fetch_assoc($rozQ);
-                                    echo '<tr>';
-                                    echo '<td class="border border-dark">' . $i++ . '</td>';
-                                    echo '<td class="border border-dark">' . my_date($item['created_at']) . '</td>';
-
-                                    echo '<td class="border border-dark"><a href="sale-remaining?view=1&p_id=' . $record['id'] . '&purchase_pays_id=' . $item['id'] . '">' . $item['dr_khaata_no'] . '</a></td>';
-                                    echo '<td class="border border-dark">' . $item['cr_khaata_no'] . '</td>';
-                                    echo '<td class="border border-dark">' . $item['report'] . '</td>';
-                                    echo '<td class="border border-dark">' . round($item['amount']) . '<sub>' . $item['currency1'] . '</sub></td>';
-                                    echo '<td class="border border-dark">' . $item['rate'] . ' [' . $item['opr'] . ']</td>';
-                                    echo '<td class="border border-dark">' . round($item['final_amount']) . '<sub>' . $item['currency2'] . '</sub></td>';
-                                    echo '</tr>';
-                                } ?>
-                            </tbody>
-                        </table>
-                    </div>
-                    <!-- Remaining Entries -->
-                    <?php if ($record['khaata_tr1'] != '') {
-                        $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $record['sr'], 'transfered_from' => 'sale_' . $record['type']));
-                        $roz = mysqli_fetch_assoc($rozQ);
-
-                        // Arrays to hold row data
-                        $roz_arr1 = array(
-                            array('Sr#', SuperAdmin() ? $roz['r_id'] . '-' . $roz['branch_serial'] : $roz['branch_serial']),
-                            array('Date', $roz['r_date']),
-                            array('ID', $roz['username']),
-                            array('Branch', branchName($roz['branch_id'])),
-                        );
-                        $roz_arr2 = array(
-                            array('Roz.#', $roz['roznamcha_no']),
-                            array('Name', $roz['r_name']),
-                            array('No', $roz['r_no']),
-                        );
-                        $roz_arr3 = array(
-                            array('Dr.', $roz['amount']),
-                        );
-                        $roz_arr4 = array(
-                            array('Total Amt', round($final_amount)),
-                            array('Advance', round($partial_amount1) . '<sub>' . $percentage . '%</sub>'),
-                        );
-                    }
-                    ?>
-
-                    <!-- <hr class="my-0 mb-2"> -->
-
-                    <div class="m-3">
-                        <b>Remaining Transactions Details</b>
-                        <table class="table mb-2 table-hover table-sm">
-                            <thead>
-                                <tr>
-                                    <th class="border border-dark">#</th>
-                                    <th class="border border-dark">Date</th>
-                                    <th class="border border-dark">Dr. A/c</th>
-                                    <th class="border border-dark">Cr. A/c</th>
-                                    <th class="border border-dark">Report</th>
-                                    <th class="border border-dark">Amount</th>
-                                    <th class="border border-dark">Rate</th>
-                                    <th class="border border-dark">Final</th>
+                                <tr class="text-nowrap">
+                                    <th>#</th>
+                                    <th>QTY</th>
+                                    <th>KGs</th>
+                                    <th>NET KGs</th>
+                                    <th>TOTAL</th>
+                                    <th>PRICE</th>
+                                    <th>AMOUNT</th>
+                                    <?php if ($record['type'] !== 'local') { ?>
+                                        <th class="text-end">FINAL</th>
+                                    <?php } else {; ?>
+                                        <th>Tax%</th>
+                                        <th>Tax.Amt</th>
+                                        <th>Final Amt</th>
+                                    <?php } ?>
+                                    <th></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php
-                                $rem_paid = purchaseSpecificData($purchase_id, 'rem');
-                                $i = 1; // Initialize the counter
-                                foreach ($rem_paid as $item) {
+                                $sr_details = $commission_item = 1;
+                                $qty_no = $qty_kgs = $total_kgs = $total_qty_kgs = $net_kgs = $total = $amount = $final_amount = $total_tax_amount = $total_total_with_tax = 0;
+                                foreach ($_fields['items'] as $myitem) {
+                                    $hasChildItems = false;
+                                    foreach ($commission_items as $oneCitem) {
+                                        if ($oneCitem['item_id'] === $myitem['id']) {
+                                            $hasChildItems = true;
+                                            $child_qty[$myitem['id']] = 0;
+                                            break;
+                                        }
+                                    }
+
+                                    // Only display the parent row if there are child items
+                                    if ($hasChildItems) {
+                                        echo '<tr><td colspan="12" class="text-center text-white bg-dark">' . goodsName($myitem['goods_id']) . '</a> / ' . $myitem['size'] . ' / ' . $myitem['brand'] . ' / ' . $myitem['origin'] . '</td></tr>';
+                                        foreach ($commission_items as $oneCitem) {
+                                            if ($oneCitem['item_id'] !== $myitem['id']) {
+                                                continue;
+                                            }
+                                            $child_qty[$myitem['id']] += $oneCitem['qty_no'];
+                                            echo '<tr>';
+                                            echo '<td>' . $commission_item . '</td>';
+                                            echo '<td>' . $oneCitem['qty_no'] . '<sub>' . $myitem['qty_name'] . '</sub></td>';
+                                            echo '<td>' . round($oneCitem['total_kgs'], 2) . '</td>';
+                                            echo '<td>' . round($oneCitem['net_kgs'], 2);
+                                            echo '<sub>' . $oneCitem['divide'] . '</sub>';
+                                            echo '</td>';
+                                            echo '<td>' . $oneCitem['total'] . '</td>';
+                                            echo '<td>' . $oneCitem['price'] . '</td>';
+                                            echo '<td>' . round($oneCitem['amount'], 2);
+                                            echo '<sub>' . $oneCitem['currency1'] . '</sub>';
+                                            echo '</td>';
+                                            if ($record['type'] !== 'local') {
+                                                echo '<td class="text-end">' . round($oneCitem['final_amount'], 2);
+                                                echo '<sub>' . $oneCitem['currency2'] . '</sub>';
+                                            } else {
+                                                echo '<td>' . $oneCitem['tax_percent'] . "%";
+                                                echo '<td>' . $oneCitem['tax_amount'];
+                                                echo '<td>' . $oneCitem['total_with_tax'];
+                                            };
+                                            echo '</td>';
+                                            echo '<td></td>';
+                                            echo '</tr>';
+                                            $commission_item++;
+                                            $qty_no += $oneCitem['qty_no'];
+                                            $qty_kgs += $oneCitem['qty_kgs'];
+                                            $total_kgs += $oneCitem['total_kgs'];
+                                            $total_qty_kgs += $oneCitem['total_qty_kgs'];
+                                            $net_kgs += $oneCitem['net_kgs'];
+                                            $total += $oneCitem['total'];
+                                            $amount += $oneCitem['amount'];
+                                            $final_amount += $oneCitem['final_amount'];
+                                            $total_tax_amount += (float)$oneCitem['tax_amount'];
+                                            $total_total_with_tax += (float)$oneCitem['total_with_tax'];
+                                        }
+                                    }
+                                    // echo json_encode($structuredData);
+                                    if (isset($child_qty[$myitem['id']])) {
+                                        $structuredData[$myitem['id']]['qty_no'] -= $child_qty[$myitem['id']];
+                                    }
+                                    // echo $myitem['id'];
+                                    // echo json_encode($child_qty);
+                                    // $structuredData[$myitem['id']]['qty_no'] -=  $child_qty[$myitem['id']];
+                                }
+                                if ($qty_no > 0) {
+                                    $added_qty = $qty_no;
                                     echo '<tr>';
-                                    echo '<td class="border border-dark">' . $i++ . '</td>'; // Row number
-                                    echo '<td class="border border-dark">' . my_date($item['created_at']) . '</td>'; // Date
-
-                                    // Dr. A/c with link
-                                    echo '<td class="border border-dark"><a href="sale-remaining?view=1&p_id=' . $purchase_id . '&purchase_pays_id=' . $item['id'] . '">' . $item['dr_khaata_no'] . '</a></td>';
-                                    echo '<td class="border border-dark">' . $item['cr_khaata_no'] . '</td>'; // Cr. A/c
-                                    echo '<td class="border border-dark">' . $item['report'] . '</td>'; // Report
-                                    echo '<td class="border border-dark">' . round($item['amount']) . '<sub>' . $item['currency1'] . '</sub></td>'; // Amount
-
-                                    echo '<td class="border border-dark">' . $item['rate'] . ' [' . $item['opr'] . ']</td>'; // Rate
-                                    echo '<td class="border border-dark">' . round($item['final_amount']) . '<sub>' . $item['currency2'] . '</sub></td>'; // Final Amount
+                                    echo '<th></th>';
+                                    echo '<th class="fw-bold" id="qty_added">' . $qty_no . '</th>';
+                                    echo '<th class="fw-bold">' . round($total_kgs, 2) . '</th>';
+                                    echo '<th class="fw-bold">' . round($net_kgs, 2) . '</th>';
+                                    echo '<th class="fw-bold">' . round($total, 2) . '</th>';
+                                    echo '<th></th>';
+                                    echo '<th class="fw-bold">' . round($amount, 2) . '</th>';
+                                    if ($record['type'] === 'local') {
+                                        echo '<th></th>';
+                                        echo '<th class="fw-bold">' . round($total_tax_amount, 2) . '</th>';
+                                        echo '<th class="fw-bold">' . round($total_total_with_tax, 2) . '</th>';
+                                    }
+                                    if ($record['type'] !== 'local') {
+                                        echo '<th class="fw-bold text-end">' . round($final_amount, 2) . '</th>';
+                                    }
+                                    echo '<th></th>';
                                     echo '</tr>';
-                                } ?>
+                                }
+                                ?>
                             </tbody>
                         </table>
-                    </div>
-
-
-                    <div class="collapse show" id="collapseExample">
-                        <input type="hidden" id="balance" value="<?php echo $balREM; ?>">
-                        <?php
-                        $p_khaata_id = json_decode($record['khaata_tr1'], true)['dr_khaata_no'];
-                        $s_khaata_id = json_decode($record['khaata_tr1'], true)['cr_khaata_no'];
-                        $adv_arr = array(
-                            'finish' => array('div_class' => '', 'btn_text' => 'Transfer', 'btn_class' => 'btn-primary', 'back' => '', 'purchase_pays_id' => $purchase_pays_id, 'action' => 'insert'),
-                            'dr_khaata_no' => $p_khaata_id,
-                            'cr_khaata_no' => $s_khaata_id,
-                            'currency1' => '',
-                            'amount' => '',
-                            'currency2' => '',
-                            'rate' => '',
-                            'opr' => '*',
-                            'final_amount' => '',
-                            'transfer_date' => date('Y-m-d'),
-                            'report' => ucfirst($_fields['p_s_name']) . ' ' . ' #' . $_fields['sr'] . ', Type: ' . ucfirst($_fields['type']) . ', Quantity: ' . $qty_no . ' '
-                            //'report' => 'ENTRY:' . $rows . ' GOODS:' . $goods . ' COUNTRY:' . $record['country'] . ' ALLOT:' . $record['allot'] . ' T.Qty:' . $qtys . ' T.KGs:' . $totals . ' RATE:' . $rate . ' T.AMNT:' . $amounts . $curr . ' EXCH.:' . $curr2
-                        );
-                        if ($purchase_pays_id > 0) {
-                            $purchase_paysQ = fetch('purchase_pays', array('id' => $purchase_pays_id));
-                            if (mysqli_num_rows($purchase_paysQ) > 0) {
-                                $pps = mysqli_fetch_assoc($purchase_paysQ);
-                                $adv_arr = array(
-                                    'finish' => array('div_class' => 'border border-danger', 'btn_text' => 'Update', 'btn_class' => 'btn-warning', 'back' => '<a href="sale-rem?view=1&p_id=' . $purchase_id . '">Back</a>', 'purchase_pays_id' => $purchase_pays_id, 'action' => 'update'),
-                                    'dr_khaata_no' => $pps['dr_khaata_no'],
-                                    'cr_khaata_no' => $pps['cr_khaata_no'],
-                                    'currency1' => $pps['currency1'],
-                                    'amount' => $pps['amount'],
-                                    'currency2' => $pps['currency2'],
-                                    'rate' => $pps['rate'],
-                                    'opr' => $pps['opr'],
-                                    'final_amount' => $pps['final_amount'],
-                                    'transfer_date' => $pps['transfer_date'],
-                                    'report' => $pps['report']
-                                );
+                    <?php
                             }
-                        }
-                        $rid_delete_array = array(); ?>
-                        <div class="card mt-3">
-                            <div class="card-body p-2">
-                                <form method="post" onsubmit="return confirm('Are you sure?');" class="table-form <?php echo $adv_arr['finish']['div_class'] ?>">
-                                    <?php echo $adv_arr['finish']['back']; ?>
-                                    <div class="row gx-0">
-                                        <div class="col-md-2">
-                                            <div class="input-group position-relative">
-                                                <label for="khaata_no1" class="text-success">Dr. A/c</label>
-                                                <input name="dr_khaata_no" id="khaata_no1" required class="form-control bg-transparent"
-                                                    value="<?php echo $adv_arr['dr_khaata_no']; ?>">
-                                                <small class="error-response top-0" id="p_response"></small>
-                                            </div>
-                                            <input type="hidden" name="dr_khaata_id" id="p_khaata_id">
-                                        </div>
-                                        <div class="col-md-2">
-                                            <div class="input-group position-relative">
-                                                <label for="khaata_no2" class="text-danger">Cr. A/c</label>
-                                                <input name="cr_khaata_no" id="khaata_no2" required class="form-control bg-transparent"
-                                                    value="<?php echo $adv_arr['cr_khaata_no']; ?>">
-                                                <small class="error-response top-0" id="s_response"></small>
-                                            </div>
-                                            <input type="hidden" name="cr_khaata_id" id="s_khaata_id">
-                                        </div>
-                                        <div class="col-md-2">
-                                            <div class="input-group">
-                                                <label for="currency1">Currency</label>
-                                                <select id="currency1" name="currency1" class="form-select bg-transparent" required>
-                                                    <option value="" hidden="">Select</option>
-                                                    <?php $currencies = fetch('currencies');
-                                                    while ($crr = mysqli_fetch_assoc($currencies)) {
-                                                        $sel_curr = $adv_arr['currency1'] == $crr['name'] ? 'selected' : '';
-                                                        echo '<option ' . $sel_curr . ' value="' . $crr['name'] . '">' . $crr['name'] . ' - ' . $crr['symbol'] . '</option>';
-                                                    } ?>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <div class="input-group">
-                                                <label for="amount">Amount</label>
-                                                <input type="text" id="amount" name="amount" class="form-control currency"
-                                                    onkeyup="lastAmount()" required value="<?php echo $adv_arr['amount']; ?>">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <div class="input-group">
-                                                <label for="currency2">Currency</label>
-                                                <select id="currency2" name="currency2" class="form-select bg-transparent" required>
-                                                    <option value="" hidden="">Select</option>
-                                                    <?php $currencies = fetch('currencies');
-                                                    while ($crr = mysqli_fetch_assoc($currencies)) {
-                                                        $sel_curr2 = $adv_arr['currency2'] == $crr['name'] ? 'selected' : '';
-                                                        echo '<option ' . $sel_curr2 . ' value="' . $crr['name'] . '">' . $crr['name'] . ' - ' . $crr['symbol'] . '</option>';
-                                                    } ?>
-                                                </select>
-                                                <label for="rate">Rate</label>
-                                                <input type="text" name="rate" class="form-control currency" id="rate" required
-                                                    onkeyup="lastAmount()" value="<?php echo $adv_arr['rate']; ?>">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-1">
-                                            <div class="input-group">
-                                                <label for="opr">Op.</label>
-                                                <select name="opr" class="form-select" id="opr" required onchange="lastAmount()">
-                                                    <?php $ops = array('[*]' => '*', '[/]' => '/');
-                                                    foreach ($ops as $opName => $op) {
-                                                        $sel_op = $adv_arr['opr'] == $op ? 'selected' : '';
-                                                        echo '<option ' . $sel_op . ' value="' . $op . '">' . $opName . '</option>';
-                                                    } ?>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-3 mt-3">
-                                            <div class="input-group">
-                                                <label for="final_amount">F.Amt.</label>
-                                                <input type="text" name="final_amount" class="form-control" id="final_amount" required
-                                                    readonly tabindex="-1" value="<?php echo $adv_arr['final_amount']; ?>">
+                    ?>
+                <?php }
 
-                                                <label for="transfer_date">Date</label>
-                                                <input type="date" class="form-control" id="transfer_date" name="transfer_date" required
-                                                    value="<?php echo $adv_arr['transfer_date']; ?>">
-                                            </div>
+                        $payments = json_decode($record['payments'], true);
+                        $total_amount = isset($_fields['items_sum']['sum_final_amount']) ? (float)$_fields['items_sum']['sum_final_amount'] : 0;
+                        $percentage = isset($payments['pct_value']) ? (int)$payments['pct_value'] : 0;
+                        $remaining_percentage = 100 - $percentage;
+                        $partial_amount1 = ($percentage / 100) * $total_amount;
+                        $partial_amount2 = ($remaining_percentage / 100) * $total_amount;
+                        if ($record['khaata_tr1'] != '') {
+                            $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $record['id'], 'transfered_from' => 'sale_' . $record['type']));
+                            $roz = mysqli_fetch_assoc($rozQ);
+                            $roz_arr1 = array(
+                                array('Sr#', SuperAdmin() ? $roz['r_id'] . '-' . $roz['branch_serial'] : $roz['branch_serial']),
+                                array('Date', $roz['r_date']),
+                                array('ID', $roz['username']),
+                                array('Branch', branchName($roz['branch_id'])),
+                            );
+                            $roz_arr2 = array(
+                                array('Roz.#', $roz['roznamcha_no']),
+                                array('Name', $roz['r_name']),
+                                array('No', $roz['r_no']),
+                            );
+                            $roz_arr3 = array(
+                                array('Dr.', $roz['amount']),
+                                //array('Cr.', 0),
+                            );
+                            $roz_arr4 = array(
+                                array('Total Amount', round($final_amount, 2)),
+                                array('Percent', $percentage . '%'),
+                                array('Advance', round($partial_amount1, 2)),
+                            );
+                        }
+                        $adv_paid_final = purchaseSpecificData($record['id'], 'adv_paid_total', 'amount');
+                        $balADV = $partial_amount1 - $adv_paid_final;
+                        $rem_paid_final = purchaseSpecificData($record['id'], 'rem_paid_total', 'amount');
+                        $balREM = $partial_amount2 - $rem_paid_final;
+                ?>
+                <hr class="my-0">
+                <div class="m-3">
+                    <b>Details</b>
+                    <table class="table mb-2 table-hover table-sm">
+                        <thead>
+                            <tr>
+                                <th class="border bg-warning border-dark">Sr#</th>
+                                <th class="border bg-warning border-dark">Date</th>
+                                <!-- <th class="border bg-warning border-dark">ID</th> -->
+                                <!-- <th class="border bg-warning border-dark">Branch</th> -->
+                                <!-- <th class="border bg-warning border-dark">Roz#</th> -->
+                                <th class="border bg-warning border-dark">No</th>
+                                <th class="border bg-warning border-dark">Total Amount</th>
+                                <th class="border bg-warning border-dark">Adv Percent</th>
+                                <th class="border bg-warning border-dark">Advance</th>
+                                <th class="border bg-warning border-dark text-success">Total</th>
+                                <th class="border bg-warning border-dark text-danger">BALANCE</th>
+                                <th class="border bg-warning border-dark">Transferred</th>
+                                <th class="border bg-warning border-dark">Remaining</th>
+                                <th class="border bg-warning border-dark text-success">Total</th>
+                                <th class="border bg-warning border-dark text-danger">BALANCE</th>
+                                <th class="border bg-warning border-dark">Transferred</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="border border-dark"><?php echo $roz_arr1[0][1]; ?></td> <!-- Sr# -->
+                                <td class="border border-dark"><?php echo $roz_arr1[1][1]; ?></td> <!-- Date -->
+                                <!-- <td class="border border-dark"><?php echo $roz_arr1[2][1]; ?></td> ID -->
+                                <!-- <td class="border border-dark"><?php echo $roz_arr1[3][1]; ?></td> Branch -->
+                                <!-- <td class="border border-dark"><?php echo $roz_arr2[0][1]; ?></td> Roz# -->
+                                <td class="border border-dark"><?php echo $roz_arr2[1][1]; ?></td> <!-- Name -->
+                                <td class="border border-dark"><?php echo $roz_arr4[0][1]; ?></td> <!-- Total Amount -->
+                                <td class="border border-dark"><?php echo $roz_arr4[1][1]; ?></td> <!-- Percent -->
+                                <td class="border border-dark"><?php echo $roz_arr4[2][1]; ?></td> <!-- Advance -->
+                                <td class="border border-dark text-success"><?php echo round($adv_paid_final); ?></td> <!-- Total -->
+                                <td class="border border-dark text-danger"><?php echo round($balADV); ?></td> <!-- BALANCE -->
+                                <td class="border border-dark">
+                                    <?php
+                                    if ($balADV <= 10 && $record['transfer_level'] < 3) {
+                                        update('transactions', array('transfer_level' => 3), array('id' => $record['id']));
+
+                                    ?><script>
+                                            window.location.href = '<?= "sale-remaining?view=1&p_id=" . $id ?>';
+                                        </script><?php
+                                                }
+
+                                                if ($balADV <= 10) {
+                                                    if ($record['transfer_level'] > 2 && $record['transfer_level'] < 4) { ?>
+                                            <form method="post" onsubmit="return confirm('Transfer to Remaining 80% Form.\n Press OK to transfer')">
+                                                <input type="hidden" name="p_id_hidden" value="<?php echo $record['id']; ?>">
+                                                <button name="transferAdvanceToRem" type="submit" class="btn btn-dark btn-sm">
+                                                    TRANSFER
+                                                </button>
+                                            </form>
+                                    <?php } else {
+                                                        echo '<i class="fa fa-check-double text-success"></i> Yes';
+                                                    }
+                                                } else {
+                                                    echo '<i class="fa fa-times text-danger"></i> No';
+                                                }
+                                    ?>
+                                </td>
+                                <td class="border border-dark"><?php echo $partial_amount2; ?></td> <!-- Remaining -->
+                                <td class="border border-dark text-success"><?php echo round($rem_paid_final); ?></td> <!-- RemTotal -->
+                                <td class="border border-dark text-danger"><?php echo round($balREM); ?></td> <!-- RemBALANCE -->
+
+                                <td class="border border-dark">
+                                    <?php
+                                    if ($balREM <= 10 && $record['transfer_level'] < 5) {
+                                        update('transactions', array('transfer_level' => 5), array('id' => $record['id']));
+                                    ?><script>
+                                            window.location.href = '<?= "sale-remaining?view=1&p_id=" . $id ?>';
+                                        </script><?php
+                                                }
+
+                                                if ($balREM <= 10) {
+                                                    if ($record['transfer_level'] > 4 && $record['transfer_level'] < 6) { ?>
+                                            <form method="post" onsubmit="return confirm('Transfer to Remaining.\n Press OK to transfer')">
+                                                <input type="hidden" name="p_id_hidden" value="<?php echo $record['id']; ?>">
+                                                <button name="transferRemToFull" type="submit" class="btn btn-dark btn-sm">
+                                                    TRANSFER
+                                                </button>
+                                            </form>
+                                    <?php } else {
+                                                        echo '<i class="fa fa-check-double text-success"></i> Yes';
+                                                    }
+                                                } else {
+                                                    echo '<i class="fa fa-times text-danger"></i> No';
+                                                } ?>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mx-3">
+                    <b class="mt-2">Advance Transactions Details</b>
+                    <table class="table mb-2 table-hover table-sm">
+                        <thead>
+                            <tr>
+                                <th class="border border-dark">#</th>
+                                <th class="border border-dark">Date</th>
+                                <th class="border border-dark">Dr. A/c</th>
+                                <th class="border border-dark">Cr. A/c</th>
+                                <th class="border border-dark">Report</th>
+                                <th class="border border-dark">Amount</th>
+                                <th class="border border-dark">Rate</th>
+                                <th class="border border-dark">Final</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php $adv_paid = purchaseSpecificData($record['id'], 'adv');
+                            $i = 1;
+                            foreach ($adv_paid as $item) {
+                                // $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $record['sr'], 'transfered_from' => 'purchase_' . $record['type']));
+                                // $roz = mysqli_fetch_assoc($rozQ);
+                                echo '<tr>';
+                                echo '<td class="border border-dark">' . $i++ . '</td>';
+                                echo '<td class="border border-dark">' . my_date($item['created_at']) . '</td>';
+
+                                echo '<td class="border border-dark"><a href="sale-advance?view=1&p_id=' . $record['id'] . '&purchase_pays_id=' . $item['id'] . '">' . $item['dr_khaata_no'] . '</a></td>';
+                                echo '<td class="border border-dark">' . $item['cr_khaata_no'] . '</td>';
+                                echo '<td class="border border-dark">' . $item['report'] . '</td>';
+                                echo '<td class="border border-dark">' . round($item['amount']) . '<sub>' . $item['currency1'] . '</sub></td>';
+                                echo '<td class="border border-dark">' . $item['rate'] . ' [' . $item['opr'] . ']</td>';
+                                echo '<td class="border border-dark">' . round($item['final_amount']) . '<sub>' . $item['currency2'] . '</sub></td>';
+                                echo '</tr>';
+                            } ?>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Remaining Entries -->
+                <?php if ($record['khaata_tr1'] != '') {
+                    $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $record['id'], 'transfered_from' => 'sale_' . $record['type']));
+                    $roz = mysqli_fetch_assoc($rozQ);
+
+                    // Arrays to hold row data
+                    $roz_arr1 = array(
+                        array('Sr#', SuperAdmin() ? $roz['r_id'] . '-' . $roz['branch_serial'] : $roz['branch_serial']),
+                        array('Date', $roz['r_date']),
+                        array('ID', $roz['username']),
+                        array('Branch', branchName($roz['branch_id'])),
+                    );
+                    $roz_arr2 = array(
+                        array('Roz.#', $roz['roznamcha_no']),
+                        array('Name', $roz['r_name']),
+                        array('No', $roz['r_no']),
+                    );
+                    $roz_arr3 = array(
+                        array('Dr.', $roz['amount']),
+                    );
+                    $roz_arr4 = array(
+                        array('Total Amt', round($final_amount)),
+                        array('Advance', round($partial_amount1) . '<sub>' . $percentage . '%</sub>'),
+                    );
+                }
+                ?>
+
+                <!-- <hr class="my-0 mb-2"> -->
+
+                <div class="m-3">
+                    <b>Remaining Transactions Details</b>
+                    <table class="table mb-2 table-hover table-sm">
+                        <thead>
+                            <tr>
+                                <th class="border border-dark">#</th>
+                                <th class="border border-dark">Date</th>
+                                <th class="border border-dark">Dr. A/c</th>
+                                <th class="border border-dark">Cr. A/c</th>
+                                <th class="border border-dark">Report</th>
+                                <th class="border border-dark">Amount</th>
+                                <th class="border border-dark">Rate</th>
+                                <th class="border border-dark">Final</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            $rem_paid = purchaseSpecificData($purchase_id, 'rem');
+                            $i = 1; // Initialize the counter
+                            foreach ($rem_paid as $item) {
+                                echo '<tr>';
+                                echo '<td class="border border-dark">' . $i++ . '</td>'; // Row number
+                                echo '<td class="border border-dark">' . my_date($item['created_at']) . '</td>'; // Date
+
+                                // Dr. A/c with link
+                                echo '<td class="border border-dark"><a href="sale-remaining?view=1&p_id=' . $purchase_id . '&purchase_pays_id=' . $item['id'] . '">' . $item['dr_khaata_no'] . '</a></td>';
+                                echo '<td class="border border-dark">' . $item['cr_khaata_no'] . '</td>'; // Cr. A/c
+                                echo '<td class="border border-dark">' . $item['report'] . '</td>'; // Report
+                                echo '<td class="border border-dark">' . round($item['amount']) . '<sub>' . $item['currency1'] . '</sub></td>'; // Amount
+
+                                echo '<td class="border border-dark">' . $item['rate'] . ' [' . $item['opr'] . ']</td>'; // Rate
+                                echo '<td class="border border-dark">' . round($item['final_amount']) . '<sub>' . $item['currency2'] . '</sub></td>'; // Final Amount
+                                echo '</tr>';
+                            } ?>
+                        </tbody>
+                    </table>
+                </div>
+
+
+                <div class="collapse show" id="collapseExample">
+                    <input type="hidden" id="balance" value="<?php echo $balREM; ?>">
+                    <?php
+                    $khaata_tr1 = json_decode($record['khaata_tr1'], true);
+                    $p_khaata_no = $khaata_tr1['dr_khaata_no'];
+                    $s_khaata_no = $khaata_tr1['cr_khaata_no'];
+                    $p_khaata_id = $khaata_tr1['dr_khaata_id'];
+                    $s_khaata_id = $khaata_tr1['cr_khaata_id'];
+                    $adv_arr = array(
+                        'finish' => array('div_class' => '', 'btn_text' => 'Transfer', 'btn_class' => 'btn-primary', 'back' => '', 'purchase_pays_id' => $purchase_pays_id, 'action' => 'insert'),
+                        'dr_khaata_no' => $p_khaata_no,
+                        'cr_khaata_no' => $s_khaata_no,
+                        'dr_khaata_id' => $p_khaata_id,
+                        'cr_khaata_id' => $s_khaata_id,
+                        'currency1' => '',
+                        'amount' => '',
+                        'currency2' => '',
+                        'rate' => '',
+                        'opr' => '*',
+                        'final_amount' => '',
+                        'transfer_date' => date('Y-m-d'),
+                        'report' => ucfirst($_fields['p_s_name']) . ' ' . ' #' . $_fields['sr'] . ', Type: ' . ucfirst($_fields['type']) . ' Remaining, Quantity: ' . $qty_no . ' '
+                        //'report' => 'ENTRY:' . $rows . ' GOODS:' . $goods . ' COUNTRY:' . $record['country'] . ' ALLOT:' . $record['allot'] . ' T.Qty:' . $qtys . ' T.KGs:' . $totals . ' RATE:' . $rate . ' T.AMNT:' . $amounts . $curr . ' EXCH.:' . $curr2
+                    );
+                    if ($purchase_pays_id > 0) {
+                        $purchase_paysQ = fetch('purchase_pays', array('id' => $purchase_pays_id));
+                        if (mysqli_num_rows($purchase_paysQ) > 0) {
+                            $pps = mysqli_fetch_assoc($purchase_paysQ);
+                            $adv_arr = array(
+                                'finish' => array('div_class' => 'border border-danger', 'btn_text' => 'Update', 'btn_class' => 'btn-warning', 'back' => '<a href="sale-rem?view=1&p_id=' . $purchase_id . '">Back</a>', 'purchase_pays_id' => $purchase_pays_id, 'action' => 'update'),
+                                'dr_khaata_no' => $pps['dr_khaata_no'],
+                                'cr_khaata_no' => $pps['cr_khaata_no'],
+                                'dr_khaata_id' => $pps['dr_khaata_id'],
+                                'cr_khaata_id' => $pps['cr_khaata_id'],
+                                'currency1' => $pps['currency1'],
+                                'amount' => $pps['amount'],
+                                'currency2' => $pps['currency2'],
+                                'rate' => $pps['rate'],
+                                'opr' => $pps['opr'],
+                                'final_amount' => $pps['final_amount'],
+                                'transfer_date' => $pps['transfer_date'],
+                                'report' => $pps['report']
+                            );
+                        }
+                    }
+                    $rid_delete_array = array(); ?>
+                    <div class="card mt-3">
+                        <div class="card-body p-2">
+                            <form method="post" onsubmit="return confirm('Are you sure?');" class="table-form <?php echo $adv_arr['finish']['div_class'] ?>">
+                                <?php echo $adv_arr['finish']['back']; ?>
+                                <div class="row gx-0">
+                                    <div class="col-md-2">
+                                        <small class="fw-bold text-danger" id="p_response"></small>
+                                        <div class="input-group position-relative">
+                                            <label for="khaata_no1" class="text-success">Dr. A/c</label>
+                                            <input name="dr_khaata_no" id="khaata_no1" required class="form-control bg-transparent"
+                                                value="<?php echo $adv_arr['cr_khaata_no']; ?>">
                                         </div>
-                                        <div class="col-md-7 mt-3">
-                                            <div class="input-group">
-                                                <label for="report">Report</label>
-                                                <input placeholder="Report" class="form-control" id="report" name="report" required
-                                                    value="<?php echo $adv_arr['report']; ?>">
-                                            </div>
+                                        <input type="hidden" name="dr_khaata_id" id="p_khaata_id" value="<?= $adv_arr['cr_khaata_id'] ?>">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <small class="fw-bold text-danger" id="p_response"></small>
+                                        <div class="input-group position-relative">
+                                            <label for="khaata_no2" class="text-danger">Cr. A/c</label>
+                                            <input name="cr_khaata_no" id="khaata_no2" required class="form-control bg-transparent"
+                                                value="<?php echo $adv_arr['dr_khaata_no']; ?>">
                                         </div>
-                                        <div class="col-md-2 mt-3 text-end">
-                                            <button name="tRemSubmit" id="recordSubmit" type="submit"
-                                                class="btn <?php echo $adv_arr['finish']['btn_class']; ?> btn-sm  rounded-0"><i
-                                                    class="fa fa-paper-plane"></i> <?php echo $adv_arr['finish']['btn_text']; ?>
-                                            </button>
+                                        <input type="hidden" name="cr_khaata_id" id="s_khaata_id" value="<?= $adv_arr['dr_khaata_id'] ?>">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="input-group">
+                                            <label for="currency1">Currency</label>
+                                            <select id="currency1" name="currency1" class="form-select bg-transparent" required>
+                                                <option value="" hidden="">Select</option>
+                                                <?php $currencies = fetch('currencies');
+                                                while ($crr = mysqli_fetch_assoc($currencies)) {
+                                                    $sel_curr = $adv_arr['currency1'] == $crr['name'] ? 'selected' : '';
+                                                    echo '<option ' . $sel_curr . ' value="' . $crr['name'] . '">' . $crr['name'] . ' - ' . $crr['symbol'] . '</option>';
+                                                } ?>
+                                            </select>
                                         </div>
                                     </div>
-                                    <input type="hidden" name="p_id_hidden" value="<?php echo $record['id']; ?>">
+                                    <div class="col-md-2">
+                                        <div class="input-group">
+                                            <label for="amount">Amount</label>
+                                            <input type="text" id="amount" name="amount" class="form-control currency"
+                                                onkeyup="lastAmount()" required value="<?php echo $adv_arr['amount']; ?>">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="input-group">
+                                            <label for="currency2">Currency</label>
+                                            <select id="currency2" name="currency2" class="form-select bg-transparent" required>
+                                                <option value="" hidden="">Select</option>
+                                                <?php $currencies = fetch('currencies');
+                                                while ($crr = mysqli_fetch_assoc($currencies)) {
+                                                    $sel_curr2 = $adv_arr['currency2'] == $crr['name'] ? 'selected' : '';
+                                                    echo '<option ' . $sel_curr2 . ' value="' . $crr['name'] . '">' . $crr['name'] . ' - ' . $crr['symbol'] . '</option>';
+                                                } ?>
+                                            </select>
+                                            <label for="rate">Rate</label>
+                                            <input type="text" name="rate" class="form-control currency" id="rate" required
+                                                onkeyup="lastAmount()" value="<?php echo $adv_arr['rate']; ?>">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-1">
+                                        <div class="input-group">
+                                            <label for="opr">Op.</label>
+                                            <select name="opr" class="form-select" id="opr" required onchange="lastAmount()">
+                                                <?php $ops = array('[*]' => '*', '[/]' => '/');
+                                                foreach ($ops as $opName => $op) {
+                                                    $sel_op = $adv_arr['opr'] == $op ? 'selected' : '';
+                                                    echo '<option ' . $sel_op . ' value="' . $op . '">' . $opName . '</option>';
+                                                } ?>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mt-3">
+                                        <div class="input-group">
+                                            <label for="final_amount">F.Amt.</label>
+                                            <input type="text" name="final_amount" class="form-control" id="final_amount" required
+                                                readonly tabindex="-1" value="<?php echo $adv_arr['final_amount']; ?>">
+
+                                            <label for="transfer_date">Date</label>
+                                            <input type="date" class="form-control" id="transfer_date" name="transfer_date" required
+                                                value="<?php echo $adv_arr['transfer_date']; ?>">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-7 mt-3">
+                                        <div class="input-group">
+                                            <label for="report">Report</label>
+                                            <input placeholder="Report" class="form-control" id="report" name="report" required
+                                                value="<?php echo $adv_arr['report']; ?>">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2 mt-3 text-end">
+                                        <button name="tRemSubmit" id="recordSubmit" type="submit"
+                                            class="btn <?php echo $adv_arr['finish']['btn_class']; ?> btn-sm  rounded-0"><i
+                                                class="fa fa-paper-plane"></i> <?php echo $adv_arr['finish']['btn_text']; ?>
+                                        </button>
+                                    </div>
+                                </div>
+                                <input type="hidden" name="p_id_hidden" value="<?php echo $record['id']; ?>">
+                                <input type="hidden" name="s_sr" value="<?php echo $record['sr']; ?>">
+                                <input type="hidden" name="p_type_hidden" value="<?php echo $purchase_type; ?>">
+                                <input type="hidden" name="purchase_pays_id_hidden" value="<?php echo $adv_arr['finish']['purchase_pays_id']; ?>">
+                                <input type="hidden" name="action" value="<?php echo $adv_arr['finish']['action']; ?>">
+                                <?php if ($purchase_pays_id > 0) {
+                                    $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'transfered_from_id' => $purchase_pays_id, 'transfered_from' => 'purchase_rem'));
+                                    if (mysqli_num_rows($rozQ) > 0) { ?>
+                                        <table class="table table-sm table-bordered">
+                                            <thead>
+                                                <tr>
+                                                    <th>Sr#</th>
+                                                    <th>Date</th>
+                                                    <th>A/c#</th>
+                                                    <th>Roz.#</th>
+                                                    <th>Name</th>
+                                                    <th>No</th>
+                                                    <th>Details</th>
+                                                    <th>Dr.</th>
+                                                    <th>Cr.</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php while ($roz = mysqli_fetch_assoc($rozQ)) {
+                                                    $rid_delete_array[] = $roz['r_id'];
+                                                    $dr = $cr = 0; ?>
+                                                    <input type="hidden" value="<?php echo $roz['r_id']; ?>" name="r_id[]">
+                                                    <tr>
+                                                        <td>
+                                                            <?php echo SuperAdmin() ? $roz['r_id'] . '-' . $roz['branch_serial'] : $roz['branch_serial']; ?>
+                                                        </td>
+                                                        <td><?php echo $roz['r_date']; ?></td>
+                                                        <td>
+                                                            <a href="ledger?back-khaata-no=<?php echo $roz['khaata_no']; ?>"
+                                                                target="_blank"><?php echo $roz['khaata_no']; ?></a>
+                                                        </td>
+                                                        <td><?php echo $roz['roznamcha_no']; ?></td>
+                                                        <td class="small"><?php echo $roz['r_name']; ?></td>
+                                                        <td><?php echo $roz['r_no']; ?></td>
+                                                        <td class="small"><?php echo $roz['details']; ?></td>
+                                                        <?php if ($roz['dr_cr'] == "dr") {
+                                                            $dr = $roz['amount'];
+                                                        } else {
+                                                            $cr = $roz['amount'];
+                                                        } ?>
+                                                        <td class="text-success"><?php echo $dr; ?></td>
+                                                        <td class="text-danger"><?php echo $cr; ?></td>
+                                                    </tr>
+                                                <?php } ?>
+                                            </tbody>
+                                        </table>
+                                <?php }
+                                } ?>
+                            </form>
+                            <?php if ($purchase_pays_id > 0) { ?>
+                                <form method="post"
+                                    onsubmit="return confirm('Are you sure to delete Payment?\nThe record will be delete from Roznamcha too.\nPress OK to Delete');">
+                                    <input type="hidden" name="r_id_hidden" value="<?php echo htmlspecialchars(json_encode($rid_delete_array)); ?>">
+                                    <input type="hidden" name="p_id_hidden" value="<?php echo $purchase_id; ?>">
                                     <input type="hidden" name="s_sr" value="<?php echo $record['sr']; ?>">
                                     <input type="hidden" name="p_type_hidden" value="<?php echo $purchase_type; ?>">
-                                    <input type="hidden" name="purchase_pays_id_hidden" value="<?php echo $adv_arr['finish']['purchase_pays_id']; ?>">
-                                    <input type="hidden" name="action" value="<?php echo $adv_arr['finish']['action']; ?>">
-                                    <?php if ($purchase_pays_id > 0) {
-                                        $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'transfered_from_id' => $record['sr'], 'transfered_from' => 'purchase_rem'));
-                                        if (mysqli_num_rows($rozQ) > 0) { ?>
-                                            <table class="table table-sm table-bordered">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Sr#</th>
-                                                        <th>Date</th>
-                                                        <th>A/c#</th>
-                                                        <th>Roz.#</th>
-                                                        <th>Name</th>
-                                                        <th>No</th>
-                                                        <th>Details</th>
-                                                        <th>Dr.</th>
-                                                        <th>Cr.</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <?php while ($roz = mysqli_fetch_assoc($rozQ)) {
-                                                        $rid_delete_array[] = $roz['r_id'];
-                                                        $dr = $cr = 0; ?>
-                                                        <input type="hidden" value="<?php echo $roz['r_id']; ?>" name="r_id[]">
-                                                        <tr>
-                                                            <td>
-                                                                <?php echo SuperAdmin() ? $roz['r_id'] . '-' . $roz['branch_serial'] : $roz['branch_serial']; ?>
-                                                            </td>
-                                                            <td><?php echo $roz['r_date']; ?></td>
-                                                            <td>
-                                                                <a href="ledger?back-khaata-no=<?php echo $roz['khaata_no']; ?>"
-                                                                    target="_blank"><?php echo $roz['khaata_no']; ?></a>
-                                                            </td>
-                                                            <td><?php echo $roz['roznamcha_no']; ?></td>
-                                                            <td class="small"><?php echo $roz['r_name']; ?></td>
-                                                            <td><?php echo $roz['r_no']; ?></td>
-                                                            <td class="small"><?php echo $roz['details']; ?></td>
-                                                            <?php if ($roz['dr_cr'] == "dr") {
-                                                                $dr = $roz['amount'];
-                                                            } else {
-                                                                $cr = $roz['amount'];
-                                                            } ?>
-                                                            <td class="text-success"><?php echo $dr; ?></td>
-                                                            <td class="text-danger"><?php echo $cr; ?></td>
-                                                        </tr>
-                                                    <?php } ?>
-                                                </tbody>
-                                            </table>
-                                    <?php }
-                                    } ?>
+                                    <input type="hidden" name="purchase_pays_id_hidden" value="<?php echo $purchase_pays_id; ?>">
+                                    <button name="deleteRemPaymentAndRozSubmit" type="submit" class="btn btn-danger btn-sm">Delete This Payment</button>
                                 </form>
-                                <?php if ($purchase_pays_id > 0) { ?>
-                                    <form method="post"
-                                        onsubmit="return confirm('Are you sure to delete Payment?\nThe record will be delete from Roznamcha too.\nPress OK to Delete');">
-                                        <input type="hidden" name="r_id_hidden" value="<?php echo htmlspecialchars(json_encode($rid_delete_array)); ?>">
-                                        <input type="hidden" name="p_id_hidden" value="<?php echo $purchase_id; ?>">
-                                        <input type="hidden" name="p_type_hidden" value="<?php echo $purchase_type; ?>">
-                                        <input type="hidden" name="purchase_pays_id_hidden" value="<?php echo $purchase_pays_id; ?>">
-                                        <button name="deleteRemPaymentAndRozSubmit" type="submit" class="btn btn-danger btn-sm">Delete This Payment</button>
-                                    </form>
-                                <?php } ?>
-                            </div>
+                            <?php } ?>
                         </div>
                     </div>
-                    <div class="col-2 order-1 fixed-sidebar table-form">
-                        <div class="mt-3">
-                            <form id="attachmentSubmit" method="post" enctype="multipart/form-data">
-                                <input type="hidden" name="t_id_hidden_attach" value="<?php echo $id; ?>">
-                                <input type="file" id="attachments" name="attachments[]" class="d-none" multiple>
-                                <input type="button" class="form-control rounded-1 bg-dark text-white"
-                                    value="+ Contract File"
-                                    onclick="document.getElementById('attachments').click();" />
-                            </form>
-                            <script>
-                                document.getElementById("attachments").onchange = function() {
-                                    document.getElementById("attachmentSubmit").submit();
-                                }
-                            </script>
-                            <?php $atts = getAttachments($id, 'purchase_contract');
-                            $no = 0;
-                            foreach ($atts as $att) {
-                                echo ++$no . '.<a class="text-decoration-underline" href="attachments/' . $att['attachment'] . '" title="' . $att['created_at'] . '" target="_blank">' . readMore($att['attachment'], 20) . '</a><br>';
-                            } ?>
-                        <?php } ?>
-
-                        <?php if ($_fields['locked'] == 0 && $_fields['is_doc'] > 0) { ?>
-                            <form method="post" onsubmit="return confirm('Lock this purchase.\nPress OK to transfer')" action>
-                                <input type="hidden" name="p_id_hidden" value="<?php echo $id; ?>">
-                                <button name="transferPurchase" type="submit" class="btn btn-dark btn-sm w-100 mt-3">
-                                    TRANSFER
-                                </button>
-                            </form>
-                        <?php } ?>
-                        <div class="bottom-buttons">
-                            <div class="px-2">
-                                <?php $update_url = $_fields['type'] == 'booking' ? 'sale-add' : ($_fields['type'] == 'market' ? 'sale-market-add' : 'sale-local-add');
-                                if ($_POST['page'] !== "sale-remaining") {
-                                ?>
-                                    <a href="<?php echo $update_url . '?id=' . $id; ?>" class="btn btn-dark btn-sm w-100 mt-2">UPDATE</a>
-                                <?php } ?>
-                                <a href="print/sale-single?t_id=<?php echo $id; ?>&action=order&secret=<?php echo base64_encode('powered-by-upsol') . "&print_type=full"; ?>"
-                                    target="_blank" class="btn btn-dark btn-sm w-100 mt-2">PRINT</a>
-                                <?php if ($_fields['locked'] == 0) { ?>
-                                    <form method="post" onsubmit="return confirm('Are you sure to delete?');">
-                                        <input type="hidden" name="p_id_hidden" value="<?php echo $id; ?>">
-                                        <button name="deleteTransaction" type="submit" class="btn btn-danger btn-sm w-100 mt-2">
-                                            DELETE
-                                        </button>
-                                    </form>
-                                <?php } ?>
-                            </div>
-                        </div>
-                        </div>
-                    </div>
-                <?php }
-                ?>
-                <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
-                <script>
-                    $(document).ready(function() {
-                        function hidePctInputs() {
-                            $("#pct, #pct_amt").hide();
-                        }
-
-                        function showPctInputs() {
-                            $("#pct, #pct_amt").show();
-                        }
-
-                        function updatePctAmt() {
-                            var pctValue = parseFloat($("#pct").val()) || 0;
-                            var finalAmt = parseFloat($("#final_amt_hidden").val()) || 0;
-                            var pctAmt = (pctValue / 100) * finalAmt;
-
-                            $("#pct_amt").val(pctAmt.toFixed(2));
-                        }
-
-                        // Initialize: Hide pct inputs
-                        hidePctInputs();
-
-                        // Show/hide pct inputs based on the selected option
-                        $("#transfer").change(function() {
-                            showHidePctInputs($(this).val());
-                        });
-
-                        function showHidePctInputs(transfer = null) {
-                            if (transfer == "1") {
-                                showPctInputs();
-                            } else {
-                                hidePctInputs();
+                </div>
+                <div class="col-2 order-1 fixed-sidebar table-form">
+                    <div class="mt-3">
+                        <form id="attachmentSubmit" method="post" enctype="multipart/form-data">
+                            <input type="hidden" name="t_id_hidden_attach" value="<?php echo $id; ?>">
+                            <input type="file" id="attachments" name="attachments[]" class="d-none" multiple>
+                            <input type="button" class="form-control rounded-1 bg-dark text-white"
+                                value="+ Contract File"
+                                onclick="document.getElementById('attachments').click();" />
+                        </form>
+                        <script>
+                            document.getElementById("attachments").onchange = function() {
+                                document.getElementById("attachmentSubmit").submit();
                             }
-                        }
+                        </script>
+                        <?php $atts = getAttachments($id, 'purchase_contract');
+                        $no = 0;
+                        foreach ($atts as $att) {
+                            echo ++$no . '.<a class="text-decoration-underline" href="attachments/' . $att['attachment'] . '" title="' . $att['created_at'] . '" target="_blank">' . readMore($att['attachment'], 20) . '</a><br>';
+                        } ?>
+                    <?php } ?>
 
-                        let transfer = $('#transfer').find(":selected").val();
-                        showHidePctInputs(transfer);
+                    <?php if ($_fields['locked'] == 0 && $_fields['is_doc'] > 0) { ?>
+                        <form method="post" onsubmit="return confirm('Lock this purchase.\nPress OK to transfer')" action>
+                            <input type="hidden" name="p_id_hidden" value="<?php echo $id; ?>">
+                            <button name="transferPurchase" type="submit" class="btn btn-dark btn-sm w-100 mt-3">
+                                TRANSFER
+                            </button>
+                        </form>
+                    <?php } ?>
+                    <div class="bottom-buttons">
+                        <div class="px-2">
+                            <?php $update_url = $_fields['type'] == 'booking' ? 'sale-add' : ($_fields['type'] == 'market' ? 'sale-market-add' : 'sale-local-add');
+                            if ($_POST['page'] !== "sale-remaining") {
+                            ?>
+                                <a href="<?php echo $update_url . '?id=' . $id; ?>" class="btn btn-dark btn-sm w-100 mt-2">UPDATE</a>
+                            <?php } ?>
+                            <a href="print/sale-single?t_id=<?php echo $id; ?>&action=order&secret=<?php echo base64_encode('powered-by-upsol') . "&print_type=full"; ?>"
+                                target="_blank" class="btn btn-dark btn-sm w-100 mt-2">PRINT</a>
+                            <?php if ($_fields['locked'] == 0) { ?>
+                                <form method="post" onsubmit="return confirm('Are you sure to delete?');">
+                                    <input type="hidden" name="p_id_hidden" value="<?php echo $id; ?>">
+                                    <button name="deleteTransaction" type="submit" class="btn btn-danger btn-sm w-100 mt-2">
+                                        DELETE
+                                    </button>
+                                </form>
+                            <?php } ?>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+            <?php }
+            ?>
+            <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+            <script>
+                $(document).ready(function() {
+                    function hidePctInputs() {
+                        $("#pct, #pct_amt").hide();
+                    }
 
-                        // Update pct_amt when user inputs a number in pct
-                        $("#pct").on("input", updatePctAmt);
+                    function showPctInputs() {
+                        $("#pct, #pct_amt").show();
+                    }
+
+                    function updatePctAmt() {
+                        var pctValue = parseFloat($("#pct").val()) || 0;
+                        var finalAmt = parseFloat($("#final_amt_hidden").val()) || 0;
+                        var pctAmt = (pctValue / 100) * finalAmt;
+
+                        $("#pct_amt").val(pctAmt.toFixed(2));
+                    }
+
+                    // Initialize: Hide pct inputs
+                    hidePctInputs();
+
+                    // Show/hide pct inputs based on the selected option
+                    $("#transfer").change(function() {
+                        showHidePctInputs($(this).val());
                     });
 
-                    function lastAmount() {
-                        let amount = $("#amount").val();
-                        let rate = $("#rate").val();
-                        let operator = $('#opr').find(":selected").val();
-                        let final_amount;
+                    function showHidePctInputs(transfer = null) {
+                        if (transfer == "1") {
+                            showPctInputs();
+                        } else {
+                            hidePctInputs();
+                        }
+                    }
 
-                        if (amount && rate) { // Ensure both amount and rate have values
-                            if (operator === "/") {
-                                final_amount = Number(amount) / Number(rate);
-                            } else {
-                                final_amount = Number(amount) * Number(rate);
-                            }
-                            final_amount = final_amount.toFixed(2);
-                            $("#final_amount").val(final_amount);
+                    let transfer = $('#transfer').find(":selected").val();
+                    showHidePctInputs(transfer);
 
-                            let balance = $("#balance").val();
-                            balance = parseFloat(balance);
-                            // if (balance !== 0) {
-                            //     if (final_amount > balance) {
-                            //         disableButton('recordSubmit');
-                            //     } else {
-                            //         enableButton('recordSubmit');
-                            //     }
+                    // Update pct_amt when user inputs a number in pct
+                    $("#pct").on("input", updatePctAmt);
+                });
+
+                function lastAmount() {
+                    let amount = $("#amount").val();
+                    let rate = $("#rate").val();
+                    let operator = $('#opr').find(":selected").val();
+                    let final_amount;
+
+                    if (amount && rate) { // Ensure both amount and rate have values
+                        if (operator === "/") {
+                            final_amount = Number(amount) / Number(rate);
+                        } else {
+                            final_amount = Number(amount) * Number(rate);
+                        }
+                        final_amount = final_amount.toFixed(2);
+                        $("#final_amount").val(final_amount);
+
+                        let balance = $("#balance").val();
+                        balance = parseFloat(balance);
+                        // if (balance !== 0) {
+                        //     if (final_amount > balance) {
+                        //         disableButton('recordSubmit');
+                        //     } else {
+                        //         enableButton('recordSubmit');
+                        //     }
+                        // } else {
+                        //     disableButton('recordSubmit');
+                        // }
+                        if (balance >= 1 || <?= $purchase_pays_id > 0 ? 1 : 0; ?>) {
+                            // if (final_amount <= balance + 0.5) {
+                            //     enableButton('recordSubmit');
                             // } else {
                             //     disableButton('recordSubmit');
                             // }
-                            if (balance >= 1) {
-                                // if (final_amount <= balance+0.5) {
-                                //     enableButton('recordSubmit');
-                                // } else {
-                                //     disableButton('recordSubmit');
-                                // }
-                            } else {
-                                disableButton('recordSubmit');
+                            enableButton('recordSubmit');
+                        } else {
+                            disableButton('recordSubmit');
+                        }
+                    }
+                }
+
+                function fetchKhaata(inputField, khaataId, responseId, prefix, khaataImageId, recordSubmitId) {
+                    let khaata_no = $(inputField).val();
+                    $.ajax({
+                        url: 'ajax/fetchSingleKhaata.php',
+                        type: 'post',
+                        data: {
+                            khaata_no: khaata_no
+                        },
+                        dataType: 'json',
+                        success: function(response) {
+                            if (response.success === true) {
+                                enableButton(recordSubmitId);
+                                $(khaataId).val(response.messages['khaata_id']);
+                                $(prefix + '_khaata_no').text(khaata_no);
+                                $(prefix + '_khaata_name').text(response.messages['khaata_name']);
+                                $(prefix + '_b_name').text(response.messages['b_name']);
+                                $(prefix + '_c_name').text(response.messages['name']);
+                                $(prefix + '_business_name').text(response.messages['business_name']);
+                                $(prefix + '_address').text(response.messages['address']);
+                                $(prefix + '_comp_name').text(response.messages['comp_name']);
+                                var details = {
+                                    indexes: response.messages['indexes'],
+                                    vals: response.messages['vals']
+                                };
+                                $(prefix + '_contacts').html(displayKhaataDetails(details));
+                                $(khaataImageId).attr("src", response.messages['image']);
+                                $(recordSubmitId).prop('disabled', false);
+                                lastAmount();
+                                $(responseId).text('');
+                            }
+                            if (response.success === false) {
+                                disableButton(recordSubmitId);
+                                $(responseId).text('INVALID');
+                                $(prefix + '_khaata_no').text('---');
+                                $(prefix + '_khaata_name').text('---');
+                                $(prefix + '_c_name').text('---');
+                                $(prefix + '_b_name').text('---');
+                                $(prefix + '_comp_name').text('---');
+                                $(prefix + '_business_name').text('---');
+                                $(prefix + '_address').text('---');
+                                $(prefix + '_contacts').text('');
+                                $(khaataImageId).attr("src", 'assets/images/logo-placeholder.png');
+                                $(khaataId).val(0);
+                            }
+                        }
+                    });
+                }
+
+                function displayKhaataDetails(details) {
+                    var html = ''; // Initialize an empty string to store HTML
+
+                    if (details.indexes && details.vals) {
+                        var indexes = JSON.parse(details.indexes);
+                        var vals = JSON.parse(details.vals);
+
+                        if (Array.isArray(indexes) && Array.isArray(vals)) {
+                            var count = Math.min(indexes.length, vals.length);
+
+                            for (var i = 0; i < count; i++) {
+                                var key = indexes[i];
+                                var value = vals[i];
+                                // Construct the HTML string
+                                html += '<b class="text-dark">' + (key) + '</b>' + value + '<br>';
                             }
                         }
                     }
-                </script>
+
+                    return html; // Return the constructed HTML string
+                }
+
+                $(document).on('keyup', "#khaata_no1", function(e) {
+                    fetchKhaata("#khaata_no1", "#p_khaata_id", "#p_response", "#p", "#p_khaata_image", "recordSubmit");
+                });
+                fetchKhaata("#khaata_no1", "#p_khaata_id", "#p_response", "#p", "#p_khaata_image", "recordSubmit");
+                $(document).on('keyup', "#khaata_no2", function(e) {
+                    fetchKhaata("#khaata_no2", "#s_khaata_id", "#s_response", "#s", "#s_khaata_image", "recordSubmit");
+                });
+                fetchKhaata("#khaata_no2", "#s_khaata_id", "#s_response", "#s", "#s_khaata_image", "recordSubmit");
+            </script>

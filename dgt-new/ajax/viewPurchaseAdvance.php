@@ -310,7 +310,7 @@ if ($id > 0) {
                     $partial_amount1 = ($percentage / 100) * $total_amount;
                     $partial_amount2 = ($remaining_percentage / 100) * $total_amount;
                     if ($record['khaata_tr1'] != '') {
-                        $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $record['sr'], 'transfered_from' => 'purchase_' . $record['type']));
+                        $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $record['id'], 'transfered_from' => 'purchase_' . $record['type']));
                         $roz = mysqli_fetch_assoc($rozQ);
                         $roz_arr1 = array(
                             array('Sr#', SuperAdmin() ? $roz['r_id'] . '-' . $roz['branch_serial'] : $roz['branch_serial']),
@@ -415,7 +415,7 @@ if ($id > 0) {
                                 <?php $adv_paid = purchaseSpecificData($record['id'], 'adv');
                                 $i = 1;
                                 foreach ($adv_paid as $item) {
-                                    $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $record['sr'], 'transfered_from' => 'purchase_' . $record['type']));
+                                    $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'dr_cr' => 'dr', 'transfered_from_id' => $purchase_id, 'transfered_from' => 'purchase_' . $record['type']));
                                     $roz = mysqli_fetch_assoc($rozQ);
                                     echo '<tr>';
                                     echo '<td class="border border-dark">' . $i++ . '</td>';
@@ -436,12 +436,16 @@ if ($id > 0) {
                         <input type="hidden" id="balance" value="<?php echo $bal; ?>">
                         <?php
                         $khaata_tr1 = json_decode($record['khaata_tr1'], true);
-                        $p_khaata_id = $khaata_tr1['dr_khaata_no'];
-                        $s_khaata_id = $khaata_tr1['cr_khaata_no'];
+                        $p_khaata_no = $khaata_tr1['dr_khaata_no'];
+                        $s_khaata_no = $khaata_tr1['cr_khaata_no'];
+                        $p_khaata_id = $khaata_tr1['dr_khaata_id'];
+                        $s_khaata_id = $khaata_tr1['cr_khaata_id'];
                         $adv_arr = array(
                             'finish' => array('div_class' => '', 'btn_text' => 'Transfer', 'btn_class' => 'btn-primary', 'back' => '', 'purchase_pays_id' => $purchase_pays_id, 'action' => 'insert'),
-                            'dr_khaata_no' => $p_khaata_id,
-                            'cr_khaata_no' => $s_khaata_id,
+                            'dr_khaata_no' => $p_khaata_no,
+                            'cr_khaata_no' => $s_khaata_no,
+                            'dr_khaata_id' => $p_khaata_id,
+                            'cr_khaata_id' => $s_khaata_id,
                             'currency1' => '',
                             'amount' => '',
                             'currency2' => '',
@@ -449,7 +453,7 @@ if ($id > 0) {
                             'opr' => '*',
                             'final_amount' => '',
                             'transfer_date' => date('Y-m-d'),
-                            'report' => ucfirst($_fields['p_s_name']) . ' ' . ' #' . $_fields['sr'] . ', Type: ' . ucfirst($_fields['type']) . ', Quantity: ' . $qty_no . ' '
+                            'report' => ucfirst($_fields['p_s_name']) . ' ' . ' #' . $_fields['sr'] . ', Type: ' . ucfirst($_fields['type']) . ' Advance, Quantity: ' . $qty_no . ' '
                             //'report' => 'ENTRY:' . $rows . ' GOODS:' . $goods . ' COUNTRY:' . $record['country'] . ' ALLOT:' . $record['allot'] . ' T.Qty:' . $qtys . ' T.KGs:' . $totals . ' RATE:' . $rate . ' T.AMNT:' . $amounts . $curr . ' EXCH.:' . $curr2
                         );
                         if ($purchase_pays_id > 0) {
@@ -460,6 +464,8 @@ if ($id > 0) {
                                     'finish' => array('div_class' => 'border border-danger', 'btn_text' => 'Update', 'btn_class' => 'btn-warning', 'back' => '<a href="purchase-advance?view=1&p_id=' . $id . '">Back</a>', 'purchase_pays_id' => $purchase_pays_id, 'action' => 'update'),
                                     'dr_khaata_no' => $pps['dr_khaata_no'],
                                     'cr_khaata_no' => $pps['cr_khaata_no'],
+                                    'dr_khaata_id' => $pps['dr_khaata_id'],
+                                    'cr_khaata_id' => $pps['cr_khaata_id'],
                                     'currency1' => $pps['currency1'],
                                     'amount' => $pps['amount'],
                                     'currency2' => $pps['currency2'],
@@ -478,22 +484,22 @@ if ($id > 0) {
                                     <?php echo $adv_arr['finish']['back']; ?>
                                     <div class="row gx-0">
                                         <div class="col-md-2">
+                                            <small class="fw-bold text-danger" id="p_response"></small>
                                             <div class="input-group position-relative">
                                                 <label for="khaata_no1" class="text-success">Dr. A/c</label>
                                                 <input name="dr_khaata_no" id="khaata_no1" required class="form-control bg-transparent"
-                                                    value="<?php echo $adv_arr['dr_khaata_no']; ?>">
-                                                <small class="error-response top-0" id="p_response"></small>
+                                                    value="<?php echo $adv_arr['cr_khaata_no']; ?>">
                                             </div>
-                                            <input type="hidden" name="dr_khaata_id" id="p_khaata_id">
+                                            <input type="hidden" name="dr_khaata_id" id="p_khaata_id" value="<?= $adv_arr['cr_khaata_id'] ?>">
                                         </div>
                                         <div class="col-md-2">
+                                            <small class="fw-bold text-danger" id="p_response"></small>
                                             <div class="input-group position-relative">
                                                 <label for="khaata_no2" class="text-danger">Cr. A/c</label>
                                                 <input name="cr_khaata_no" id="khaata_no2" required class="form-control bg-transparent"
-                                                    value="<?php echo $adv_arr['cr_khaata_no']; ?>">
-                                                <small class="error-response top-0" id="s_response"></small>
+                                                    value="<?php echo $adv_arr['dr_khaata_no']; ?>">
                                             </div>
-                                            <input type="hidden" name="cr_khaata_id" id="s_khaata_id">
+                                            <input type="hidden" name="cr_khaata_id" id="s_khaata_id" value="<?= $adv_arr['dr_khaata_id'] ?>">
                                         </div>
                                         <div class="col-md-2">
                                             <div class="input-group">
@@ -575,7 +581,7 @@ if ($id > 0) {
                                     <input type="hidden" name="action" value="<?php echo $adv_arr['finish']['action']; ?>">
                                     <?php
                                     if ($purchase_pays_id > 0) {
-                                        $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'transfered_from_id' => $record['sr'], 'transfered_from' => 'purchase_advance'));
+                                        $rozQ = fetch('roznamchaas', array('r_type' => 'Business', 'transfered_from_id' => $purchase_pays_id, 'transfered_from' => 'purchase_advance'));
                                         if (mysqli_num_rows($rozQ) > 0) { ?>
                                             <table class="table table-sm table-bordered">
                                                 <thead>
@@ -629,6 +635,7 @@ if ($id > 0) {
                                         onsubmit="return confirm('Are you sure to delete Payment?\nThe record will be delete from Roznamcha too.\nPress OK to Delete');">
                                         <input type="hidden" name="r_id_hidden" value="<?php echo htmlspecialchars(json_encode($rid_delete_array)); ?>">
                                         <input type="hidden" name="p_id_hidden" value="<?php echo $purchase_id; ?>">
+                                        <input type="hidden" name="p_sr" value="<?php echo $record['sr']; ?>">
                                         <input type="hidden" name="p_type_hidden" value="<?php echo $purchase_type; ?>">
                                         <input type="hidden" name="purchase_pays_id_hidden" value="<?php echo $purchase_pays_id; ?>">
                                         <button name="deletePaymentAndRozSubmit" type="submit" class="btn btn-danger btn-sm">Delete This Payment</button>
@@ -760,7 +767,7 @@ if ($id > 0) {
                         // } else {
                         //     disableButton('recordSubmit');
                         // }
-                        if (balance >= 1) {
+                        if (balance >= 1 || <?= $purchase_pays_id > 0 ? 1 : 0; ?>) {
                             // if (final_amount <= balance + 0.5) {
                             //     enableButton('recordSubmit');
                             // } else {
@@ -772,4 +779,83 @@ if ($id > 0) {
                         }
                     }
                 }
+
+                function fetchKhaata(inputField, khaataId, responseId, prefix, khaataImageId, recordSubmitId) {
+                    let khaata_no = $(inputField).val();
+                    $.ajax({
+                        url: 'ajax/fetchSingleKhaata.php',
+                        type: 'post',
+                        data: {
+                            khaata_no: khaata_no
+                        },
+                        dataType: 'json',
+                        success: function(response) {
+                            if (response.success === true) {
+                                enableButton(recordSubmitId);
+                                $(khaataId).val(response.messages['khaata_id']);
+                                $(prefix + '_khaata_no').text(khaata_no);
+                                $(prefix + '_khaata_name').text(response.messages['khaata_name']);
+                                $(prefix + '_b_name').text(response.messages['b_name']);
+                                $(prefix + '_c_name').text(response.messages['name']);
+                                $(prefix + '_business_name').text(response.messages['business_name']);
+                                $(prefix + '_address').text(response.messages['address']);
+                                $(prefix + '_comp_name').text(response.messages['comp_name']);
+                                var details = {
+                                    indexes: response.messages['indexes'],
+                                    vals: response.messages['vals']
+                                };
+                                $(prefix + '_contacts').html(displayKhaataDetails(details));
+                                $(khaataImageId).attr("src", response.messages['image']);
+                                $(recordSubmitId).prop('disabled', false);
+                                lastAmount();
+                                $(responseId).text('');
+                            }
+                            if (response.success === false) {
+                                disableButton(recordSubmitId);
+                                $(responseId).text('INVALID');
+                                $(prefix + '_khaata_no').text('---');
+                                $(prefix + '_khaata_name').text('---');
+                                $(prefix + '_c_name').text('---');
+                                $(prefix + '_b_name').text('---');
+                                $(prefix + '_comp_name').text('---');
+                                $(prefix + '_business_name').text('---');
+                                $(prefix + '_address').text('---');
+                                $(prefix + '_contacts').text('');
+                                $(khaataImageId).attr("src", 'assets/images/logo-placeholder.png');
+                                $(khaataId).val(0);
+                            }
+                        }
+                    });
+                }
+
+                function displayKhaataDetails(details) {
+                    var html = ''; // Initialize an empty string to store HTML
+
+                    if (details.indexes && details.vals) {
+                        var indexes = JSON.parse(details.indexes);
+                        var vals = JSON.parse(details.vals);
+
+                        if (Array.isArray(indexes) && Array.isArray(vals)) {
+                            var count = Math.min(indexes.length, vals.length);
+
+                            for (var i = 0; i < count; i++) {
+                                var key = indexes[i];
+                                var value = vals[i];
+                                // Construct the HTML string
+                                html += '<b class="text-dark">' + (key) + '</b>' + value + '<br>';
+                            }
+                        }
+                    }
+
+                    return html; // Return the constructed HTML string
+                }
+
+                $(document).on('keyup', "#khaata_no1", function(e) {
+                    fetchKhaata("#khaata_no1", "#p_khaata_id", "#p_response", "#p", "#p_khaata_image", "recordSubmit");
+                });
+                fetchKhaata("#khaata_no1", "#p_khaata_id", "#p_response", "#p", "#p_khaata_image", "recordSubmit");
+                $(document).on('keyup', "#khaata_no2", function(e) {
+                    fetchKhaata("#khaata_no2", "#s_khaata_id", "#s_response", "#s", "#s_khaata_image", "recordSubmit");
+                });
+                fetchKhaata("#khaata_no2", "#s_khaata_id", "#s_response", "#s", "#s_khaata_image", "recordSubmit");
             </script>

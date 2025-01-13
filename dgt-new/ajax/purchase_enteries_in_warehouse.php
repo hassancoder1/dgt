@@ -32,7 +32,7 @@ if (isset($_POST["warehouse"])) {
                 if (!empty($ldata['good']['goods_json']['allotment_name'])) {
                     $responseData[$warehouse][] = [
                         "unique_code" => $row['unique_code'],
-                        "p_id" => $ldata['p_id'],
+                        "p_sr" => $ldata['p_sr'],
                         "sr_no" => $ldata['sr_no'],
                         "allot" => $ldata['good']['goods_json']['allotment_name'],
                         'goods_id' => $ldata['good']['goods_id'],

@@ -335,14 +335,11 @@ if ($id > 0) {
                                                             <label for="vat_general" class="form-label">VAT General ??</label>
                                                             <select name="vat_general" id="vat_general" class="form-select form-select-sm">
                                                                 <option value="yes">Yes</option>
-                                                                <option value="no">No</option>
+                                                                <option value="no" selected>No</option>
                                                             </select>
                                                             <!--  -->
                                                         </div>
-                                                        <div class="col-md-4">
-                                                            <label for="warehouse_entry" class="form-label">Current Entries In Warehouse</label>
-                                                            <select id="warehouse_entry" name="warehouse_entry" class="form-select form-select-sm">
-                                                            </select>
+                                                        <div class="col-md-4 d-none" id="warehouseEnteries">
                                                         </div>
                                                     <?php } ?>
                                                 </div>
@@ -399,8 +396,9 @@ if ($id > 0) {
             }
         });
     });
-    let selectedEntry = null;
-    let saleQtyValue = null;
+    let selectedEntries = [];
+    let saleQtyValues = [];
+    let purchasedQtyValues = [];
 
     function agentDetails() {
         var agentAccNo = $('#ag_acc_no').val().toUpperCase();
@@ -431,27 +429,54 @@ if ($id > 0) {
     }
 
     $(document).ready(function() {
+        let selectedValues = [];
+        let selectedForPermission = [];
+        let selectionOrder = []; // Track the order of selection
+
         $('.row-checkbox').change(function() {
-            let selectedValues = [];
-            let selectedForPermission = [];
-            $('.row-checkbox:checked').each(function() {
-                let checkbox = $(this);
-                saleQtyValue = parseFloat(checkbox.closest('tr').find('td:nth-child(6)').text().trim());
-                selectedValues.push(checkbox.val());
-                $('#currentLoading').val(checkbox.closest('tr').data('loading'));
-                let agAccNoElem = checkbox.closest('tr').find('.ag_acc_no');
-                if (agAccNoElem.children('i.fa-times').length > 0) {
-                    $('#transfer-alert').text('This Row #' + checkbox.val() + ' is not transferred to any Agent Yet!');
-                    // document.querySelector('.transfer-form').classList.remove('d-none');
-                } else {
-                    selectedForPermission.push(checkbox.val());
+            const checkbox = $(this);
+            const rowIndex = checkbox.val();
+            const quantity = parseFloat(checkbox.closest('tr').find('td:nth-child(6)').text().trim());
+
+            if (checkbox.is(':checked')) {
+                // Add the row to the order if not already present
+                if (!selectionOrder.includes(rowIndex)) {
+                    selectionOrder.push(rowIndex);
+                }
+            } else {
+                // Remove the row from the order if unchecked
+                const index = selectionOrder.indexOf(rowIndex);
+                if (index !== -1) {
+                    selectionOrder.splice(index, 1);
+                }
+            }
+
+            // Clear existing arrays and rebuild based on selectionOrder
+            saleQtyValues = [];
+            selectedValues = [];
+            selectedForPermission = [];
+
+            selectionOrder.forEach((rowId) => {
+                const matchingCheckbox = $(`.row-checkbox[value="${rowId}"]`);
+                if (matchingCheckbox.is(':checked')) {
+                    const matchingQuantity = parseFloat(
+                        matchingCheckbox.closest('tr').find('td:nth-child(6)').text().trim()
+                    );
+                    selectedValues.push(rowId);
+                    saleQtyValues.push(matchingQuantity);
+
+                    const agAccNoElem = matchingCheckbox.closest('tr').find('.ag_acc_no');
+                    if (agAccNoElem.children('i.fa-times').length === 0) {
+                        selectedForPermission.push(rowId);
+                    }
                 }
             });
+
+            // Update hidden fields
             $('#ag_transfer_ids').val(selectedValues.join(','));
             $('#update_permission_ids').val(selectedForPermission.join(','));
         });
     });
-
 
 
 
@@ -469,7 +494,7 @@ if ($id > 0) {
     }
 
     function currentStock(event) {
-        if (saleQtyValue !== null) {
+        if (saleQtyValues.length > 0) {
             const selectedWarehouse = $('#cargo_transfer').val() ?? '';
             $('#warehouse_entry').html('');
             $('#entriesTableBody').html('');
@@ -493,35 +518,35 @@ if ($id > 0) {
                             // Loop through each warehouse and its entries
                             Object.entries(data).forEach(([warehouse, entries]) => {
                                 entriesHtml += `
-                                <tr>
-                                    <td colspan="12" class="bg-primary text-white text-center">
-                                        Warehouse: ${warehouse}
-                                    </td>
-                                </tr>`;
+                            <tr>
+                                <td colspan="12" class="bg-primary text-white text-center">
+                                    Warehouse: ${warehouse}
+                                </td>
+                            </tr>`;
 
                                 entries.forEach(entry => {
                                     entriesHtml += `
-                                    <tr>
-                                        <td>
-                                            <input type="radio" name="warehouseEntry" 
-                                                value="${entry.unique_code}~${entry.goods_id}~${entry.goods_name}~${entry.quantity_no}~${entry.quantity_name}~${entry.gross_weight}~${entry.net_weight}" />
-                                        </td>
-                                        <td class="d-none">P#${entry.p_id} (${entry.sr_no}) => ${entry.goods_name} (${entry.quantity_no}) ${entry.quantity_name}</td>
-                                        <td>P#${entry.p_id} (${entry.sr_no})</td>
-                                        <td>${entry.allot}</td>
-                                        <td>${entry.goods_name}</td>
-                                        <td>${entry.size}</td>
-                                        <td>${entry.brand}</td>
-                                        <td>${entry.origin}</td>
-                                        <td>
-                                            <span class="ajax-qty">${entry.quantity_no}</span>
-                                            <sub>${entry.quantity_name}</sub>
-                                        </td>
-                                        <td>${entry.gross_weight}</td>
-                                        <td>${entry.net_weight}</td>
-                                        <td>${entry.container_no}</td>
-                                        <td>${entry.container_name}</td>
-                                    </tr>`;
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" class="entry-checkbox" 
+                                            value="${entry.unique_code}~${entry.goods_id}~${entry.goods_name}~${entry.quantity_no}~${entry.quantity_name}~${entry.gross_weight}~${entry.net_weight}" />
+                                    </td>
+                                    <td class="d-none">P#${entry.p_sr} (${entry.sr_no}) => ${entry.goods_name} (${entry.quantity_no}) ${entry.quantity_name}</td>
+                                    <td>P#${entry.p_sr} (${entry.sr_no})</td>
+                                    <td>${entry.allot}</td>
+                                    <td>${entry.goods_name}</td>
+                                    <td>${entry.size}</td>
+                                    <td>${entry.brand}</td>
+                                    <td>${entry.origin}</td>
+                                    <td>
+                                        <span class="ajax-qty">${entry.quantity_no}</span>
+                                        <sub>${entry.quantity_name}</sub>
+                                    </td>
+                                    <td>${entry.gross_weight}</td>
+                                    <td>${entry.net_weight}</td>
+                                    <td>${entry.container_no}</td>
+                                    <td>${entry.container_name}</td>
+                                </tr>`;
                                 });
                             });
 
@@ -545,31 +570,89 @@ if ($id > 0) {
             alert("Please Select an entry first!");
         }
     }
+    let finalSelectedEntries = [];
+    let finalPurchasedQtyValues = [];
+    let selectionOrder = [];
 
+    $(document).on('change', '.entry-checkbox', function() {
+        const checkbox = $(this);
+        const entryValue = checkbox.val();
+        const quantityValue = parseFloat(checkbox.closest('tr').find('td').eq(8).find('.ajax-qty').text().trim());
 
-    // Handle entry selection
-    $(document).on('change', '#warehouseEntries input[type="radio"]', function() {
-        selectedEntry = $(this).val();
-        $('#connectButton').prop('disabled', false);
+        if (checkbox.is(':checked')) {
+            // Allow selecting any entry as long as total selections don't exceed limit
+            if (finalSelectedEntries.length < saleQtyValues.length) {
+                if (!finalSelectedEntries.includes(entryValue)) {
+                    // Add the entry and its quantity to their respective arrays
+                    finalSelectedEntries.push(entryValue);
+                    finalPurchasedQtyValues.push(quantityValue);
+                    selectionOrder.push(entryValue);
+
+                    // Update UI state
+                    updateCheckboxStates();
+                }
+            } else {
+                alert('You can only select ' + saleQtyValues.length + ' entries!');
+                checkbox.prop('checked', false);
+            }
+        } else {
+            // Remove the unchecked entry and its quantity
+            const index = finalSelectedEntries.indexOf(entryValue);
+            if (index > -1) {
+                finalSelectedEntries.splice(index, 1);
+                finalPurchasedQtyValues.splice(index, 1);
+                const orderIndex = selectionOrder.indexOf(entryValue);
+                if (orderIndex > -1) {
+                    selectionOrder.splice(orderIndex, 1);
+                }
+
+                // Update UI state
+                updateCheckboxStates();
+            }
+        }
+
+        // Enable connect button only when the number of selections matches required amount
+        $('#connectButton').prop('disabled', finalSelectedEntries.length !== saleQtyValues.length);
     });
 
     // Handle connect button click
     $('#connectButton').click(function() {
-        if (selectedEntry) {
-            const selectedRadio = $('#warehouseEntries input[type="radio"]:checked');
-            const selectedLabel = selectedRadio.closest('tr').find('td').eq(1).text().trim();
-            let purchasedQtyValue = parseFloat(selectedRadio.closest('tr').find('td').eq(8).find('.ajax-qty').text().trim());
-            if (saleQtyValue <= purchasedQtyValue) {
-                if (selectedLabel) {
-                    const optionHtml = `<option value="${selectedEntry}" selected>${selectedLabel}</option>`;
-                    $('#warehouse_entry').html(optionHtml);
-                    $('#warehouseModal').modal('hide');
+        console.log("Sale Quantities:", saleQtyValues);
+        console.log("Selected Entries:", finalSelectedEntries);
+        console.log("Purchased Quantities:", finalPurchasedQtyValues);
+
+        if (finalSelectedEntries.length === saleQtyValues.length) {
+            let detailsInputs = "";
+            let isValid = true;
+
+            // Compare quantities in the order they were selected
+            finalSelectedEntries.forEach((selectedEntry, index) => {
+                if (saleQtyValues[index] <= finalPurchasedQtyValues[index]) {
+                    detailsInputs += `<input type="hidden" name="warehouse_entry${index}" value="${selectedEntry}"/>`;
                 } else {
-                    alert('Failed to retrieve entry details. Please try again.');
+                    alert('Sale Quantity is greater than purchased for Selected entry ' + (index + 1));
+                    isValid = false;
+                    return false;
                 }
-            } else {
-                alert('Sale Quantity is greater then purchased');
+            });
+
+            if (isValid && detailsInputs !== "") {
+                $('#warehouseEnteries').html(detailsInputs);
+                $('#warehouseModal').modal('hide');
             }
+        } else {
+            alert('Please select exactly ' + saleQtyValues.length + ' entries!');
         }
+    });
+
+    function updateCheckboxStates() {
+        if (finalSelectedEntries.length < saleQtyValues.length) {
+            $('.entry-checkbox:not(:checked)').prop('disabled', false);
+        } else {
+            $('.entry-checkbox:not(:checked)').prop('disabled', true);
+        }
+    }
+    $(document).ready(function() {
+        updateCheckboxStates();
     });
 </script>

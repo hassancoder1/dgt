@@ -430,11 +430,6 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
     });
 </script>
 <?php
-function safeJsonEncode($data)
-{
-    global $connect;
-    return mysqli_real_escape_string($connect, json_encode($data));
-}
 if (isset($_POST['LLoadingSubmit'])) {
     $msg = 'DB Error';
     $msgType = 'danger';
@@ -482,11 +477,11 @@ if (isset($_POST['LLoadingSubmit'])) {
     WHERE uid = '$uid' 
     AND JSON_EXTRACT(lloading_info, '$.child_ids') IS NOT NULL
 "));
-    if ($parent_uid_data && $parent_uid_data['id'] !== ($_POST['id'] ?? '')) {
+    if ($parent_uid_data && (isset($_POST['action']) ? ($parent_bl_data['id'] !== $_POST['id']) : true)) {
         $data = json_decode($parent_uid_data['lloading_info'], true);
         $existing_child_ids = isset($data['child_ids']) ? $data['child_ids'] : '';
         $existing_child_ids_count = isset($data['child_ids_count']) ? $data['child_ids_count'] : 0;
-        if (($_GET['action'] ?? '') === 'update') {
+        if ($_POST['action'] === 'update') {
             $child_ids = $existing_child_ids;
             $child_ids_count = $existing_child_ids_count;
         } else {
@@ -588,7 +583,13 @@ if (isset($_POST['LLoadingSubmit'])) {
         ['reports' => json_decode($Ttempdata['reports'], true)] ?? []
     );
     $Transfer = array_merge($transfer_details, isset($_POST['warehouse_entry']) ? ['sold_from' => [$_POST['warehouse_entry']]] : []);
-    $currentLoading = mysqli_fetch_assoc(mysqli_query($connect, "SELECT AUTO_INCREMENT FROM information_schema.TABLES WHERE TABLE_SCHEMA = '$dbname' AND TABLE_NAME = 'local_loading'"))['AUTO_INCREMENT'];
+    $currentLoading = '';
+    if ($_POST['action'] === 'update') {
+        $currentLoading = $_POST['id'];
+    } else {
+        $currentLoading = mysqli_fetch_assoc(mysqli_query($connect, "SELECT AUTO_INCREMENT FROM information_schema.TABLES WHERE TABLE_SCHEMA = '$dbname' AND TABLE_NAME = 'local_loading'"))['AUTO_INCREMENT'];
+    }
+    $_POST['unique_code'] = $_POST['unique_code'] . $currentLoading;
     $tempG = $goods_details;
     $tempG['goods_json'] = array_merge(json_decode($_POST['goods_json'], true), [
         'qty_no' => (isset($_POST['warehouse_entry']) ? 0 : $tempG['quantity_no']),
@@ -610,15 +611,30 @@ if (isset($_POST['LLoadingSubmit'])) {
     $ldata = array_merge($TempData, ['id' => $currentLoading, 'good' => $tempG, 'transfer' => $Transfer, 'info' => $my]);
     $CCWdata = [
         'data_for' => $_POST['warehouse_transfer'],
-        'unique_code' => $_POST['unique_code'] . $currentLoading,
-        'tdata' => safeJsonEncode($tdata),
-        'ldata' => safeJsonEncode($ldata),
+        'unique_code' => $_POST['unique_code'],
+        'tdata' => mysqli_real_escape_string($connect, json_encode($tdata)),
+        'ldata' => json_encode($ldata),
     ];
-    if (!recordExists('data_copies', ['unique_code' => $CCWdata['unique_code']])) {
-        insert('data_copies', $CCWdata);
-    }
-    if (!recordExists('vat_copies', ['unique_code' => $CCWdata['unique_code']])) {
-        insert('vat_copies', $CCWdata);
+    $CCWTables = ['data_copies', 'vat_copies'];
+    foreach ($CCWTables as $myTable) {
+        if (!recordExists($myTable, ['unique_code' => $CCWdata['unique_code']])) {
+            insert($myTable, $CCWdata);
+        } else {
+            $CCWdata['ldata'] = json_decode($CCWdata['ldata'], true);
+            $fetchedLdata = json_decode(mysqli_fetch_assoc(fetch($myTable, ['unique_code' => $CCWdata['unique_code']]))['ldata'], true);
+            if (isset($fetchedLdata['edited']) && $fetchedLdata['edited'] === true) {
+                continue;
+            }
+            $sold_to_from_key = isset($fetchedLdata['transfer']['sold_to']) ? 'sold_to' : (isset($fetchedLdata['transfer']['sold_from']) ? 'sold_from' : '');
+            if ($fetchedLdata['ldata']['good']['quantity_no'] !== $fetchedLdata['ldata']['good']['goods_json']['qty_no']) {
+                $CCWdata['ldata']['good']['goods_json'] = $fetchedLdata['good']['goods_json'];
+            }
+            if (!empty($sold_to_from_key)) {
+                $CCWdata['ldata']['transfer'][$sold_to_from_key] = $fetchedLdata['transfer'][$sold_to_from_key];
+            }
+            $CCWdata['ldata'] = json_encode($CCWdata['ldata']);
+            update($myTable, $CCWdata, ['unique_code' => $CCWdata['unique_code']]);
+        }
     }
     if (isset($_POST['warehouse_entry'])) {
         $p_unique_code = explode('~', $_POST['warehouse_entry'])[0];
@@ -631,12 +647,12 @@ if (isset($_POST['LLoadingSubmit'])) {
         $qty_no = $goods_json['qty_no'] -= $tempG['quantity_no'];
         $updatedGood = calcNewValues($qty_no, $existingLdata['good'], 'rems');
         $existingLdata['good'] = $updatedGood;
-        $existingLdata['transfer']['sold_to'][] = $_POST['unique_code'] . $currentLoading . '~' . $tempG['goods_id'] . '~' . goodsName($tempG['goods_id']) . '~' . $tempG['quantity_no'] . '~' . $tempG['quantity_name'] . '~' . $tempG['gross_weight'] . '~' . $tempG['net_weight'] . '~' . $_POST['warehouse_transfer'] . '~' . $sr_no;
-        update('data_copies', ['ldata' => safeJsonEncode($existingLdata)], ['unique_code' => $p_unique_code]);
-        update('vat_copies', ['ldata' => safeJsonEncode($existingLdata)], ['unique_code' => $p_unique_code]);
+        $existingLdata['transfer']['sold_to'][] = $_POST['unique_code'] . '~' . $tempG['goods_id'] . '~' . goodsName($tempG['goods_id']) . '~' . $tempG['quantity_no'] . '~' . $tempG['quantity_name'] . '~' . $tempG['gross_weight'] . '~' . $tempG['net_weight'] . '~' . $_POST['warehouse_transfer'] . '~' . $sr_no;
+        update('data_copies', ['ldata' => json_encode($existingLdata)], ['unique_code' => $p_unique_code]);
+        update('vat_copies', ['ldata' => json_encode($existingLdata)], ['unique_code' => $p_unique_code]);
     }
 
-    if (isset($_POST['action']) && isset($_POST['id'])) {
+    if ($_POST['action'] === 'update' && isset($_POST['id'])) {
         $url_ = "local-loading?p_id=" . $p_id . "&view=1";
         if ($data['attachments'] == '[]') {
             unset($data['attachments']);
@@ -657,7 +673,7 @@ if (isset($_POST['LLoadingSubmit'])) {
             $msg = 'New Goods Loading Added!';
         }
     }
-    messageNew($type, $url_, $msg);
+    // messageNew($type, $url_, $msg);
 }
 
 if (isset($_GET['deleteLoadingEntry']) && isset($_GET['lp_id']) && !empty($_GET['lp_id'])) {
@@ -665,6 +681,7 @@ if (isset($_GET['deleteLoadingEntry']) && isset($_GET['lp_id']) && !empty($_GET[
     $msg = 'DB Failed';
     $childEntryId = mysqli_real_escape_string($connect, $_GET['lp_id']);
     $p_id = mysqli_real_escape_string($connect, $_GET['p_id']);
+    $unique_code = mysqli_real_escape_string($connect, $_GET['unique_code']);
     $url_ = "local-loading?view=1&p_id=" . $p_id;
     $parentIdQuery = "SELECT JSON_EXTRACT(lloading_info, '$.parent_id') AS parent_id FROM local_loading WHERE id = '$childEntryId'";
     $parentIdResult = mysqli_fetch_assoc(mysqli_query($connect, $parentIdQuery));
@@ -693,8 +710,17 @@ if (isset($_GET['deleteLoadingEntry']) && isset($_GET['lp_id']) && !empty($_GET[
         update('local_loading', $updateData, ['id' => $parentUIDData['id']]);
         $deleteQuery = "DELETE FROM `local_loading` WHERE id='$childEntryId'";
         $done = mysqli_query($connect, $deleteQuery);
-        if ($done) {
-            $msg = "Loading Entry Deleted for Purchase #" . $p_id;
+        $done1 = "DELETE FROM `data_copies` WHERE unique_code='$unique_code'";
+        $done2 = "DELETE FROM `vat_copies` WHERE unique_code='$unique_code'";
+        $done1_result = mysqli_query($connect, $done1);
+        $done2_result = mysqli_query($connect, $done2);
+        if ($done1_result || $done2_result) {
+            $Mydone = true;
+        } else {
+            $Mydone = false;
+        }
+        if ($done && $Mydone) {
+            $msg = "Loading Entry Deleted!";
             $type = "success";
         } else {
             $msg = "Failed to delete loading entry.";

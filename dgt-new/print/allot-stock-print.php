@@ -153,7 +153,7 @@ if (!empty($_GET['allot'])) {
                         </tr>
                     </thead>
                     <tbody>
-                    <?php
+                        <?php
                         // Initialize totals
                         $total_purchased_qty = $total_purchased_kgs = $total_purchased_net_kgs = $total_sold_qty = $total_sold_kgs = $total_sold_net_kgs = $total_remaining_qty = $total_remaining_gross_weight = $total_remaining_net_weight = 0;
                         $i = 1;
@@ -306,7 +306,7 @@ if (!empty($_GET['allot'])) {
                                         const whatsappURL = `https://wa.me/?text=Your+file+${encodeURIComponent(formattedName)}+is+ready!+Download+it+here:+${encodeURIComponent(fileURL)}`;
                                         window.open(whatsappURL, '_blank');
                                     } else if (fileType === 'email') {
-                                        const emailURL = `mailto:?subject=Your+Requested+File+-+${encodeURIComponent(formattedName)}&body=Hello,%0A%0AYour+file+${encodeURIComponent(formattedName)}+is+ready+for+download!%0A%0AAccess+it+here:+${encodeURIComponent(fileURL)}`;
+                                        const emailURL = `/emails?page=compose&file-url=${fileURL}&file-name=${formattedFileName}&page-name=${formattedName}`;
                                         window.open(emailURL, '_blank');
                                     }
 

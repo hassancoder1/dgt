@@ -202,5 +202,5 @@ $back_page_url = $back_page_url ?? './'; ?>
 unset($_SESSION['response']); ?>
 
 <body class="bg-light">
-    <div class="container-fluid px-0 overflow-hidden -pb-4" style="margin-top: 2rem">
+    <div class="container-fluid px-0 overflow-hidden -pb-4 special-emails" style="margin-top: 2rem">
         <div class="page-wrapper">

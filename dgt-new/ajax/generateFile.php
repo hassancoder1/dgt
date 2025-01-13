@@ -22,6 +22,9 @@ $postData = json_encode([
     "margin_right" => "0.015cm",
     "margin_left" => "0.015cm",
     "url" => $pageURL,
+    "title" => 'HASSAN ALI',
+    "author" => 'DAC.DGT.LLC',
+    'producer' => 'PDFEndPoint',
     "sandbox" => true,
     "page_size" => "A4"
 ]);

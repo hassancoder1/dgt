@@ -29,18 +29,18 @@ $bkn = isset($_GET['back-khaata-no']) ? mysqli_real_escape_string($connect, $_GE
                         <div class="input-group">
                             <label for="khaata_no" class="fw-bold">A/C</label>
                             <input type="text" id="khaata_no" class="form-control inputFilter" autofocus
-                                   placeholder="A/c (F2)" value="<?php echo $bkn; ?>">
+                                placeholder="A/c (F2)" value="<?php echo $bkn; ?>">
                         </div>
                         <form id="datesBranchForm">
                             <div class="input-group">
                                 <input type="date" name="start_date" id="start_date" class="form-control"
-                                       value="<?php echo date('Y-m-d'); ?>" onchange="dataBranchDates();">
+                                    value="<?php echo date('Y-m-d'); ?>" onchange="dataBranchDates();">
                                 <input type="date" name="end_date" id="end_date" class="form-control"
-                                       value="<?php echo date('Y-m-d'); ?>" onchange="dataBranchDates();">
+                                    value="<?php echo date('Y-m-d'); ?>" onchange="dataBranchDates();">
                             </div>
                             <div>
                                 <select name="branch_id" id="branch_id" class=" form-select"
-                                        onchange="dataBranchDates();">
+                                    onchange="dataBranchDates();">
                                     <option value="0">All Branch</option>
                                     <?php $branches = fetch('branches');
                                     while ($branch = mysqli_fetch_assoc($branches)) {
@@ -74,19 +74,19 @@ $bkn = isset($_GET['back-khaata-no']) ? mysqli_real_escape_string($connect, $_GE
                 <div class="table-responsive">
                     <table class="table table-sm table-hover">
                         <thead>
-                        <tr class="text-nowrap text-uppercase">
-                            <th>B.</th>
-                            <th>Date</th>
-                            <th>Serial</th>
-                            <th>User</th>
-                            <th>Roz#</th>
-                            <th>Name</th>
-                            <th>No.</th>
-                            <th>Details</th>
-                            <th>Dr.</th>
-                            <th>Cr.</th>
-                            <th>Total</th>
-                        </tr>
+                            <tr class="text-nowrap text-uppercase">
+                                <th>B.</th>
+                                <th>Date</th>
+                                <th>Serial</th>
+                                <th>User</th>
+                                <th>Roz#</th>
+                                <th>Name</th>
+                                <th>No.</th>
+                                <th>Details</th>
+                                <th>Dr.</th>
+                                <th>Cr.</th>
+                                <th>Total</th>
+                            </tr>
                         </thead>
                         <tbody id="ledger-table"></tbody>
                     </table>
@@ -97,7 +97,7 @@ $bkn = isset($_GET['back-khaata-no']) ? mysqli_real_escape_string($connect, $_GE
 </div>
 <?php include("footer.php"); ?>
 <script>
-    $(document).on('keyup', "#khaata_no", function (e) {
+    $(document).on('keyup', "#khaata_no", function(e) {
         fetchKhaata();
     });
     fetchKhaata();
@@ -113,9 +113,11 @@ $bkn = isset($_GET['back-khaata-no']) ? mysqli_real_escape_string($connect, $_GE
         $.ajax({
             url: 'ajax/fetchSingleKhaata.php',
             type: 'post',
-            data: {khaata_no: khaata_no},
+            data: {
+                khaata_no: khaata_no
+            },
             dataType: 'json',
-            success: function (response) {
+            success: function(response) {
                 if (response.success === true) {
                     $("#khaata_id").val(response.messages['khaata_id']);
                     $("#khaata_print_btn").show();
@@ -139,9 +141,11 @@ $bkn = isset($_GET['back-khaata-no']) ? mysqli_real_escape_string($connect, $_GE
                     $.ajax({
                         url: 'ajax/fetchLedgerForm.php',
                         type: 'post',
-                        data: {khaata_id: khaata_id},
+                        data: {
+                            khaata_id: khaata_id
+                        },
                         dataType: 'json',
-                        success: function (data) {
+                        success: function(data) {
                             $("#ledger-table").html(data['tableData']);
                             $("#rows_span").text(data['bottomData'][0]);
                             $("#dr_total_span").text(data['bottomData'][1].toFixed(2));
@@ -216,7 +220,7 @@ $bkn = isset($_GET['back-khaata-no']) ? mysqli_real_escape_string($connect, $_GE
                 end_date: end_date
             },
             dataType: 'json',
-            success: function (data) {
+            success: function(data) {
                 //console.log(data);
                 console.log(data['bottomData']);
                 $("#ledger-table").html(data['tableData']);
