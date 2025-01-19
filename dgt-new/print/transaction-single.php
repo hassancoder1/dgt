@@ -103,9 +103,12 @@ $Ptype = $P['full_advance'] === 'advance' ? strtoupper($P['full_advance']) . " "
                 <option value="contract" <?= $_GET['print_type'] === 'contract' ? 'selected' : ''; ?>>Contract Print</option>
                 <option value="invoice" <?= $_GET['print_type'] === 'invoice' ? 'selected' : ''; ?>>Invoice Print</option>
                 <?php if ($T_details['type'] === 'local') { ?>
-                    <option value="<?= $T_details['p_s_name']; ?>-export-invoice" <?= $PRINTStyle === $T_details['p_s_name'] . '-export-invoice' ? 'selected' : ''; ?>><?= $T['p_s']; ?>.Export Invoice</option>
-                    <option value="<?= $T_details['p_s_name']; ?>-local-invoice" <?= $PRINTStyle === $T_details['p_s_name'] . '-local-invoice' ? 'selected' : ''; ?>><?= $T['p_s']; ?>.Local Invoice</option>
+                    <option value="<?= $T_details['p_s_name']; ?>-export-invoice-non-tax" <?= $PRINTStyle === $T_details['p_s_name'] . '-export-invoice-non-tax' ? 'selected' : ''; ?>><?= $T['p_s']; ?>.Export Invoice Non-Tax</option>
+                    <option value="<?= $T_details['p_s_name']; ?>-local-invoice-non-tax" <?= $PRINTStyle === $T_details['p_s_name'] . '-local-invoice-non-tax' ? 'selected' : ''; ?>><?= $T['p_s']; ?>.Local Invoice Non-Tax</option>
+                    <option value="<?= $T_details['p_s_name']; ?>-export-invoice-tax" <?= $PRINTStyle === $T_details['p_s_name'] . '-export-invoice-tax' ? 'selected' : ''; ?>><?= $T['p_s']; ?>.Export Invoice Tax</option>
+                    <option value="<?= $T_details['p_s_name']; ?>-local-invoice-tax" <?= $PRINTStyle === $T_details['p_s_name'] . '-local-invoice-tax' ? 'selected' : ''; ?>><?= $T['p_s']; ?>.Local Invoice Tax</option>
                 <?php } ?>
+
             </select>
             <div class="dropdown hide-on-print">
                 <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
@@ -267,10 +270,8 @@ $Ptype = $P['full_advance'] === 'advance' ? strtoupper($P['full_advance']) . " "
                             echo '<td><a class="text-dark text-nowrap">' . goodsName($details['goods_id']) . '</a> <br> / ' . $details['size'] . ' / ' . $details['brand'] . '</td>';
                             echo '<td>' . $details['qty_no'] . '<sub>' . $details['qty_name'] . '</sub></td>';
                             echo '<td>' . round($details['total_kgs'], 2) . '</td>';
-                            echo '<td>' . round($details['net_kgs'], 2);
-                            echo '<sub>' . $details['divide'] . '</sub>';
-                            echo '</td>';
-                            echo '<td>' . $details['total'] . '</td>';
+                            echo '<td>' . round($details['net_kgs'], 2) . '</td>';
+                            echo '<td>' . $details['total'] .' /'. $details['divide'] . '</td>';
                             echo '<td>' . $details['rate1'];
                             echo '<sub>' . $details['currency1'] . '</sub></td>';
                             echo '<td>' . round($details['amount'], 2);
@@ -572,7 +573,473 @@ $Ptype = $P['full_advance'] === 'advance' ? strtoupper($P['full_advance']) . " "
                 </div>
             </div>
 
-        <?php } elseif ($PRINTStyle === $T_details['p_s_name'] . '-export-invoice') { ?>
+        <?php } elseif ($PRINTStyle === $T_details['p_s_name'] . '-export-invoice-non-tax') { ?>
+            <div class="d-flex justify-content-between align-items-center mt-2 mb-5">
+                <div class="col-md-4">
+                    <div>
+                        <img src="logo.jpg" style="border-radius: 100%; width:80px;" alt="">
+                    </div>
+                    <span class="fw-bold text-dark"><a href="https://www.dgt.llc" class="text-dark">www.dgt.llc</a> | <a href="mailto:dgtllc@dgt.llc" class="text-dark">Email: dgtllc@dgt.llc</a></span><br>
+                    <span class="fw-bold"> <a href="tel:+971433333" class="text-dark">Office#+971433333</a> / <a href="tel:+971544816664" class="text-dark">M#+971544816664</a></span>
+                </div>
+                <div class="col-md-4">
+                    <h4 class="text-center mb-4 mt-2"><?= ucwords(str_replace('-', ' ', $PRINTStyle)); ?></h4>
+                </div>
+                <div class="col-md-4 text-end">
+                    <strong><?= $T_ps; ?> #:</strong> <?= $T['sr']; ?><br>
+                    <strong>Date:</strong> <?= $T['_date']; ?><br>
+                    <strong>Country:</strong> <?= ucfirst($T['country']); ?><br>
+                    <strong>Branch:</strong> <?= branchName(ucwords($T['branch_id'])); ?><br>
+                    <strong>Status:</strong> <?= $T['transferred']; ?><br>
+                </div>
+            </div>
+
+            <div class="row mb-3 mt-5">
+                <div class="col-6 ">
+                    <h5>Sale</h5>
+                    <div class="hide-on-print">
+                        <span><strong>Acc Name: </strong> <?= $T_details['cr_acc_name']; ?> | <strong>Acc No: </strong> <?= $T_details['cr_acc']; ?></span><br>
+                    </div>
+                    <span><strong>Company:</strong> <?= getCompanyName($T_details['cr_acc_kd_id']) ?? 'Not Found!'; ?></span><br>
+                    <span><?= str_replace(getCompanyName($T_details['cr_acc_kd_id']), '', $T_details['cr_acc_details']); ?></span>
+                </div>
+                <div class="col-6">
+                    <h5>Purchase</h5>
+                    <div class="hide-on-print">
+                        <span><strong>Acc Name: </strong> <?= $T_details['dr_acc_name']; ?> | <strong>Acc No: </strong> <?= $T_details['dr_acc']; ?></span><br>
+                    </div>
+                    <span><strong>Company:</strong> <?= getCompanyName($T_details['dr_acc_kd_id']) ?? 'Not Found!'; ?></span><br>
+                    <span><?= str_replace(getCompanyName($T_details['dr_acc_kd_id']), '', $T_details['dr_acc_details']); ?></span>
+                </div>
+
+            </div>
+
+            <div class="row mb-3 align-items-center">
+                <?php if ($notify_Exists) { ?>
+                    <div class="col-6">
+                        <h5>Notify Party</h5>
+                        <div class="hide-on-print">
+                            <span><strong>Acc Name: </strong> <?= $T_notify['np_acc_name']; ?> | <strong>Acc No: </strong> <?= $T_notify['np_acc']; ?></span><br>
+                        </div>
+                        <span><strong>Company:</strong> <?= getCompanyName($T_notify['np_acc_kd_id']) ?? 'Not Found!'; ?></span><br>
+                        <span><?= str_replace(getCompanyName($T_notify['np_acc_kd_id']), '', $T_notify['np_acc_details']); ?></span>
+                    </div>
+                <?php } ?>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th class="bg-dark text-white">ORIGIN</th>
+                            <?php
+                            if ($T['type'] !== 'local') {
+                                echo '<th class="bg-dark text-white">SHIP</th>';
+                            } else {
+                                echo '<th class="bg-dark text-white">LOCAL Transfer</th>';
+                            }
+                            ?>
+                            <th class="bg-dark text-white">Loading</th>
+                            <th class="bg-dark text-white">Receiving</th>
+                            <th class="bg-dark text-white">Delivery Terms</th>
+                            <th class="bg-dark text-white">Payment Type</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><?= $firstItem['origin']; ?></td>
+                            <?php
+                            if ($T['type'] !== 'local') {
+                                echo '<td>' . strtoupper($T_details['sea_road']) . '</td>';
+                                echo '<td>' . strtoupper($T_details['sea_road_array']['l_port']) . '</td>';
+                                echo '<td>' . strtoupper($T_details['sea_road_array']['r_port']) . '</td>';
+                            } else {
+                                echo '<td>' . strtoupper($T_details['sea_road_array']['route']) . ' Transfer</td>';
+                                echo '<td>' . strtoupper(($T_details['sea_road_array']['loading_company_name'] ?? '')) . '</td>';
+                                echo '<td>' . strtoupper(($T_details['sea_road_array']['receiving_company_name'] ?? '')) . '</td>';
+                            }
+                            echo '<td>' . strtoupper($T['delivery_terms']) . '</td>';
+                            echo '<td>' . $Ptype . '</td>';
+                            ?>
+                </table>
+            </div>
+
+            <?php if (!empty($T_details['items'])) { ?>
+                <table class="table table-hover mb-0 mt-3">
+                    <thead>
+                        <tr class="text-nowrap">
+                            <th>#</th>
+                            <th>GOODS / SIZE / BRAND</th>
+                            <th>QTY</th>
+                            <th>KGs</th>
+                            <th>NET KGs</th>
+                            <th>TOTAL</th>
+                            <th>PRICE</th>
+                            <th>AMOUNT</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        foreach ($items as $details) {
+                            $details_id = $details['id'];
+                            echo '<tr>';
+                            echo '<td>' . $details['sr'] . '</td>';
+                            echo '<td><a class="text-dark text-nowrap">' . goodsName($details['goods_id']) . '</a> <br> / ' . $details['size'] . ' / ' . $details['brand'] . '</td>';
+                            echo '<td>' . $details['qty_no'] . '<sub>' . $details['qty_name'] . '</sub></td>';
+                            echo '<td>' . round($details['total_kgs'], 2) . '</td>';
+                            echo '<td>' . round($details['net_kgs'], 2) . '</td>';
+                            echo '<td>' . $details['total'] .' /'. $details['divide'] . '</td>';
+                            echo '<td>' . $details['rate1'];
+                            echo '<sub>' . $details['currency1'] . '</sub></td>';
+                            echo '<td>' . round($details['amount'], 2);
+                            echo '</td>';
+                            echo '</tr>';
+                            $sr_details++;
+                        }
+                        ?>
+                    </tbody>
+                </table>
+
+                <div class="row mt-4 align-items-center">
+                    <!-- Left Column: Bank Details -->
+                    <div class="col-8">
+                        <div class="fs-6 fw-bold">Third Party BANK Details</div>
+                        <?php
+                        $third_party_bank = json_decode($T['third_party_bank'], true);
+                        if (!empty($third_party_bank)) {
+                            echo '<div class="row">';
+                            echo '<div class="col-12"><b>Account Name: </b>' . (isset($third_party_bank['acc_name']) ? $third_party_bank['acc_name'] : 'N/A') . '</div>';
+                            echo '<div class="col-12"><b>Bank Name: </b>' . (isset($third_party_bank['bank_name']) ? $third_party_bank['bank_name'] : 'N/A') . '</div>';
+                            echo '<div class="col-12"><b>IBAN: </b>' . (isset($third_party_bank['iban']) ? $third_party_bank['iban'] : 'N/A') . '</div>';
+                            echo '<div class="col-12"><b>Branch Code: </b>' . (isset($third_party_bank['branch_code']) ? $third_party_bank['branch_code'] : 'N/A') . '</div>';
+                            echo '<div class="col-12"><b>Location: </b>' . (isset($third_party_bank['city']) ? $third_party_bank['city'] : 'N/A') . ', ' . (isset($third_party_bank['state']) ? $third_party_bank['state'] : 'N/A') . ', ' . (isset($third_party_bank['country']) ? $third_party_bank['country'] : 'N/A') . '</div>';
+                            echo '<div class="col-12"><b>Address: </b>' . (isset($third_party_bank['address']) ? $third_party_bank['address'] : 'N/A') . '</div>';
+                            echo '</div>';
+                        } else {
+                            echo 'Not Found!';
+                        }
+                        ?>
+                    </div>
+                    <?php if ($qty_no > 0) { ?>
+
+                        <!-- Right Column: Totals -->
+                        <div class="col-4 text-end">
+                            <strong>Quantity:</strong> <?= $qty_no; ?><br>
+                            <strong>Total Gross Weight:</strong> <?= round($total_kgs, 2); ?><br>
+                            <strong>Total Net Weight:</strong> <?= round($net_kgs, 2); ?><br>
+                            <strong>Total Amount:</strong> <?= round($amount, 2); ?><br>
+                            <!-- <strong>Sub-Total:</strong> <?= round($amount, 2); ?><br> -->
+                            <?php if ($T['type'] === 'local') { ?>
+                                <strong>Total Tax:</strong> <?= round($total_tax_amount, 2); ?><br>
+                                <strong>Final Amount:</strong> <?= round($total_total_with_tax, 2); ?><br>
+                            <?php } else { ?>
+                                <strong>Final Amount:</strong> <?= round($final_amount, 2); ?><br>
+                            <?php } ?>
+                        </div>
+                    <?php } ?>
+                </div>
+            <?php } ?>
+
+            <div class="text-center my-5 py-2 rounded" style="background-color: #fff3cd;">
+                <span class="fw-bold">Reports and Signatures are on the last page!</span>
+            </div>
+
+            <div class="page-break"></div>
+            <?php if (!empty($T['reports']) && $T['reports'] !== '[]') { ?>
+                <div class="border-box">
+                    <h6 class="section-title">Reports Summary</h6>
+                    <div style="margin-top: 1rem;">
+                        <?php
+                        $purchase_reports = json_decode($T['reports'], true);
+                        $company_details = '';
+                        if (!empty($purchase_reports)) {
+                            foreach ($purchase_reports as $key => $value) {
+                                $report_title = ucwords(str_replace('_', ' ', $key));
+                                echo '<h6>' . htmlspecialchars($report_title) . ':</h6>';
+                                echo '<div style="margin-left:20px; margin-top:-6px; margin-bottom:3px;">';
+                                echo nl2br(htmlspecialchars($value));
+                                if ($key == 'company_details') {
+                                    $company_details = nl2br(htmlspecialchars($value));
+                                }
+                                echo '</div>';
+                            }
+                        } else {
+                            echo '<p>No Reports Found!</p>';
+                        }
+                        ?>
+                    </div>
+                </div>
+            <?php } else { ?>
+                <div class="border-box">
+                    <h6 class="section-title">Reports Summary</h6>
+                    <p style="margin-top: 1rem;">No Reports Found!</p>
+                </div>
+            <?php } ?>
+            <form action="?t_id=<?= $T['id']; ?>&timestamp=<?= $_GET['timestamp']; ?>&<?= $print_type; ?>" method="POST">
+                <input type="hidden" name="p_id_hidden" value="<?= $T['id']; ?>">
+                <input type="text" id="inputBox" name="inputBox" class="form-control form control-sm d-none" required>
+                <button type="submit" name="companyReport" onclick="document.querySelector('#inputBox').classList.toggle('d-none');" class="btn btn-outline-dark mt-3 hide-on-print" style="padding:2px 4px; font-size:12px;">Company Report</button>
+            </form>
+
+            <br><br><br><br><br><br>
+            <!-- Totals and Signature -->
+            <div class="d-flex align-items-center text-center justify-content-between mt-4 px-3 pb-3">
+                <div>
+                    <div class="signature-box">
+                        <span>Buyer Signature</span><br>
+                        <b><?= getCompanyName($T_details['dr_acc_kd_id']) ?? 'Not Found!'; ?></b>
+                    </div>
+                </div>
+                <?php if ($notify_Exists) { ?>
+                    <div>
+                        <div class="signature-box">
+                            <span>Notify Party Signature</span><br>
+                            <b><?= getCompanyName($T_notify['np_acc_kd_id']) ?? 'Not Found!'; ?></b>
+                        </div>
+                    </div>
+                <?php } ?>
+                <div>
+                    <div class="signature-box">
+                        <span>Seller Signature</span><br>
+                        <b><?= getCompanyName($T_details['cr_acc_kd_id']) ?? 'Not Found!'; ?></b>
+                    </div>
+                </div>
+            </div>
+        <?php } elseif ($PRINTStyle === $T_details['p_s_name'] . '-local-invoice-non-tax') { ?>
+            <div class="d-flex justify-content-between align-items-center mt-2 mb-5">
+                <div class="col-md-4">
+                    <div>
+                        <img src="logo.jpg" style="border-radius: 100%; width:80px;" alt="">
+                    </div>
+                    <span class="fw-bold text-dark"><a href="https://www.dgt.llc" class="text-dark">www.dgt.llc</a> | <a href="mailto:dgtllc@dgt.llc" class="text-dark">Email: dgtllc@dgt.llc</a></span><br>
+                    <span class="fw-bold"> <a href="tel:+971433333" class="text-dark">Office#+971433333</a> / <a href="tel:+971544816664" class="text-dark">M#+971544816664</a></span>
+                </div>
+                <div class="col-md-4">
+                    <h4 class="text-center mb-4 mt-2"><?= ucwords(str_replace('-', ' ', $PRINTStyle)); ?></h4>
+                </div>
+                <div class="col-md-4 text-end">
+                    <strong><?= $T_ps; ?> #:</strong> <?= $T['sr']; ?><br>
+                    <strong>Date:</strong> <?= $T['_date']; ?><br>
+                    <strong>Country:</strong> <?= ucfirst($T['country']); ?><br>
+                    <strong>Branch:</strong> <?= branchName(ucwords($T['branch_id'])); ?><br>
+                    <strong>Status:</strong> <?= $T['transferred']; ?><br>
+                </div>
+            </div>
+
+            <div class="row mb-3 mt-5">
+                <div class="col-6 ">
+                    <h5>Sale</h5>
+                    <div class="hide-on-print">
+                        <span><strong>Acc Name: </strong> <?= $T_details['cr_acc_name']; ?> | <strong>Acc No: </strong> <?= $T_details['cr_acc']; ?></span><br>
+                    </div>
+                    <span><strong>Company:</strong> <?= getCompanyName($T_details['cr_acc_kd_id']) ?? 'Not Found!'; ?></span><br>
+                    <span><?= str_replace(getCompanyName($T_details['cr_acc_kd_id']), '', $T_details['cr_acc_details']); ?></span>
+                </div>
+                <div class="col-6">
+                    <h5>Purchase</h5>
+                    <div class="hide-on-print">
+                        <span><strong>Acc Name: </strong> <?= $T_details['dr_acc_name']; ?> | <strong>Acc No: </strong> <?= $T_details['dr_acc']; ?></span><br>
+                    </div>
+                    <span><strong>Company:</strong> <?= getCompanyName($T_details['dr_acc_kd_id']) ?? 'Not Found!'; ?></span><br>
+                    <span><?= str_replace(getCompanyName($T_details['dr_acc_kd_id']), '', $T_details['dr_acc_details']); ?></span>
+                </div>
+
+            </div>
+
+            <div class="row mb-3 align-items-center">
+                <?php if ($notify_Exists) { ?>
+                    <div class="col-6">
+                        <h5>Notify Party</h5>
+                        <div class="hide-on-print">
+                            <span><strong>Acc Name: </strong> <?= $T_notify['np_acc_name']; ?> | <strong>Acc No: </strong> <?= $T_notify['np_acc']; ?></span><br>
+                        </div>
+                        <span><strong>Company:</strong> <?= getCompanyName($T_notify['np_acc_kd_id']) ?? 'Not Found!'; ?></span><br>
+                        <span><?= str_replace(getCompanyName($T_notify['np_acc_kd_id']), '', $T_notify['np_acc_details']); ?></span>
+                    </div>
+                <?php } ?>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th class="bg-dark text-white">ORIGIN</th>
+                            <?php
+                            if ($T['type'] !== 'local') {
+                                echo '<th class="bg-dark text-white">SHIP</th>';
+                            } else {
+                                echo '<th class="bg-dark text-white">LOCAL Transfer</th>';
+                            }
+                            ?>
+                            <th class="bg-dark text-white">Loading</th>
+                            <th class="bg-dark text-white">Receiving</th>
+                            <th class="bg-dark text-white">Delivery Terms</th>
+                            <th class="bg-dark text-white">Payment Type</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><?= $firstItem['origin']; ?></td>
+                            <?php
+                            if ($T['type'] !== 'local') {
+                                echo '<td>' . strtoupper($T_details['sea_road']) . '</td>';
+                                echo '<td>' . strtoupper($T_details['sea_road_array']['l_port']) . '</td>';
+                                echo '<td>' . strtoupper($T_details['sea_road_array']['r_port']) . '</td>';
+                            } else {
+                                echo '<td>' . strtoupper($T_details['sea_road_array']['route']) . ' Transfer</td>';
+                                echo '<td>' . strtoupper(($T_details['sea_road_array']['loading_company_name'] ?? '')) . '</td>';
+                                echo '<td>' . strtoupper(($T_details['sea_road_array']['receiving_company_name'] ?? '')) . '</td>';
+                            }
+                            echo '<td>' . strtoupper($T['delivery_terms']) . '</td>';
+                            echo '<td>' . $Ptype . '</td>';
+                            ?>
+                </table>
+            </div>
+
+            <?php if (!empty($T_details['items'])) { ?>
+                <table class="table table-hover mb-0 mt-3">
+                    <thead>
+                        <tr class="text-nowrap">
+                            <th>#</th>
+                            <th>GOODS / SIZE / BRAND</th>
+                            <th>QTY</th>
+                            <th>KGs</th>
+                            <th>NET KGs</th>
+                            <th>TOTAL</th>
+                            <th>PRICE</th>
+                            <th>AMOUNT</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        foreach ($items as $details) {
+                            $details_id = $details['id'];
+                            echo '<tr>';
+                            echo '<td>' . $details['sr'] . '</td>';
+                            echo '<td><a class="text-dark text-nowrap">' . goodsName($details['goods_id']) . '</a> <br> / ' . $details['size'] . ' / ' . $details['brand'] . '</td>';
+                            echo '<td>' . $details['qty_no'] . '<sub>' . $details['qty_name'] . '</sub></td>';
+                            echo '<td>' . round($details['total_kgs'], 2) . '</td>';
+                            echo '<td>' . round($details['net_kgs'], 2) . '</td>';
+                            echo '<td>' . $details['total'] .' /'. $details['divide'] . '</td>';
+                            echo '<td>' . $details['rate1'];
+                            echo '<sub>' . $details['currency1'] . '</sub></td>';
+                            echo '<td>' . round($details['amount'], 2);
+                            echo '</td>';
+                            echo '</tr>';
+                            $sr_details++;
+                        }
+                        ?>
+                    </tbody>
+                </table>
+
+                <div class="row mt-4 align-items-center">
+                    <!-- Left Column: Bank Details -->
+                    <div class="col-8">
+                        <div class="fs-6 fw-bold">Third Party BANK Details</div>
+                        <?php
+                        $third_party_bank = json_decode($T['third_party_bank'], true);
+                        if (!empty($third_party_bank)) {
+                            echo '<div class="row">';
+                            echo '<div class="col-12"><b>Account Name: </b>' . (isset($third_party_bank['acc_name']) ? $third_party_bank['acc_name'] : 'N/A') . '</div>';
+                            echo '<div class="col-12"><b>Bank Name: </b>' . (isset($third_party_bank['bank_name']) ? $third_party_bank['bank_name'] : 'N/A') . '</div>';
+                            echo '<div class="col-12"><b>IBAN: </b>' . (isset($third_party_bank['iban']) ? $third_party_bank['iban'] : 'N/A') . '</div>';
+                            echo '<div class="col-12"><b>Branch Code: </b>' . (isset($third_party_bank['branch_code']) ? $third_party_bank['branch_code'] : 'N/A') . '</div>';
+                            echo '<div class="col-12"><b>Location: </b>' . (isset($third_party_bank['city']) ? $third_party_bank['city'] : 'N/A') . ', ' . (isset($third_party_bank['state']) ? $third_party_bank['state'] : 'N/A') . ', ' . (isset($third_party_bank['country']) ? $third_party_bank['country'] : 'N/A') . '</div>';
+                            echo '<div class="col-12"><b>Address: </b>' . (isset($third_party_bank['address']) ? $third_party_bank['address'] : 'N/A') . '</div>';
+                            echo '</div>';
+                        } else {
+                            echo 'Not Found!';
+                        }
+                        ?>
+                    </div>
+                    <?php if ($qty_no > 0) { ?>
+
+                        <!-- Right Column: Totals -->
+                        <div class="col-4 text-end">
+                            <strong>Quantity:</strong> <?= $qty_no; ?><br>
+                            <strong>Total Gross Weight:</strong> <?= round($total_kgs, 2); ?><br>
+                            <strong>Total Net Weight:</strong> <?= round($net_kgs, 2); ?><br>
+                            <strong>Total Amount:</strong> <?= round($amount, 2); ?><br>
+                            <!-- <strong>Sub-Total:</strong> <?= round($amount, 2); ?><br> -->
+                            <?php if ($T['type'] === 'local') { ?>
+                                <strong>Total Tax:</strong> <?= round($total_tax_amount, 2); ?><br>
+                                <strong>Final Amount:</strong> <?= round($total_total_with_tax, 2); ?><br>
+                            <?php } else { ?>
+                                <strong>Final Amount:</strong> <?= round($final_amount, 2); ?><br>
+                            <?php } ?>
+                        </div>
+                    <?php } ?>
+                </div>
+            <?php } ?>
+
+            <div class="text-center my-5 py-2 rounded" style="background-color: #fff3cd;">
+                <span class="fw-bold">Reports and Signatures are on the last page!</span>
+            </div>
+
+            <div class="page-break"></div>
+            <?php if (!empty($T['reports']) && $T['reports'] !== '[]') { ?>
+                <div class="border-box">
+                    <h6 class="section-title">Reports Summary</h6>
+                    <div style="margin-top: 1rem;">
+                        <?php
+                        $purchase_reports = json_decode($T['reports'], true);
+                        $company_details = '';
+                        if (!empty($purchase_reports)) {
+                            foreach ($purchase_reports as $key => $value) {
+                                $report_title = ucwords(str_replace('_', ' ', $key));
+                                echo '<h6>' . htmlspecialchars($report_title) . ':</h6>';
+                                echo '<div style="margin-left:20px; margin-top:-6px; margin-bottom:3px;">';
+                                echo nl2br(htmlspecialchars($value));
+                                if ($key == 'company_details') {
+                                    $company_details = nl2br(htmlspecialchars($value));
+                                }
+                                echo '</div>';
+                            }
+                        } else {
+                            echo '<p>No Reports Found!</p>';
+                        }
+                        ?>
+                    </div>
+                </div>
+            <?php } else { ?>
+                <div class="border-box">
+                    <h6 class="section-title">Reports Summary</h6>
+                    <p style="margin-top: 1rem;">No Reports Found!</p>
+                </div>
+            <?php } ?>
+            <form action="?t_id=<?= $T['id']; ?>&timestamp=<?= $_GET['timestamp']; ?>&<?= $print_type; ?>" method="POST">
+                <input type="hidden" name="p_id_hidden" value="<?= $T['id']; ?>">
+                <input type="text" id="inputBox" name="inputBox" class="form-control form control-sm d-none" required>
+                <button type="submit" name="companyReport" onclick="document.querySelector('#inputBox').classList.toggle('d-none');" class="btn btn-outline-dark mt-3 hide-on-print" style="padding:2px 4px; font-size:12px;">Company Report</button>
+            </form>
+
+            <br><br><br><br><br><br>
+            <!-- Totals and Signature -->
+            <div class="d-flex align-items-center text-center justify-content-between mt-4 px-3 pb-3">
+                <div>
+                    <div class="signature-box">
+                        <span>Buyer Signature</span><br>
+                        <b><?= getCompanyName($T_details['dr_acc_kd_id']) ?? 'Not Found!'; ?></b>
+                    </div>
+                </div>
+                <?php if ($notify_Exists) { ?>
+                    <div>
+                        <div class="signature-box">
+                            <span>Notify Party Signature</span><br>
+                            <b><?= getCompanyName($T_notify['np_acc_kd_id']) ?? 'Not Found!'; ?></b>
+                        </div>
+                    </div>
+                <?php } ?>
+                <div>
+                    <div class="signature-box">
+                        <span>Seller Signature</span><br>
+                        <b><?= getCompanyName($T_details['cr_acc_kd_id']) ?? 'Not Found!'; ?></b>
+                    </div>
+                </div>
+            </div>
+            <?php } elseif ($PRINTStyle === $T_details['p_s_name'] . '-export-invoice-tax') { ?>
             <div class="d-flex justify-content-between align-items-center mt-2 mb-5">
                 <div class="col-md-4">
                     <div>
@@ -694,10 +1161,8 @@ $Ptype = $P['full_advance'] === 'advance' ? strtoupper($P['full_advance']) . " "
                             echo '<td><a class="text-dark text-nowrap">' . goodsName($details['goods_id']) . '</a> <br> / ' . $details['size'] . ' / ' . $details['brand'] . '</td>';
                             echo '<td>' . $details['qty_no'] . '<sub>' . $details['qty_name'] . '</sub></td>';
                             echo '<td>' . round($details['total_kgs'], 2) . '</td>';
-                            echo '<td>' . round($details['net_kgs'], 2);
-                            echo '<sub>' . $details['divide'] . '</sub>';
-                            echo '</td>';
-                            echo '<td>' . $details['total'] . '</td>';
+                            echo '<td>' . round($details['net_kgs'], 2) . '</td>';
+                            echo '<td>' . $details['total'] .' /'. $details['divide'] . '</td>';
                             echo '<td>' . $details['rate1'];
                             echo '<sub>' . $details['currency1'] . '</sub></td>';
                             echo '<td>' . round($details['amount'], 2);
@@ -823,7 +1288,7 @@ $Ptype = $P['full_advance'] === 'advance' ? strtoupper($P['full_advance']) . " "
                     </div>
                 </div>
             </div>
-        <?php } elseif ($PRINTStyle === $T_details['p_s_name'] . '-local-invoice') { ?>
+        <?php } elseif ($PRINTStyle === $T_details['p_s_name'] . '-local-invoice-tax') { ?>
             <div class="d-flex justify-content-between align-items-center mt-2 mb-5">
                 <div class="col-md-4">
                     <div>
@@ -945,10 +1410,8 @@ $Ptype = $P['full_advance'] === 'advance' ? strtoupper($P['full_advance']) . " "
                             echo '<td><a class="text-dark text-nowrap">' . goodsName($details['goods_id']) . '</a> <br> / ' . $details['size'] . ' / ' . $details['brand'] . '</td>';
                             echo '<td>' . $details['qty_no'] . '<sub>' . $details['qty_name'] . '</sub></td>';
                             echo '<td>' . round($details['total_kgs'], 2) . '</td>';
-                            echo '<td>' . round($details['net_kgs'], 2);
-                            echo '<sub>' . $details['divide'] . '</sub>';
-                            echo '</td>';
-                            echo '<td>' . $details['total'] . '</td>';
+                            echo '<td>' . round($details['net_kgs'], 2) . '</td>';
+                            echo '<td>' . $details['total'] .' /'. $details['divide'] . '</td>';
                             echo '<td>' . $details['rate1'];
                             echo '<sub>' . $details['currency1'] . '</sub></td>';
                             echo '<td>' . round($details['amount'], 2);
@@ -1074,7 +1537,7 @@ $Ptype = $P['full_advance'] === 'advance' ? strtoupper($P['full_advance']) . " "
                     </div>
                 </div>
             </div>
-        <?php } ?>
+            <?php } ?>
     </div>
     <br><br>
     <div class="position-fixed top-0 start-0 w-100 h-100 d-none justify-content-center align-items-center" style="background: rgba(25, 26, 25, 0.4); z-index: 60;" id="processingScreen">

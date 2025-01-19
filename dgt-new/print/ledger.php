@@ -23,6 +23,8 @@ if (
     $dates = $start_date != '' && $end_date != '' ? '<div class="text-muted"><i class="fas fa-calendar-alt me-2"></i>' . my_date($start_date) . ' - ' . my_date($end_date) . '</div>' : '';
     $branchName = $branch_id > 0 ? branchName($branch_id) : " All ";
     $records = mysqli_query($connect, $sql);
+
+    $print_url = 'print/'.$this_url;
 ?>
     <!DOCTYPE html>
     <html lang="en">
@@ -34,9 +36,15 @@ if (
         <title><?php echo 'Ledger_' . my_date(date('Y-m-d')); ?></title>
         <link href="../assets/bs/css/bootstrap.min.css" rel="stylesheet">
         <link href="../assets/css/virtual-select.min.css" rel="stylesheet">
-        <link href="../assets/fa/css/all.min.css" rel="stylesheet" />
+        <!-- <link href="../assets/fa/css/all.min.css" rel="stylesheet" /> -->
+        <link href="../assets/fonts/lexend.css" rel="stylesheet" />
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/js/all.min.js" integrity="sha512-b+nQTCdtTBIRIbraqNEwsjB6UvL3UEMkXnhzd8awtCYh0Kcsjl9uEgwVFVbhoj3uu1DO1ZMacNvLoyJJiNfcvg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
         <link rel="shortcut icon" href="../assets/images/favicon.jpg" />
         <style>
+            * {
+                font-family: 'Lexend', sans-serif;
+            }
+
             body {
                 background-color: #f8f9fa;
                 font-size: 12px;
@@ -45,7 +53,7 @@ if (
             .ledger-header {
                 background: white;
                 border-radius: 10px;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                /* box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); */
                 padding: 20px;
                 margin-bottom: 20px;
             }
@@ -53,7 +61,7 @@ if (
             .table {
                 background: white;
                 border-radius: 10px;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                /* box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); */
             }
 
             .table thead th {
@@ -77,11 +85,11 @@ if (
                 background: white;
                 border-radius: 8px;
                 padding: 15px;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                /* box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); */
             }
 
             @media print {
-                .d-print-none {
+                .hide-on-print {
                     display: none !important;
                 }
 
@@ -92,7 +100,7 @@ if (
                 .container {
                     width: 100vw !important;
                     max-width: 100vw !important;
-                    padding: 0 !important;
+                    padding: 0 5px !important;
                     margin: 0 auto;
                 }
             }
@@ -104,10 +112,51 @@ if (
             <div class="row justify-content-center">
                 <div class="col-12 bg-white border">
                     <div class="px-3 py-2 rounded">
-                        <img src="../assets/images/logo.png" alt="logo" class="img-fluid my-3 mx-auto" width="120">
+                        <?php $_GET['print_type'] = isset($_GET['print_type']) ? $_GET['print_type'] : 'sm'; ?>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <img src="../assets/images/logo.png" alt="logo" class="img-fluid my-3" width="120">
+                            <div class="d-flex justify-content-center gap-2 align-items-center">
+                                <select name="print_type" id="print_type" class="form-select form-select-sm hide-on-print">
+                                    <option value="sm" <?= $_GET['print_type'] === 'sm' ? 'selected' : ''; ?>>Small</option>
+                                    <option value="lg" <?= $_GET['print_type'] === 'lg' ? 'selected' : ''; ?>>Large</option>
+                                </select>
+                                <div class="dropdown hide-on-print">
+                                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fa fa-print"></i>
+                                    </button>
+                                    <ul class="dropdown-menu mt-2" aria-labelledby="dropdownMenuButton">
+                                        <li>
+                                            <a class="dropdown-item" href="javascript:void(0);" onclick="openAndPrint('<?= str_replace('print/', '', $print_url); ?>')">
+                                                <i class="fas text-secondary fa-print me-2"></i> Print
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="#" onclick="getFileThrough('pdf', '<?= $print_url; ?>')">
+                                                <i id="pdfIcon" class="fas text-secondary fa-file-pdf me-2"></i> Download PDF
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="#" onclick="getFileThrough('word', '<?= $print_url; ?>')">
+                                                <i id="wordIcon" class="fas text-secondary fa-file-word me-2"></i> Download Word File
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="#" onclick="getFileThrough('whatsapp', '<?= $print_url; ?>')">
+                                                <i id="whatsappIcon" class="fa text-secondary fa-whatsapp me-2"></i> Send in WhatsApp
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="#" onclick="getFileThrough('email', '<?= $print_url; ?>')">
+                                                <i id="emailIcon" class="fas text-secondary fa-envelope me-2"></i> Send In Email
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
                         <div class="row">
                             <div class="col-4">
-                                <div class="border px-3 py-2 rounded">
+                                <div class="px-3 py-2">
                                     <h6 class="mb-2">Branch Details</h6>
                                     <div><strong>Branch:</strong> <?php echo $branchName; ?></div>
                                     <div><strong>Category:</strong> <?php echo catName($khaata['cat_id']); ?></div>
@@ -116,7 +165,7 @@ if (
                                 </div>
                             </div>
                             <div class="col-4">
-                                <div class="border px-3 py-2 rounded">
+                                <div class="px-3 py-2">
                                     <h6 class="mb-2">Financial Summary</h6>
                                     <div><strong>Dr:</strong> <span id="dr_total_span" class="text-success"></span></div>
                                     <div><strong>Cr:</strong> <span id="cr_total_span" class="text-danger"></span></div>
@@ -124,7 +173,7 @@ if (
                                 </div>
                             </div>
                             <div class="col-4">
-                                <div class="border px-3 py-2 rounded">
+                                <div class="px-3 py-2">
                                     <h6 class="mb-2">Account Details</h6>
                                     <div><strong>A/C:</strong> <?php echo $khaata['khaata_no']; ?></div>
                                     <div><strong>Name:</strong> <?php echo $khaata['khaata_name']; ?></div>
@@ -135,25 +184,25 @@ if (
                     </div>
 
 
-                    <table class="table table-bordered my-3">
+                    <table class="table my-3">
                         <thead>
-                            <tr class="border">
+                            <tr class="border text-nowrap">
                                 <?php if ($print_type == 'lg'): ?>
-                                    <th class="border"><i class="fas fa-building me-1"></i>Branch</th>
+                                    <th class="border text-nowrap"><i class="fas fa-building me-1"></i>Branch</th>
                                 <?php endif; ?>
-                                <th class="border"><i class="fas fa-calendar me-1"></i>Date</th>
-                                <th class="border"><i class="fas fa-hashtag me-1"></i>Serial</th>
+                                <th class="border text-nowrap"><i class="fas fa-calendar me-1"></i>Date</th>
+                                <th class="border text-nowrap"><i class="fas fa-hashtag me-1"></i>Serial</th>
                                 <?php if ($print_type == 'lg'): ?>
-                                    <th class="border"><i class="fas fa-user me-1"></i>User</th>
-                                    <th class="border"><i class="fas fa-file-alt me-1"></i>Roz#</th>
+                                    <th class="border text-nowrap"><i class="fas fa-user me-1"></i>User</th>
+                                    <th class="border text-nowrap"><i class="fas fa-file-alt me-1"></i>Roz#</th>
                                 <?php endif; ?>
-                                <th class="border"><i class="fas fa-user me-1"></i>Name</th>
-                                <th class="border"><i class="fas fa-list-ol me-1"></i>No</th>
-                                <th class="border"><i class="fas fa-info-circle me-1"></i>Details</th>
-                                <th class="border text-end"><i class="fas fa-arrow-up me-1"></i>Dr.</th>
-                                <th class="border text-end"><i class="fas fa-arrow-down me-1"></i>Cr.</th>
-                                <th class="border text-center">/</th>
-                                <th class="border text-end"><i class="fas fa-balance-scale me-1"></i>Balance</th>
+                                <th class="border text-nowrap"><i class="fas fa-exchange me-1"></i>Name</th>
+                                <th class="border text-nowrap"><i class="fas fa-list-ol me-1"></i>No</th>
+                                <th class="border text-nowrap"><i class="fas fa-info-circle me-1"></i>Details</th>
+                                <th class="border text-nowrap text-end"><i class="fas fa-arrow-up me-1"></i>Dr.</th>
+                                <th class="border text-nowrap text-end"><i class="fas fa-arrow-down me-1"></i>Cr.</th>
+                                <th class="border text-nowrap text-center">/</th>
+                                <th class="border text-nowrap text-end"><i class="fas fa-balance-scale me-1"></i>Balance</th>
                             </tr>
                         </thead>
                         <tbody class="border">
@@ -178,7 +227,7 @@ if (
                                         <?php endif; ?>
                                         <td class="border"><?php echo $datum["r_name"]; ?></td>
                                         <td class="border"><?php echo $datum['r_no']; ?></td>
-                                        <td class="border"><?php echo $datum["details"]; ?></td>
+                                        <td class="border" style="font-size: 10px; font-weight:600;"><?php echo $datum["details"]; ?></td>
                                         <?php
                                         if ($datum['dr_cr'] == "dr") {
                                             $dr = $datum['amount'];
@@ -227,30 +276,12 @@ if (
             <input type="hidden" id="dr_total" value="<?php echo $dr_total; ?>">
             <input type="hidden" id="cr_total" value="<?php echo $cr_total; ?>">
         </div>
-
-        <div class="d-print-none position-fixed start-0 top-50 translate-middle-y ms-3">
-            <div class="print-controls">
-                <div class="d-grid gap-2">
-                    <a href="../ledger?back-khaata-no=<?php echo $khaata['khaata_no']; ?>"
-                        class="btn btn-outline-secondary btn-sm">
-                        <i class="fas fa-arrow-left me-1"></i> Back
-                    </a>
-                    <button onclick="window.print();" class="btn btn-primary btn-sm">
-                        <i class="fas fa-print me-1"></i> Print
-                    </button>
-                    <select class="form-select form-select-sm mt-2" id="print_type" name="print_type">
-                        <?php
-                        $print_array = array(array('Full Print', 'lg'), array('Small Print', 'sm'));
-                        foreach ($print_array as $item) {
-                            $sel = $item[1] == $print_type ? 'selected' : '';
-                            echo '<option ' . $sel . ' value="' . $item[1] . '">' . ucfirst($item[0]) . '</option>';
-                        }
-                        ?>
-                    </select>
-                </div>
+        <br><br>
+        <div class="position-fixed top-0 start-0 w-100 h-100 d-none justify-content-center align-items-center" style="background: rgba(25, 26, 25, 0.4); z-index: 60;" id="processingScreen">
+            <div class="spinner-border text-white" style="width: 5rem; height: 5rem;" role="status">
+                <span class="visually-hidden">Loading...</span>
             </div>
         </div>
-
         <script src="../assets/js/jquery-3.7.1.min.js"></script>
         <script src="../assets/bs/js/bootstrap.bundle.min.js"></script>
         <script src="../assets/js/virtual-select.min.js"></script>
@@ -287,6 +318,95 @@ if (
                     window.location.href = '<?php echo $this_url; ?>&print_type=' + this.value;
                 });
             });
+
+            function openAndPrint(url) {
+                const newWindow = window.open(
+                    url,
+                    '_blank',
+                    'toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=' + screen.width + ',height=' + screen.height
+                );
+                newWindow.onload = () => {
+                    newWindow.print();
+                };
+            }
+
+            function getFileThrough(fileType, url) {
+                $('#processingScreen').toggleClass('d-none d-flex');
+                let formattedFileName = url
+                    .split('?')[0] // Remove query parameters and their values
+                    .replace(/^print\//, '')
+                    .replace(/-main|-print$/, '')
+                    .trim();
+                let formattedName = formattedFileName
+                    .replace(/-/g, ' ')
+                    .split(' ')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                    .join(' ');
+
+                $.ajax({
+                    url: `${window.location.protocol}//${window.location.host}/ajax/generateFile.php`,
+                    type: 'post',
+                    data: {
+                        filetype: fileType,
+                        pageURL: url
+                    },
+                    success: function(response) {
+                        $('#processingScreen').toggleClass('d-none d-flex');
+                        try {
+                            const result = JSON.parse(response);
+                            if (result.fileURL) {
+                                const fileURL = result.fileURL;
+                                if (fileType === 'pdf' || fileType === 'word') {
+                                    fetch(fileURL)
+                                        .then(response => {
+                                            if (!response.ok) {
+                                                throw new Error(`HTTP error! Status: ${response.status}`);
+                                            }
+                                            return response.blob();
+                                        })
+                                        .then(blob => {
+                                            const currentTime = Date.now();
+                                            const fileExtension = fileType === 'pdf' ? 'pdf' : 'docx';
+                                            const fileName = `Print-${formattedFileName}${currentTime}.${fileExtension}`;
+                                            const downloadLink = document.createElement('a');
+                                            const objectURL = URL.createObjectURL(blob);
+                                            downloadLink.href = objectURL;
+                                            downloadLink.download = fileName;
+                                            document.body.appendChild(downloadLink);
+                                            downloadLink.click();
+                                            URL.revokeObjectURL(objectURL);
+                                            document.body.removeChild(downloadLink);
+                                        })
+                                        .catch(error => {
+                                            console.error('Error downloading file:', error);
+                                            alert('Failed to download the file.');
+                                        });
+                                } else if (fileType === 'whatsapp') {
+                                    const whatsappURL = `https://wa.me/?text=Your+file+${encodeURIComponent(formattedName)}+is+ready!+Download+it+here:+${encodeURIComponent(fileURL)}`;
+                                    window.open(whatsappURL, '_blank');
+                                } else if (fileType === 'email') {
+                                    const emailURL = `/emails?page=compose&file-url=${fileURL}&file-name=${formattedFileName}&page-name=${formattedName}`;
+                                    window.open(emailURL, '_blank');
+                                }
+
+                            } else {
+                                alert('Failed to retrieve the file URL.');
+                                console.log(result.error);
+                            }
+                        } catch (e) {
+                            console.error('Error parsing response:', e);
+                            alert('Invalid response format received from the server.');
+                        }
+                    },
+                    error: function(jqXHR, textStatus, errorThrown) {
+                        // Hide the processing screen
+                        $('#processingScreen').toggleClass('d-none d-flex');
+
+                        console.error("AJAX Error: ", textStatus, errorThrown);
+                        alert('An error occurred while processing your request. Please refresh and try again.');
+                    }
+                });
+            }
         </script>
     </body>
 

@@ -1,15 +1,15 @@
 <?php
 $page_title = 'FBill Payment';
-$pageURL = 'sale-final';
+$pageURL = 'purchase-final';
 include("header.php");
 $remove = $size = $brand = $goods_name = $start_print = $end_print = $is_transferred = $s_khaata_id = '';
 $is_search = false;
 global $connect;
-$sql = "SELECT * FROM `transactions` WHERE p_s='s'";
+$sql = "SELECT * FROM `transactions`";
 $conditions = []; // Store all conditions here
 $print_filters = [];
 if ($_GET) {
-    $remove = removeFilter('sale-final');
+    $remove = removeFilter('purchase-final');
     $is_search = true;
 
     // Filter by goods_name
@@ -54,9 +54,10 @@ if ($_GET) {
 
 // If there are any conditions, concatenate them with 'AND'
 if (count($conditions) > 0) {
-    $sql .= ' AND ' . implode(' AND ', $conditions);
+    $sql .= ' WHERE ' . implode(' AND ', $conditions);
+} else {
+    $sql .= " WHERE locked = '1' AND transfer_level >= '6'";
 }
-$sql .= " AND locked IN ('1', '2')  AND transfer_level >= '6'";
 
 $sql .= " ORDER BY id DESC";
 if (count($print_filters) > 0) {
@@ -154,7 +155,7 @@ $mypageURL = $pageURL;
         <div class="d-flex gap-1">
             <?php // echo searchInput('1', 'form-control form-control-sm '); 
             ?>
-            <?php echo addNew('sale-add', '', 'btn-sm'); ?>
+            <?php echo addNew('purchase-add', '', 'btn-sm'); ?>
             <form action="print/<?php echo $mypageURL; ?>" target="_blank" method="get">
                 <input type="hidden" name="start" value="<?php echo $start_print; ?>">
                 <input type="hidden" name="end" value="<?php echo $end_print; ?>">
@@ -259,23 +260,23 @@ $mypageURL = $pageURL;
                                 }
 
                                 // $rowColor = $locked == 0 ? ($is_doc == 0 ? ' text-danger ' : ' text-warning ') : '';
-                                $trans_from = ucwords(str_replace('sale-', '', $purchase['from']));
+                                $trans_from = ucwords(str_replace('purchase-', '', $purchase['from']));
                                 $type = '';
                                 $my_amount = '';
-                                if ($purchase['from'] === 'sale-advance') {
+                                if ($purchase['from'] === 'purchase-advance') {
                                     $type = 'adv';
                                     $my_amount = $payments['partial_amount1'];
-                                } elseif ($purchase['from'] === 'sale-remaining') {
+                                } elseif ($purchase['from'] === 'purchase-remaining') {
                                     $type = 'rem';
                                     $my_amount = $payments['partial_amount2'];
-                                } elseif ($purchase['from'] === 'sale-credit') {
+                                } elseif ($purchase['from'] === 'purchase-credit') {
                                     $type = 'crdt';
                                     $my_amount = $payments['p_total_amount'];
                                 } elseif ($purchase['from'] === 'bill-transfer') {
                                     $type = '';
                                     $trans_from = "Bill Transfer";
                                 }
-                                if ($purchase['from'] !== 'bill-transfer' && $purchase['from'] !== 'sale-commission') {
+                                if ($purchase['from'] !== 'bill-transfer') {
                                     $paid_final = purchaseSpecificData($id, $type . '_paid_total', 'amount');
                                     $paid_final = (float)$paid_final;
                                     $bal = (float)$my_amount - $paid_final;
@@ -294,28 +295,19 @@ $mypageURL = $pageURL;
                                 } else {
                                     $rowColor = '';
                                     $bal = (int)$payments['p_total_amount'] - (int)$payments['p_total_amount'];
-                                    if ($purchase['from'] === 'sale-commission') {
-                                        $com_items = fetch('commission_items', ['sale_id' => $id]);
-                                        $totalPaid = $totalAmt = 0;
-                                        while ($com_item = mysqli_fetch_assoc($com_items)) {
-                                            $totalAmt += $com_item['final_amount'];
-                                            $totalPaid += !empty($com_item['transferred']) ? json_decode($com_item['transferred'], true)['transfer_amount'] : 0;
-                                        }
-                                        $bal = $totalAmt - $totalPaid;
-                                    }
                                 }
                             ?>
                                 <tr class="text-nowrap">
                                     <td class="pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $id; ?>)"
                                         data-bs-toggle="modal" data-bs-target="#KhaataDetails">
                                         <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $purchase['sr']; ?>
-                                        <?php echo in_array($locked, [1, 2]) ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
+                                        <?php echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
                                     </td>
                                     <td class="<?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['type']); ?></td>
                                     <td class="<?php echo $rowColor; ?>"><?php echo branchName($_fields_single['branch_id']); ?></td>
                                     <td class="<?php echo $rowColor; ?>"><?php echo my_date($_fields_single['_date']); ?></td>
-                                    <td class="s_khaata_id_row <?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['dr_acc']); ?></td>
-                                    <td class="<?php echo $rowColor; ?>"><?php echo $_fields_single['dr_acc_name']; ?></td>
+                                    <td class="s_khaata_id_row <?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['cr_acc']); ?></td>
+                                    <td class="<?php echo $rowColor; ?>"><?php echo $_fields_single['cr_acc_name']; ?></td>
                                     <td class="<?php echo $rowColor; ?>"><?php echo $Goods; ?></td>
                                     <td class="<?php echo $rowColor; ?>"><?php echo $Qty; ?></td>
                                     <td class="<?php echo $rowColor; ?>"><?php echo $KGs; ?></td>
@@ -332,7 +324,7 @@ $mypageURL = $pageURL;
                                     <td class="<?php echo $rowColor; ?>">
                                         <?php echo isset($payments['partial_amount2']) ? $payments['partial_amount2'] : "No Advance Alloted"; ?>
                                     </td> -->
-                                    <td class="text-success"><?= $purchase['from'] === 'sale-commission' ? $totalAmt : round((float)$payments['p_total_amount'], 2); ?></td>
+                                    <td class="text-success"><?= round((float)$payments['p_total_amount'], 2); ?></td>
                                     <td class="text-danger"><?= round($bal, 2); ?></td>
                                     <td class="<?php echo $rowColor; ?>"><?= $trans_from; ?></td> <!-- Transferred From -->
 
@@ -370,7 +362,7 @@ $mypageURL = $pageURL;
     <div class="modal-dialog modal-fullscreen -modal-xl -modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="staticBackdropLabel">SALE FINAL</h5>
+                <h5 class="modal-title" id="staticBackdropLabel">PURCHASE FINAL</h5>
                 <a href="<?php echo $mypageURL; ?>" class="btn-close" aria-label="Close"></a>
             </div>
             <div class="modal-body bg-light pt-0" id="viewDetails"></div>
@@ -381,12 +373,12 @@ $mypageURL = $pageURL;
     function viewPurchase(id = null) {
         if (id) {
             $.ajax({
-                url: 'ajax/viewSaleFinal.php',
+                url: 'ajax/viewPurchaseFinal.php',
                 type: 'post',
                 data: {
                     id: id,
                     level: 1,
-                    page: "sale-remaining"
+                    page: "purchase-remaining"
                 },
                 success: function(response) {
                     $('#viewDetails').html(response);
@@ -397,6 +389,15 @@ $mypageURL = $pageURL;
         }
     }
 </script>
+<?php
+
+
+if (isset($_GET['t_id']) && is_numeric($_GET['t_id'])) {/*&& isset($_GET['view']) && $_GET['view'] == 1*/
+    $t_id = mysqli_real_escape_string($connect, $_GET['t_id']);
+    echo "<script>jQuery(document).ready(function ($) {  $('#KhaataDetails').modal('show');});</script>";
+    echo "<script>jQuery(document).ready(function ($) {  viewPurchase($t_id); });</script>";
+}
+?>
 
 <script>
     $(document).ready(function() {

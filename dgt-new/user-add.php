@@ -51,272 +51,486 @@ if (isset($_GET['id']) && $_GET['id'] > 0) {
         );
     }
 } ?>
-<div class="row">
-    <div class="col-xl-12">
-        <div class="d-flex align-items-center justify-content-between mb-md-2">
-            <div class="fs-5 text-uppercase"><?php echo $page_title; ?></div>
-            <div>
-                <?php echo backUrl($back_page_url); ?>
-                <?php echo addNew('user-add', '', 'btn-sm'); ?>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-body">
-                <div class="row">
-                    <div class="col">
-                        <form method="post" onsubmit="return confirm('Are you sure to save data?');" class="table-form">
-                            <div class="row">
-                                <div class="col-md-8">
-                                    <div class="row gy-4 gx-1">
-                                        <div class="col-md-4">
-                                            <div class="input-group">
-                                                <label for="type" class="form-label">ID Type</label>
-                                                <select class="form-select" name="type" id="type" autofocus>
-                                                    <option selected hidden disabled="">Select</option>
-                                                    <?php $id_types = array('agent', 'office', 'customer');
-                                                    foreach ($id_types as $id_type) {
-                                                        $typeSelected = $id_type == $type ? 'selected' : '';
-                                                        echo '<option ' . $typeSelected . ' value="' . $id_type . '">' . ucfirst($id_type) . '</option>';
-                                                    } ?>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="input-group">
-                                                <label for="branch_id" class="form-label">Branch</label>
-                                                <select id="branch_id" name="branch_id" class="form-select">
-                                                    <option hidden class="" selected disabled="">Select</option>
-                                                    <?php $branches = fetch('branches');
-                                                    while ($branch = mysqli_fetch_assoc($branches)) {
-                                                        $branchSelected = $branch['id'] == $branch_id ? 'selected' : '';
-                                                        echo '<option ' . $branchSelected . ' value="' . $branch['id'] . '">' . $branch['b_name'] . '</option>';
-                                                    } ?>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="input-group">
-                                                <label for="name" class="form-label">Name</label>
-                                                <input type="text" id="name" name="full_name"
-                                                       class="form-control" required
-                                                       value="<?php echo $full_name; ?>">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="input-group">
-                                                <label for="username" class="form-label">User ID</label>
-                                                <input type="text" id="username" name="username"
-                                                       value="<?php echo $username; ?>"
-                                                       class="form-control" required>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="input-group">
-                                                <label for="password" class="form-label">Password</label>
-                                                <input id="password" class="form-control" name="password"
-                                                       value="<?php echo $password; ?>" type="text"
-                                                       autocomplete="off">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="input-group">
-                                                <label for="c_password" class="form-label">Confirm</label>
-                                                <input id="c_password" class="form-control" name="c_password"
-                                                       value="<?php echo $password; ?>" type="text"
-                                                       autocomplete="off">
-                                            </div>
-                                        </div>
-                                        <?php if ($id == 0 || ($id > 0 && userRoleStr($id) != 'superadmin')) { ?>
-                                            <div class="col-md-3">
-                                                <div class="input-group">
-                                                    <label for="role" class="form-label">Post</label>
-                                                    <select class="form-select" name="role" id="role">
-                                                        <option selected hidden disabled>Select</option>
-                                                        <?php $roles = fetch('roles');
-                                                        while ($rol = mysqli_fetch_assoc($roles)) {
-                                                            $roleSelected = $rol['role_name'] == $role ? 'selected' : '';
-                                                            echo '<option ' . $roleSelected . ' value="' . $rol['role_name'] . '">' . ucfirst($rol['role_name']) . '</option>';
-                                                        } ?>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            <div class="col-lg-9">
-                                                <div class="d-flex align-items-center">
-                                                    <label for="permission">Permissions</label>
-                                                    <select multiple name="permission[]" id="permission"
-                                                            class="v-select w-100"
-                                                            data-silent-initial-value-set="true">
-                                                        <?php $pData = fetch('user_permissions', array('user_id' => $id));
-                                                        $pDatum = mysqli_fetch_assoc($pData);
-                                                        $forms = fetch('navbar', array('is_view' => 1));
-                                                        while ($form = mysqli_fetch_assoc($forms)) {
-                                                            $selected = '';
-                                                            if (!empty($pDatum['permission'])) {
-                                                                $perms = json_decode($pDatum['permission']);
-                                                                $selected = in_array($form['url'], $perms) ? 'selected' : '';
-                                                            }
-                                                            //echo '<option ' . $selected . ' value="' . $form['id'] . '">' . $form['label'] . '</option>';
-                                                            echo '<option ' . $selected . ' value="' . $form['url'] . '">' . $form['label'] . '</option>';
-                                                        } ?>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        <?php } ?>
-                                    </div>
-                                </div>
-                                <div class="col-md-4 border-end border-start">
-                                    <div class="d-flex align-items-center justify-content-between mb-md-4">
-                                        <div><b>Sr#: </b> <?php echo $sr; ?></div>
-                                        <div><b>Date: </b> <?php echo $user_date; ?></div>
-                                    </div>
-                                    <input type="hidden" value="<?php echo $id; ?>" name="hidden_id">
-                                    <div class="btn-group-sm w-100 gap-1">
-                                        <button type="submit" name="recordSubmit" id="recordSubmit"
-                                                class="btn btn-dark">Submit
-                                        </button>
-                                        <?php if ($id > 0) { ?>
-                                            <button type="button" class="btn btn-outline-dark"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#contactDetails">+ Details
-                                            </button>
-                                            <button type="button" class="btn btn-outline-dark"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#attachAccount">+ Account
-                                            </button>
-                                        <?php } ?>
-                                    </div>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                    <div class="col-auto">
-                        <form action="ajax/uploadPicture.php" method="post" id="picUpload"
-                              enctype="multipart/form-data">
-                            <label for="dropify" class="pointer">
-                                <?php echo '<img class="img-fluid rounded" width="100" src="' . $img_path . '" alt="profile">'; ?>
-                                <input type="file" id="dropify" name="fileUpload" class="sr-only" required>
-                            </label>
-                            <input type="hidden" name="id" value="<?php echo $id; ?>">
-                            <input type="hidden" name="pk" value="id">
-                            <input type="hidden" name="tbl" value="users">
-                            <input type="hidden" name="url" value="user-add?id=<?php echo $id; ?>">
-                        </form>
-                        <script>
-                            document.getElementById("dropify").onchange = function () {
-                                document.getElementById("picUpload").submit();
-                            }
-                        </script>
-                    </div>
+<!-- Main Container -->
+<div class="fixed-top bg-light shadow-sm border-bottom">
+<?php require_once('nav-links.php'); ?>
+</div>
+<div class="container-fluid py-4">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center bg-white rounded-3 p-4 shadow-sm">
+                <h1 class="h4 text-uppercase mb-0 text-primary fw-bold">
+                    <?php echo $page_title; ?>
+                </h1>
+                <div class="d-flex gap-2">
+                    <?php echo backUrl($back_page_url); ?>
+                    <?php echo addNew('user-add', '', 'btn-sm'); ?>
                 </div>
             </div>
         </div>
-        <div class="card mt-2">
-            <div class="card-body">
-                <div class="row table-form-">
-                    <div class="col-8 border-end">
-                        <!--<div class="fs-6 fw-bold mb-3">Contact Details</div>-->
-                        <?php if (!empty($contact_details)) { ?>
-                            <table class="table table-borderless">
-                                <tbody>
-                                <tr>
-                                    <td>
-                                        <span class="me-1 fw-bold">NAME</span><?php echo $person_details['full_name']; ?>
-                                    </td>
-                                    <td>
-                                        <span class="me-1 fw-bold">FATHER NAME</span><?php echo $person_details['father_name']; ?>
-                                    </td>
-                                    <td>
-                                        <span class="me-1 fw-bold">GENDER</span><?php echo ucfirst($person_details['gender']); ?>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td colspan="3">
-                                        <span class="me-1 fw-bold">IDENTITY</span><?php echo $person_details['identity']; ?>
-                                        <span class="me-1 ms-3 fw-bold">No.</span><?php echo $person_details['idn_no']; ?>
-                                        <span class="me-1 ms-3 fw-bold">REGISTRATION DATE</span><?php echo $person_details['idn_reg']; ?>
-                                        <span class="me-1 ms-3 fw-bold">EXPIRY DATE</span><?php echo $person_details['idn_expiry']; ?>
-                                        <span class="me-1 ms-3 fw-bold">COUNTRY</span><?php echo $person_details['idn_country']; ?>
-                                    </td>
+    </div>
 
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <span class="me-1 fw-bold">COUNTRY</span><?php echo $person_details['country']; ?>
-                                    </td>
-                                    <td>
-                                        <span class="me-1 fw-bold">STATE</span><?php echo $person_details['state']; ?>
-                                    </td>
-                                    <td>
-                                        <span class="me-1 fw-bold">CITY</span><?php echo ucfirst($person_details['city']); ?>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td colspan="3"><span
-                                                class="me-1 fw-bold">ADDRESS</span><?php echo $person_details['address']; ?>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <span class="me-1 fw-bold">POST CODE</span><?php echo $person_details['postcode']; ?>
-                                    </td>
-                                    <td>
-                                        <span class="me-1 fw-bold">MOBILE</span><?php echo $person_details['mobile']; ?>
-                                    </td>
-                                    <td>
-                                        <span class="me-1 fw-bold">PHONE</span><?php echo ucfirst($person_details['phone']); ?>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <span class="me-1 fw-bold">WHATSAPP</span><?php echo ucfirst($person_details['whatsapp']); ?>
-                                    </td>
-                                    <td colspan="2"></td>
-                                </tr>
-                                </tbody>
-                            </table>
-                            <?php /*echo '<div class="d-flex flex-wrap justify-content-between mb-3">';
-                                echo '<div><b>Name</b> ' . $person_details['full_name'] . '</div>';
-                                echo '<div><b>Father Name</b> ' . $person_details['father_name'] . '</div>';
-                                echo '<div><b>Gender</b> ' . $person_details['gender'] . '</div>';
+    <!-- Main Form Card -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-body p-4">
+                    <form method="post" onsubmit="return confirm('Are you sure to save data?');" class="needs-validation" novalidate>
+                        <div class="row">
+                            <!-- Left Form Section -->
+                            <div class="col-md-8">
+                                <div class="row g-4">
+                                    <!-- ID Type -->
+                                    <div class="col-md-4">
+                                        <div class="form-floating">
+                                            <select class="form-select" name="type" id="type" required autofocus>
+                                                <option value="" selected disabled>Select Type</option>
+                                                <?php
+                                                $id_types = array('agent', 'office', 'customer');
+                                                foreach ($id_types as $id_type) {
+                                                    $typeSelected = $id_type == $type ? 'selected' : '';
+                                                    echo '<option ' . $typeSelected . ' value="' . $id_type . '">' . ucfirst($id_type) . '</option>';
+                                                }
+                                                ?>
+                                            </select>
+                                            <label for="type">ID Type</label>
+                                        </div>
+                                    </div>
+
+                                    <!-- Branch -->
+                                    <div class="col-md-4">
+                                        <div class="form-floating">
+                                            <select class="form-select" name="branch_id" id="branch_id" required>
+                                                <option value="" selected disabled>Select Branch</option>
+                                                <?php
+                                                $branches = fetch('branches');
+                                                while ($branch = mysqli_fetch_assoc($branches)) {
+                                                    $branchSelected = $branch['id'] == $branch_id ? 'selected' : '';
+                                                    echo '<option ' . $branchSelected . ' value="' . $branch['id'] . '">' . $branch['b_name'] . '</option>';
+                                                }
+                                                ?>
+                                            </select>
+                                            <label for="branch_id">Branch</label>
+                                        </div>
+                                    </div>
+
+                                    <!-- Name -->
+                                    <div class="col-md-4">
+                                        <div class="form-floating">
+                                            <input type="text" class="form-control" id="name" name="full_name" value="<?php echo $full_name; ?>" required>
+                                            <label for="name">Full Name</label>
+                                        </div>
+                                    </div>
+
+                                    <!-- User ID -->
+                                    <div class="col-md-4">
+                                        <div class="form-floating">
+                                            <input type="text" class="form-control" id="username" name="username" value="<?php echo $username; ?>" required>
+                                            <label for="username">User ID</label>
+                                        </div>
+                                    </div>
+
+                                    <!-- Password -->
+                                    <div class="col-md-4">
+                                        <div class="form-floating">
+                                            <input type="password" class="form-control" id="password" name="password" value="<?php echo $password; ?>" autocomplete="off">
+                                            <label for="password">Password</label>
+                                        </div>
+                                    </div>
+
+                                    <!-- Confirm Password -->
+                                    <div class="col-md-4">
+                                        <div class="form-floating">
+                                            <input type="password" class="form-control" id="c_password" name="c_password" value="<?php echo $password; ?>" autocomplete="off">
+                                            <label for="c_password">Confirm Password</label>
+                                        </div>
+                                    </div>
+
+                                    <?php if ($id == 0 || ($id > 0 && userRoleStr($id) != 'superadmin')) { ?>
+                                        <!-- Role -->
+                                        <div class="col-md-3">
+                                            <div class="form-floating">
+                                                <select class="form-select" name="role" id="role" required>
+                                                    <option value="" selected disabled>Select Role</option>
+                                                    <?php
+                                                    $roles = fetch('roles');
+                                                    while ($rol = mysqli_fetch_assoc($roles)) {
+                                                        $roleSelected = $rol['role_name'] == $role ? 'selected' : '';
+                                                        echo '<option ' . $roleSelected . ' value="' . $rol['role_name'] . '">' . ucfirst($rol['role_name']) . '</option>';
+                                                    }
+                                                    ?>
+                                                </select>
+                                                <label for="role">Role</label>
+                                            </div>
+                                        </div>
+
+                                        <!-- Permissions -->
+                                        <div class="col-md-9">
+                                            <div class="form-floating">
+                                                <select class="form-select" style="height:150px;" name="permission[]" id="permission" multiple data-silent-initial-value-set="true">
+                                                    <?php
+                                                    $pData = fetch('user_permissions', array('user_id' => $id));
+                                                    $pDatum = mysqli_fetch_assoc($pData);
+                                                    $forms = fetch('navbar', array('is_view' => 1));
+                                                    while ($form = mysqli_fetch_assoc($forms)) {
+                                                        $selected = '';
+                                                        if (!empty($pDatum['permission'])) {
+                                                            $perms = json_decode($pDatum['permission']);
+                                                            $selected = in_array($form['url'], $perms) ? 'selected' : '';
+                                                        }
+                                                        echo '<option ' . $selected . ' value="' . $form['url'] . '">' . $form['label'] . '</option>';
+                                                    }
+                                                    ?>
+                                                </select>
+                                                <label for="permission">Permissions</label>
+                                            </div>
+                                        </div>
+                                    <?php } ?>
+                                </div>
+                            </div>
+
+                            <!-- Right Section -->
+                            <div class="col-md-4 border-start ps-4">
+                                <!-- User Info -->
+                                <div class="d-flex justify-content-between mb-4 text-muted">
+                                    <div class="fw-bold">Sr#: <span class="fw-normal"><?php echo $sr; ?></span></div>
+                                    <div class="fw-bold">Date: <span class="fw-normal"><?php echo $user_date; ?></span></div>
+                                </div>
+
+                                <!-- Profile Picture -->
+                                <div class="text-center mb-4">
+                                    <form action="ajax/uploadPicture.php" method="post" id="picUpload" enctype="multipart/form-data">
+                                        <div class="position-relative d-inline-block">
+                                            <img src="<?php echo $img_path; ?>" alt="Profile" class="rounded-circle object-fit-cover" style="width: 120px; height: 120px;">
+                                            <label for="dropify" class="position-absolute bottom-0 end-0 bg-primary text-white rounded-circle p-2 cursor-pointer">
+                                                <i class="bi bi-camera-fill"></i>
+                                                <input type="file" id="dropify" name="fileUpload" class="d-none" required>
+                                            </label>
+                                        </div>
+                                        <input type="hidden" name="id" value="<?php echo $id; ?>">
+                                        <input type="hidden" name="pk" value="id">
+                                        <input type="hidden" name="tbl" value="users">
+                                        <input type="hidden" name="url" value="user-add?id=<?php echo $id; ?>">
+                                    </form>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="d-grid gap-2">
+                                    <button type="submit" name="recordSubmit" class="btn btn-primary">
+                                        <i class="bi bi-check2-circle me-2"></i>Submit
+                                    </button>
+                                    <?php if ($id > 0) { ?>
+                                        <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#contactDetails">
+                                            <i class="bi bi-person-lines-fill me-2"></i>Details
+                                        </button>
+                                        <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#attachAccount">
+                                            <i class="bi bi-link-45deg me-2"></i>Account
+                                        </button>
+                                    <?php } ?>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Details Card -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-body p-4">
+                    <div class="row">
+                        <!-- Personal Details -->
+                        <div class="col-md-8 border-end">
+                            <?php if (!empty($contact_details)) { ?>
+                                <h5 class="mb-4 text-primary">Personal Information</h5>
+                                <div class="row g-4">
+                                    <div class="col-md-4">
+                                        <div class="fw-bold text-muted small">NAME</div>
+                                        <div><?php echo $person_details['full_name']; ?></div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="fw-bold text-muted small">FATHER NAME</div>
+                                        <div><?php echo $person_details['father_name']; ?></div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="fw-bold text-muted small">GENDER</div>
+                                        <div><?php echo ucfirst($person_details['gender']); ?></div>
+                                    </div>
+
+                                    <!-- Identity Information -->
+                                    <div class="col-12">
+                                        <div class="bg-light p-3 rounded-3">
+                                            <div class="row g-3">
+                                                <div class="col-md-3">
+                                                    <div class="fw-bold text-muted small">IDENTITY</div>
+                                                    <div><?php echo $person_details['identity']; ?></div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <div class="fw-bold text-muted small">ID NUMBER</div>
+                                                    <div><?php echo $person_details['idn_no']; ?></div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <div class="fw-bold text-muted small">REGISTRATION DATE</div>
+                                                    <div><?php echo $person_details['idn_reg']; ?></div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <div class="fw-bold text-muted small">EXPIRY DATE</div>
+                                                    <div><?php echo $person_details['idn_expiry']; ?></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Contact Information -->
+                                    <div class="col-12">
+                                        <div class="row g-3">
+                                            <div class="col-md-4">
+                                                <div class="fw-bold text-muted small">MOBILE</div>
+                                                <div><?php echo $person_details['mobile']; ?></div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="fw-bold text-muted small">PHONE</div>
+                                                <div><?php echo $person_details['phone']; ?></div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="fw-bold text-muted small">WHATSAPP</div>
+                                                <div><?php echo $person_details['whatsapp']; ?></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Address Information -->
+                                    <div class="col-12">
+                                        <div class="fw-bold text-muted small">ADDRESS</div>
+                                        <div><?php echo $person_details['address']; ?></div>
+                                    </div>
+                                </div>
+                            <?php } ?>
+                        </div>
+
+                        <!-- Account Information -->
+                        <div class="col-md-4 ps-4">
+                            <h5 class="mb-4 text-primary">Account Information</h5>
+                            <?php
+                            $attached = userAttachedAccount($id);
+                            if (!empty($attached)) {
+                                echo '<div class="d-flex align-items-center gap-2">';
+                                echo '<i class="bi bi-credit-card text-primary fs-4"></i>';
+                                echo '<div>';
+                                echo '<div class="text-muted small">Account Number</div>';
+                                echo '<a href="khaata-add?id=' . $attached['khaata_id'] . '" class="text-decoration-none">' . $attached['khaata_no'] . '</a>';
                                 echo '</div>';
-                                echo '<div class="d-flex flex-wrap gap-md-4 justify-content-between mb-3">';
-                                echo '<div><b>Identity</b> ' . $person_details['identity'] . '</div>';
-                                echo '<div class="d-flex gap-1 flex-fill justify-content-between">';
-                                echo '<div><b>No.</b> ' . $person_details['idn_no'] . '</div>';
-                                echo '<div><b>Registration Date</b> ' . $person_details['idn_reg'] . '</div>';
-                                echo '<div><b>Expiry Date</b> ' . $person_details['idn_expiry'] . '</div>';
-                                echo '<div><b>Country</b> ' . $person_details['idn_country'] . '</div>';
-                                echo '</div></div>';
-                                echo '<div class="d-flex flex-wrap justify-content-between row-gap-3">';
-                                echo '<div><b>Country</b> ' . $person_details['country'] . '</div>';
-                                echo '<div><b>State</b> ' . $person_details['state'] . '</div>';
-                                echo '<div><b>City</b> ' . $person_details['city'] . '</div>';
-                                echo '<div class="w-100"><b>Address</b> ' . $person_details['address'] . '</div>';
-                                echo '<div><b>Postcode</b> ' . $person_details['postcode'] . '</div>';
-                                echo '<div><b>Mobile</b> ' . $person_details['mobile'] . '</div>';
-                                echo '<div><b>Phone</b> ' . $person_details['phone'] . '</div>';
-                                echo '<div><b>WhatsApp</b> ' . $person_details['whatsapp'] . '</div>';
-                                echo '</div>';*/
-                        } ?>
-                    </div>
-                    <div class="col">
-                        <div class="fs-6 fw-bold mb-3">Attached Account</div>
-                        <?php $attached = userAttachedAccount($id);
-                        if (!empty($attached)) {
-                            echo '<a href="khaata-add?id=' . $attached['khaata_id'] . '" class="text-dark" target="_blank"><b>A/c #</b> ' . $attached['khaata_no'] . '</a>';
-                        }
-                        ?>
+                                echo '</div>';
+                            }
+                            ?>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+<div class="modal fade" id="contactDetails" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+    aria-labelledby="contactDetailsLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <form method="post">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5" id="contactDetailsLabel">Contact Details</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body table-form">
+                    <div class="row gx-1 gy-4">
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <label for="full_name" class="form-label">Name</label>
+                                <input value="<?php echo $person_details['full_name']; ?>" id="full_name"
+                                    name="full_name" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <label for="father_name" class="form-label">Father Name</label>
+                                <input value="<?php echo $person_details['father_name']; ?>" id="father_name"
+                                    name="father_name" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <label for="gender" class="form-label">Gender</label>
+                                <select class="form-select" name="gender" id="gender">
+                                    <option selected hidden disabled="">Select</option>
+                                    <?php $genders = array('male', 'female', 'other');
+                                    foreach ($genders as $gender) {
+                                        $genderSelected = $gender == $person_details['gender'] ? 'selected' : '';
+                                        echo '<option ' . $genderSelected . ' value="' . $gender . '">' . ucfirst($gender) . '</option>';
+                                    } ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="input-group">
+                                <label for="identity" class="form-label">Identity</label>
+                                <select class="form-select" name="identity" id="identity">
+                                    <option selected hidden disabled="">Select</option>
+                                    <?php $identities = array('passport', 'cnic', 'uae');
+                                    foreach ($identities as $identity) {
+                                        $idSelected = $identity == $person_details['identity'] ? 'selected' : '';
+                                        echo '<option ' . $idSelected . ' value="' . $identity . '">' . ucfirst($identity) . '</option>';
+                                    } ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-9">
+                            <div class="row g-0">
+                                <div class="col-md-3">
+                                    <div class="input-group">
+                                        <label for="idn_no" class="form-label">No</label>
+                                        <input value="<?php echo $person_details['idn_no']; ?>" id="idn_no"
+                                            name="idn_no" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="input-group">
+                                        <label for="idn_reg" class="form-label">Reg.</label>
+                                        <input type="date" value="<?php echo $person_details['idn_reg']; ?>"
+                                            id="idn_reg" name="idn_reg" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="input-group">
+                                        <label for="idn_expiry" class="form-label">Expiry</label>
+                                        <input type="date" value="<?php echo $person_details['idn_expiry']; ?>"
+                                            id="idn_expiry" name="idn_expiry" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="input-group">
+                                        <label for="idn_country" class="form-label">Country</label>
+                                        <input value="<?php echo $person_details['idn_country']; ?>"
+                                            id="idn_country" name="idn_country" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <label for="country" class="form-label">Country</label>
+                                <input value="<?php echo $person_details['country']; ?>" id="country" name="country"
+                                    class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <label for="state" class="form-label">State</label>
+                                <input value="<?php echo $person_details['state']; ?>" id="state" name="state"
+                                    class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <label for="city" class="form-label">City</label>
+                                <input value="<?php echo $person_details['city']; ?>" id="city" name="city"
+                                    class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="input-group">
+                                <label for="address" class="form-label">Address</label>
+                                <input value="<?php echo $person_details['address']; ?>" id="address" name="address"
+                                    class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="input-group">
+                                <label for="postcode" class="form-label">Postcode</label>
+                                <input value="<?php echo $person_details['postcode']; ?>" id="postcode"
+                                    name="postcode" class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="input-group">
+                                <label for="mobile" class="form-label">Mobile</label>
+                                <input value="<?php echo $person_details['mobile']; ?>" id="mobile" name="mobile"
+                                    class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="input-group">
+                                <label for="phone" class="form-label">Phone</label>
+                                <input value="<?php echo $person_details['phone']; ?>" id="phone" name="phone"
+                                    class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="input-group">
+                                <label for="whatsapp" class="form-label">WhatsApp</label>
+                                <input value="<?php echo $person_details['whatsapp']; ?>" id="whatsapp"
+                                    name="whatsapp" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" name="contactDetailsSubmit" class="btn btn-dark">Save</button>
+                </div>
+            </div>
+            <input type="hidden" name="hidden_id" value="<?php echo $id; ?>">
+        </form>
+    </div>
+</div>
+<div class="modal fade" id="attachAccount" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+    aria-labelledby="attachAccountLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg-">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="attachAccountLabel">Attach Account</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" class="table-form">
+                <div class="modal-body">
+                    <div class="row gx-1 gy-4">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <label for="khaata_id" class="form-label">A/c. Sr#</label>
+                                <input type="number" step="1" min="1" id="khaata_id" name="khaata_id"
+                                    class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <label for="khaata_no" class="form-label">A/c. No.</label>
+                                <input type="text" id="khaata_no" name="khaata_no" class="form-control"
+                                    value="<?php //echo $bkn; 
+                                            ?>" required>
+                            </div>
+                        </div>
+                        <div class="col" id="khaata_details"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" name="attachAccountSubmit" id="attachAccountSubmit" class="btn btn-dark">
+                        Submit
+                    </button>
+                </div>
+                <input type="hidden" name="hidden_id" value="<?php echo $id; ?>">
+            </form>
+        </div>
+    </div>
+</div>
 <?php include("footer.php"); ?>
-<script>$("#entries").addClass('active');</script>
-<script>$("#users").addClass('active');</script>
 <script>
-    $(document).on('keyup', "#password,#c_password", function (e) {
+    $("#entries").addClass('active');
+</script>
+<script>
+    $("#users").addClass('active');
+</script>
+<script>
+    $(document).on('keyup', "#password,#c_password", function(e) {
         password();
     });
     password();
@@ -333,6 +547,47 @@ if (isset($_GET['id']) && $_GET['id'] > 0) {
                 enableButton('recordSubmit');
             }
         }
+    }
+</script>
+<script>
+    $(document).on('keyup', "#khaata_no,#khaata_id", function(e) {
+        fetchKhaata();
+    });
+    fetchKhaata();
+    disableButton('attachAccountSubmit');
+
+    function fetchKhaata() {
+        let khaata_no = $("#khaata_no").val();
+        let khaata_id = $("#khaata_id").val();
+        $.ajax({
+            url: 'ajax/attachAccountWithUser.php',
+            type: 'post',
+            data: {
+                khaata_no: khaata_no,
+                khaata_id: khaata_id
+            },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success === true) {
+                    $("#khaata_details").html('<b>A/C NAME	</b>' + response.messages['khaata_name']);
+                    enableButton('attachAccountSubmit');
+                    /*var details = {
+                        indexes: response.messages['indexes'],
+                        vals: response.messages['vals']
+                    };
+                    $("#contacts").html(displayKhaataDetails(details));*/
+                    $("#khaata_no").addClass('is-valid');
+                    $("#khaata_no").removeClass('is-invalid');
+                    //$("#response").text('');
+                }
+                if (response.success === false) {
+                    $("#khaata_no").addClass('is-invalid');
+                    $("#khaata_no").removeClass('is-valid');
+                    disableButton('attachAccountSubmit');
+                    $("#khaata_details").html('');
+                }
+            }
+        });
     }
 </script>
 <?php $msg_array = array('msg' => 'DB Error', 'type' => 'danger');
@@ -390,193 +645,6 @@ if (isset($_POST['recordSubmit'])) {
     }
     messageNew($msg_array['type'], $pageURL, $msg_array['msg']);
 } ?>
-<div class="modal fade" id="contactDetails" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
-     aria-labelledby="contactDetailsLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-        <form method="post">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h1 class="modal-title fs-5" id="contactDetailsLabel">Contact Details</h1>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body table-form">
-                    <div class="row gx-1 gy-4">
-                        <div class="col-md-4">
-                            <div class="input-group">
-                                <label for="full_name" class="form-label">Name</label>
-                                <input value="<?php echo $person_details['full_name']; ?>" id="full_name"
-                                       name="full_name" class="form-control" required>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="input-group">
-                                <label for="father_name" class="form-label">Father Name</label>
-                                <input value="<?php echo $person_details['father_name']; ?>" id="father_name"
-                                       name="father_name" class="form-control" required>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="input-group">
-                                <label for="gender" class="form-label">Gender</label>
-                                <select class="form-select" name="gender" id="gender">
-                                    <option selected hidden disabled="">Select</option>
-                                    <?php $genders = array('male', 'female', 'other');
-                                    foreach ($genders as $gender) {
-                                        $genderSelected = $gender == $person_details['gender'] ? 'selected' : '';
-                                        echo '<option ' . $genderSelected . ' value="' . $gender . '">' . ucfirst($gender) . '</option>';
-                                    } ?>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="input-group">
-                                <label for="identity" class="form-label">Identity</label>
-                                <select class="form-select" name="identity" id="identity">
-                                    <option selected hidden disabled="">Select</option>
-                                    <?php $identities = array('passport', 'cnic', 'uae');
-                                    foreach ($identities as $identity) {
-                                        $idSelected = $identity == $person_details['identity'] ? 'selected' : '';
-                                        echo '<option ' . $idSelected . ' value="' . $identity . '">' . ucfirst($identity) . '</option>';
-                                    } ?>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-9">
-                            <div class="row g-0">
-                                <div class="col-md-3">
-                                    <div class="input-group">
-                                        <label for="idn_no" class="form-label">No</label>
-                                        <input value="<?php echo $person_details['idn_no']; ?>" id="idn_no"
-                                               name="idn_no" class="form-control">
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="input-group">
-                                        <label for="idn_reg" class="form-label">Reg.</label>
-                                        <input type="date" value="<?php echo $person_details['idn_reg']; ?>"
-                                               id="idn_reg" name="idn_reg" class="form-control">
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="input-group">
-                                        <label for="idn_expiry" class="form-label">Expiry</label>
-                                        <input type="date" value="<?php echo $person_details['idn_expiry']; ?>"
-                                               id="idn_expiry" name="idn_expiry" class="form-control">
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="input-group">
-                                        <label for="idn_country" class="form-label">Country</label>
-                                        <input value="<?php echo $person_details['idn_country']; ?>"
-                                               id="idn_country" name="idn_country" class="form-control">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="input-group">
-                                <label for="country" class="form-label">Country</label>
-                                <input value="<?php echo $person_details['country']; ?>" id="country" name="country"
-                                       class="form-control">
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="input-group">
-                                <label for="state" class="form-label">State</label>
-                                <input value="<?php echo $person_details['state']; ?>" id="state" name="state"
-                                       class="form-control">
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="input-group">
-                                <label for="city" class="form-label">City</label>
-                                <input value="<?php echo $person_details['city']; ?>" id="city" name="city"
-                                       class="form-control">
-                            </div>
-                        </div>
-                        <div class="col-md-12">
-                            <div class="input-group">
-                                <label for="address" class="form-label">Address</label>
-                                <input value="<?php echo $person_details['address']; ?>" id="address" name="address"
-                                       class="form-control">
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="input-group">
-                                <label for="postcode" class="form-label">Postcode</label>
-                                <input value="<?php echo $person_details['postcode']; ?>" id="postcode"
-                                       name="postcode" class="form-control">
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="input-group">
-                                <label for="mobile" class="form-label">Mobile</label>
-                                <input value="<?php echo $person_details['mobile']; ?>" id="mobile" name="mobile"
-                                       class="form-control">
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="input-group">
-                                <label for="phone" class="form-label">Phone</label>
-                                <input value="<?php echo $person_details['phone']; ?>" id="phone" name="phone"
-                                       class="form-control">
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="input-group">
-                                <label for="whatsapp" class="form-label">WhatsApp</label>
-                                <input value="<?php echo $person_details['whatsapp']; ?>" id="whatsapp"
-                                       name="whatsapp" class="form-control">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" name="contactDetailsSubmit" class="btn btn-dark">Save</button>
-                </div>
-            </div>
-            <input type="hidden" name="hidden_id" value="<?php echo $id; ?>">
-        </form>
-    </div>
-</div>
-<div class="modal fade" id="attachAccount" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
-     aria-labelledby="attachAccountLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg-">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h1 class="modal-title fs-5" id="attachAccountLabel">Attach Account</h1>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form method="post" class="table-form">
-                <div class="modal-body">
-                    <div class="row gx-1 gy-4">
-                        <div class="col-md-6">
-                            <div class="input-group">
-                                <label for="khaata_id" class="form-label">A/c. Sr#</label>
-                                <input type="number" step="1" min="1" id="khaata_id" name="khaata_id"
-                                       class="form-control" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="input-group">
-                                <label for="khaata_no" class="form-label">A/c. No.</label>
-                                <input type="text" id="khaata_no" name="khaata_no" class="form-control"
-                                       value="<?php //echo $bkn; ?>" required>
-                            </div>
-                        </div>
-                        <div class="col" id="khaata_details"></div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" name="attachAccountSubmit" id="attachAccountSubmit" class="btn btn-dark">
-                        Submit
-                    </button>
-                </div>
-                <input type="hidden" name="hidden_id" value="<?php echo $id; ?>">
-            </form>
-        </div>
-    </div>
-</div>
 <?php if (isset($_POST['contactDetailsSubmit'])) {
     $post = json_encode($_POST);
     $data = array('contact_details' => $post);
@@ -605,42 +673,3 @@ if (isset($_POST['recordSubmit'])) {
     }
     messageNew($msg_array['type'], $pageURL . '?id=' . $hidden_id, $msg_array['msg']);
 } ?>
-<script>
-    $(document).on('keyup', "#khaata_no,#khaata_id", function (e) {
-        fetchKhaata();
-    });
-    fetchKhaata();
-    disableButton('attachAccountSubmit');
-
-    function fetchKhaata() {
-        let khaata_no = $("#khaata_no").val();
-        let khaata_id = $("#khaata_id").val();
-        $.ajax({
-            url: 'ajax/attachAccountWithUser.php',
-            type: 'post',
-            data: {khaata_no: khaata_no, khaata_id: khaata_id},
-            dataType: 'json',
-            success: function (response) {
-                if (response.success === true) {
-                    $("#khaata_details").html('<b>A/C NAME	</b>' + response.messages['khaata_name']);
-                    enableButton('attachAccountSubmit');
-                    /*var details = {
-                        indexes: response.messages['indexes'],
-                        vals: response.messages['vals']
-                    };
-                    $("#contacts").html(displayKhaataDetails(details));*/
-                    $("#khaata_no").addClass('is-valid');
-                    $("#khaata_no").removeClass('is-invalid');
-                    //$("#response").text('');
-                }
-                if (response.success === false) {
-                    $("#khaata_no").addClass('is-invalid');
-                    $("#khaata_no").removeClass('is-valid');
-                    disableButton('attachAccountSubmit');
-                    $("#khaata_details").html('');
-                }
-            }
-        });
-    }
-
-</script>
