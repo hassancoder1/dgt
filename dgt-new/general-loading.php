@@ -8,7 +8,13 @@ global $connect;
 $results_per_page = 25;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $start_from = ($page - 1) * $results_per_page;
-$sql = "SELECT * FROM `transactions` WHERE type IN ('booking','commission')";
+$sql = "
+SELECT DISTINCT t.* 
+FROM transactions t
+JOIN transaction_items ti ON ti.parent_id = t.id
+WHERE t.type IN ('booking', 'commission') 
+  AND JSON_EXTRACT(ti.show_in, '$.loading') = 'yes'
+";
 $conditions = [];
 $print_filters = [];
 if ($_GET) {
@@ -17,34 +23,36 @@ if ($_GET) {
     if (isset($_GET['p_id']) && !empty($_GET['p_id'])) {
         $p_sr = mysqli_real_escape_string($connect, $_GET['p_id']);
         $print_filters[] = 'p_id=' . $p_sr;
-        $conditions[] = "sr = '$p_sr'";
+        $conditions[] = "t.sr = '$p_sr'";
     }
     if (isset($_GET['start']) && !empty($_GET['start'])) {
         $start_print = mysqli_real_escape_string($connect, $_GET['start']);
         $print_filters[] = 'start=' . $start_print;
-        $conditions[] = "_date >= '$start_print'";
+        $conditions[] = "t._date >= '$start_print'";
     }
     if (isset($_GET['end']) && !empty($_GET['end'])) {
         $end_print = mysqli_real_escape_string($connect, $_GET['end']);
         $print_filters[] = 'end=' . $end_print;
-        $conditions[] = "_date <= '$end_print'";
+        $conditions[] = "t._date <= '$end_print'";
     }
     if (isset($_GET['is_transferred']) && $_GET['is_transferred'] !== '') {
         $is_transferred = mysqli_real_escape_string($connect, $_GET['is_transferred']);
         $print_filters[] = "is_transferred=" . $is_transferred;
         if ($is_transferred === '1') {
-            $conditions[] = "locked = '1'";
+            $conditions[] = "t.locked = '1'";
         } elseif ($is_transferred === '0') {
-            $conditions[] = "locked = '0'";
+            $conditions[] = "t.locked = '0'";
         }
     }
     if (isset($_GET['acc_no']) && !empty($_GET['acc_no'])) {
         $acc_no = mysqli_real_escape_string($connect, $_GET['acc_no']);
         $print_filters[] = 'acc_no=' . $acc_no;
+        $conditions[] = "t.acc_no = '$acc_no'";
     }
     if (isset($_GET['acc_name']) && !empty($_GET['acc_name'])) {
         $acc_name = mysqli_real_escape_string($connect, $_GET['acc_name']);
         $print_filters[] = 'acc_name=' . $acc_name;
+        $conditions[] = "t.acc_name = '$acc_name'";
     }
     if (isset($_GET['page']) && !empty($_GET['page'])) {
         $page = mysqli_real_escape_string($connect, $_GET['page']);
@@ -53,18 +61,22 @@ if ($_GET) {
     if (isset($_GET['sea_road']) && !empty($_GET['sea_road'])) {
         $sea_road = mysqli_real_escape_string($connect, $_GET['sea_road']);
         $print_filters[] = 'sea_road=' . $sea_road;
-        $conditions[] = "JSON_EXTRACT(sea_road, '$.sea_road') = '$sea_road'";
+        $conditions[] = "JSON_EXTRACT(t.sea_road, '$.sea_road') = '$sea_road'";
     }
 }
 if (count($conditions) > 0) {
     $sql .= ' AND ' . implode(' AND ', $conditions);
 }
-$sql .= " AND locked IN ('1', '2') AND (CASE WHEN type='commission' THEN transfer_level >= '1' ELSE transfer_level >= '2' END) ORDER BY id DESC LIMIT $start_from, $results_per_page";
+$sql .= " 
+  AND t.locked IN ('1', '2') 
+  AND (CASE WHEN t.type = 'commission' THEN t.transfer_level >= '1' ELSE t.transfer_level >= '2' END) 
+ORDER BY t.id DESC 
+LIMIT $start_from, $results_per_page
+";
 $purchases = mysqli_query($connect, $sql);
 $query_string = implode('&', $print_filters);
 $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
 ?>
-
 <div class="fixed-top">
     <?php require_once('nav-links.php'); ?>
 </div>
@@ -84,8 +96,12 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     $base_url = $url_parts['path'] . '?' . http_build_query($query_params);
 
                     $count_sql = "SELECT COUNT(id) AS total FROM `transactions` WHERE p_s='p'";
-                    if (count($conditions) > 0) {
-                        $count_sql .= ' AND ' . implode(' AND ', $conditions);
+                    // Remove "t." from the conditions array for this query
+                    $count_conditions = array_map(function ($condition) {
+                        return str_replace("t.", "", $condition);
+                    }, $conditions);
+                    if (count($count_conditions) > 0) {
+                        $count_sql .= ' AND ' . implode(' AND ', $count_conditions);
                     }
                     $count_sql .= " AND locked = '1' AND transfer_level >= '2' ORDER BY id DESC";
                     $count_result = mysqli_query($connect, $count_sql);
@@ -248,8 +264,8 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     <th>Type</th>
                     <th>BR.</th>
                     <th>Date</th>
-                    <th>A/c</th>
-                    <th>A/c Name</th>
+                    <th>Seller Acc.</th>
+                    <th>Purchaser Acc.</th>
                     <th>Goods Name</th>
                     <th>Qty</th>
                     <th>KGs</th>
@@ -286,11 +302,22 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     $payments = json_decode($purchase['payments'], true);
                     $cntrs = purchaseSpecificData($id, 'purchase_rows');
                     $totals = purchaseSpecificData($id, 'product_details');
-                    $Goods = empty($_fields_single['items'][0]) ? '' : goodsName($_fields_single['items'][0]['goods_id']);
-                    $Qty = empty($_fields_single['items_sum']) ? '' : $_fields_single['items_sum']['sum_qty_no'];
-                    $KGs = empty($_fields_single['items_sum']) ? '' : $_fields_single['items_sum']['sum_total_kgs'];
-
-                    // Sea/Road information
+                    $Goods = '';
+                    $Qty = 0;
+                    $KGs = 0;
+                    if (!empty($_fields_single['items'])) {
+                        $Goods = goodsName($_fields_single['items'][0]['goods_id']);
+                        foreach ($_fields_single['items'] as $item) {
+                            $show_in = isset($item['show_in']) ? json_decode($item['show_in'], true) : null;
+                            if (!empty($show_in) && isset($show_in['loading']) && $show_in['loading'] === 'yes') {
+                                $Qty += isset($item['qty_no']) ? $item['qty_no'] : 0;
+                                $KGs += isset($item['total_kgs']) ? $item['total_kgs'] : 0;
+                            }
+                        }
+                    } else {
+                        $Qty = '';
+                        $KGs = '';
+                    }
                     $sea_road = '';
                     $sea_road_array = json_decode(getSeaRoadArray($id));
                     $_fields_sr = ['l_country' => '', 'l_date' => '', 'r_country' => '', 'r_date' => ''];
@@ -340,11 +367,13 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                         <td class="<?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['type']); ?></td>
                         <td class="<?php echo $rowColor; ?>"><?php echo branchName($_fields_single['branch_id']); ?></td>
                         <td class="<?php echo $rowColor; ?>"><?php echo my_date($_fields_single['_date']); ?></td>
-                        <td class="acc_no <?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['cr_acc']); ?></td>
-                        <td class="acc_name <?php echo $rowColor; ?>"><?php echo $_fields_single['cr_acc_name']; ?></td>
+                        <td class="acc_no <?php echo $rowColor; ?>"><?= strtoupper($_fields_single['cr_acc']) . ' ' . $_fields_single['cr_acc_name']; ?></td>
+                        <td class="acc_no <?php echo $rowColor; ?>"><?= strtoupper($_fields_single['dr_acc']) . ' ' . $_fields_single['dr_acc_name']; ?></td>
+                        <!-- <td class="acc_no <?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['dr_acc']); ?></td> -->
+                        <!-- <td class="<?php echo $rowColor; ?>"><?php echo $_fields_single['dr_acc_name']; ?></td> -->
                         <td class="<?php echo $rowColor; ?>"><?php echo $Goods; ?></td>
-                        <td class="<?php echo $rowColor; ?>"><?php echo $Qty; ?></td>
-                        <td class="<?php echo $rowColor; ?>"><?php echo $KGs; ?></td>
+                        <td class="<?php echo $rowColor; ?>"><?php echo number_format($Qty, 2); ?></td>
+                        <td class="<?php echo $rowColor; ?>"><?php echo number_format($KGs, 2); ?></td>
                         <?php if ($sea_road == '') { ?>
                             <td class="<?php echo $rowColor; ?>" colspan="3"></td>
                         <?php } else { ?>

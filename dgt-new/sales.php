@@ -8,7 +8,7 @@ global $connect;
 $results_per_page = 25;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $start_from = ($page - 1) * $results_per_page;
-$sql = "SELECT * FROM `transactions` WHERE p_s='s'";
+$sql = "SELECT *, CASE WHEN locked = 0 AND is_doc = 0 THEN 1 WHEN locked = 0 AND is_doc = 1 THEN 2 ELSE 3 END as color_priority FROM `transactions` WHERE p_s='s'";
 $conditions = [];
 $print_filters = [];
 if ($_GET) {
@@ -85,7 +85,7 @@ if ($_GET) {
 if (count($conditions) > 0) {
     $sql .= ' AND ' . implode(' AND ', $conditions);
 }
-$sql .= " ORDER BY id DESC LIMIT $start_from, $results_per_page";
+$sql .= " ORDER BY color_priority, sr DESC LIMIT $start_from, $results_per_page";
 $purchases = mysqli_query($connect, $sql);
 $query_string = implode('&', $print_filters);
 $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
@@ -396,8 +396,8 @@ while ($test = mysqli_fetch_assoc($textQ)) {
                     <th class="sticky-column">Allot</th>
                     <th>BR.</th>
                     <th>Date</th>
-                    <th>A/c</th>
-                    <th>A/c Name</th>
+                    <th>Seller Acc.</th>
+                    <th>Purchaser Acc.</th>
                     <th>Goods Name</th>
                     <th>Qty</th>
                     <th>KGs</th>
@@ -459,8 +459,7 @@ while ($test = mysqli_fetch_assoc($textQ)) {
 
                     $p_qty_total += !empty($totals['Qty']) ? $totals['Qty'] : 0;
                     $p_kgs_total += !empty($totals['KGs']) ? $totals['KGs'] : 0;
-                    $rowColor = '';
-                    $rowColor = $purchase['locked'] == 0 ? 'text-danger ' : ' text-dark '; ?>
+                    $rowColor = $purchase['color_priority'] == 1 ? ' text-danger ' : ($purchase['color_priority'] == 2 ? ' text-warning ' : ' text-dark '); ?>
                     <tr class="text-nowrap">
                         <td class="sticky-column pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $id; ?>)"
                             data-bs-toggle="modal" data-bs-target="#KhaataDetails">
@@ -471,14 +470,16 @@ while ($test = mysqli_fetch_assoc($textQ)) {
                         <td class="sticky-column <?= $rowColor; ?>"><?= $_fields_single['items'][0]['allotment_name'] ?? ''; ?></td>
                         <td class="<?php echo $rowColor; ?> branch"><?php echo branchName($_fields_single['branch_id']); ?></td>
                         <td class="<?php echo $rowColor; ?>"><?php echo my_date($_fields_single['_date']);; ?></td>
-                        <td class="acc_no <?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['dr_acc']); ?></td>
-                        <td class="<?php echo $rowColor; ?>"><?php echo $_fields_single['dr_acc_name']; ?></td>
+                        <td class="acc_no <?php echo $rowColor; ?>"><?= strtoupper($_fields_single['cr_acc']) . ' ' . $_fields_single['cr_acc_name']; ?></td>
+                        <td class="acc_no <?php echo $rowColor; ?>"><?= strtoupper($_fields_single['dr_acc']) . ' ' . $_fields_single['dr_acc_name']; ?></td>
+                        <!-- <td class="acc_no <?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['dr_acc']); ?></td> -->
+                        <!-- <td class="<?php echo $rowColor; ?>"><?php echo $_fields_single['dr_acc_name']; ?></td> -->
                         <td class="<?php echo $rowColor; ?>"><?php echo $Goods; ?></td>
-                        <td class="<?php echo $rowColor; ?>"><?php echo $Qty; ?></td>
-                        <td class="<?php echo $rowColor; ?>"><?php echo $KGs; ?></td>
+                        <td class="<?php echo $rowColor; ?>"><?php echo number_format($Qty, 2); ?></td>
+                        <td class="<?php echo $rowColor; ?>"><?php echo number_format($KGs, 2); ?></td>
                         <td class="<?php echo $rowColor; ?>">
                             <?php if ($cntrs > 0) {
-                                echo $totals['Final'] . '<sub>' . $totals['curr2'] . '</sub>';
+                                echo number_format($totals['Final'], 2) . '<sub>' . $totals['curr2'] . '</sub>';
                             } ?>
                         </td>
                         <td class="<?php echo $rowColor; ?> px-2"><?= isset($_fields_single['payment_details']->full_advance) ? ucwords($_fields_single['payment_details']->full_advance) : "No Payment Details Available"; ?></td>

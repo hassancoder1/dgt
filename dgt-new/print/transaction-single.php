@@ -165,7 +165,7 @@ $Ptype = $P['full_advance'] === 'advance' ? strtoupper($P['full_advance']) . " "
             </div>
 
             <div class="row mb-3 mt-5">
-                <div class="col-6 ">
+                <div class="col-6">
                     <h5>Sale</h5>
                     <div class="hide-on-print">
                         <span><strong>Acc Name: </strong> <?= $T_details['cr_acc_name']; ?> | <strong>Acc No: </strong> <?= $T_details['cr_acc']; ?></span><br>
@@ -271,7 +271,7 @@ $Ptype = $P['full_advance'] === 'advance' ? strtoupper($P['full_advance']) . " "
                             echo '<td>' . $details['qty_no'] . '<sub>' . $details['qty_name'] . '</sub></td>';
                             echo '<td>' . round($details['total_kgs'], 2) . '</td>';
                             echo '<td>' . round($details['net_kgs'], 2) . '</td>';
-                            echo '<td>' . $details['total'] .' /'. $details['divide'] . '</td>';
+                            echo '<td>' . $details['total'] . ' /' . $details['divide'] . '</td>';
                             echo '<td>' . $details['rate1'];
                             echo '<sub>' . $details['currency1'] . '</sub></td>';
                             echo '<td>' . round($details['amount'], 2);
@@ -689,7 +689,7 @@ $Ptype = $P['full_advance'] === 'advance' ? strtoupper($P['full_advance']) . " "
                             echo '<td>' . $details['qty_no'] . '<sub>' . $details['qty_name'] . '</sub></td>';
                             echo '<td>' . round($details['total_kgs'], 2) . '</td>';
                             echo '<td>' . round($details['net_kgs'], 2) . '</td>';
-                            echo '<td>' . $details['total'] .' /'. $details['divide'] . '</td>';
+                            echo '<td>' . $details['total'] . ' /' . $details['divide'] . '</td>';
                             echo '<td>' . $details['rate1'];
                             echo '<sub>' . $details['currency1'] . '</sub></td>';
                             echo '<td>' . round($details['amount'], 2);
@@ -922,7 +922,7 @@ $Ptype = $P['full_advance'] === 'advance' ? strtoupper($P['full_advance']) . " "
                             echo '<td>' . $details['qty_no'] . '<sub>' . $details['qty_name'] . '</sub></td>';
                             echo '<td>' . round($details['total_kgs'], 2) . '</td>';
                             echo '<td>' . round($details['net_kgs'], 2) . '</td>';
-                            echo '<td>' . $details['total'] .' /'. $details['divide'] . '</td>';
+                            echo '<td>' . $details['total'] . ' /' . $details['divide'] . '</td>';
                             echo '<td>' . $details['rate1'];
                             echo '<sub>' . $details['currency1'] . '</sub></td>';
                             echo '<td>' . round($details['amount'], 2);
@@ -1039,7 +1039,7 @@ $Ptype = $P['full_advance'] === 'advance' ? strtoupper($P['full_advance']) . " "
                     </div>
                 </div>
             </div>
-            <?php } elseif ($PRINTStyle === $T_details['p_s_name'] . '-export-invoice-tax') { ?>
+        <?php } elseif ($PRINTStyle === $T_details['p_s_name'] . '-export-invoice-tax') { ?>
             <div class="d-flex justify-content-between align-items-center mt-2 mb-5">
                 <div class="col-md-4">
                     <div>
@@ -1162,7 +1162,7 @@ $Ptype = $P['full_advance'] === 'advance' ? strtoupper($P['full_advance']) . " "
                             echo '<td>' . $details['qty_no'] . '<sub>' . $details['qty_name'] . '</sub></td>';
                             echo '<td>' . round($details['total_kgs'], 2) . '</td>';
                             echo '<td>' . round($details['net_kgs'], 2) . '</td>';
-                            echo '<td>' . $details['total'] .' /'. $details['divide'] . '</td>';
+                            echo '<td>' . $details['total'] . ' /' . $details['divide'] . '</td>';
                             echo '<td>' . $details['rate1'];
                             echo '<sub>' . $details['currency1'] . '</sub></td>';
                             echo '<td>' . round($details['amount'], 2);
@@ -1411,7 +1411,7 @@ $Ptype = $P['full_advance'] === 'advance' ? strtoupper($P['full_advance']) . " "
                             echo '<td>' . $details['qty_no'] . '<sub>' . $details['qty_name'] . '</sub></td>';
                             echo '<td>' . round($details['total_kgs'], 2) . '</td>';
                             echo '<td>' . round($details['net_kgs'], 2) . '</td>';
-                            echo '<td>' . $details['total'] .' /'. $details['divide'] . '</td>';
+                            echo '<td>' . $details['total'] . ' /' . $details['divide'] . '</td>';
                             echo '<td>' . $details['rate1'];
                             echo '<sub>' . $details['currency1'] . '</sub></td>';
                             echo '<td>' . round($details['amount'], 2);
@@ -1537,7 +1537,7 @@ $Ptype = $P['full_advance'] === 'advance' ? strtoupper($P['full_advance']) . " "
                     </div>
                 </div>
             </div>
-            <?php } ?>
+        <?php } ?>
     </div>
     <br><br>
     <div class="position-fixed top-0 start-0 w-100 h-100 d-none justify-content-center align-items-center" style="background: rgba(25, 26, 25, 0.4); z-index: 60;" id="processingScreen">

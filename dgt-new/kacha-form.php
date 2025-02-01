@@ -124,7 +124,7 @@ function generateUniqueBillNo($existingBillNumbers)
                                 <td><?= htmlspecialchars($row['bill_no']); ?></td>
                                 <td><?= strlen($row['bill_name']) > 50 ? htmlspecialchars(substr($row['bill_name'], 0, 50)) . '...' : htmlspecialchars($row['bill_name']); ?></td>
                                 <td><?= htmlspecialchars($row['acc_no']); ?></td>
-                                <td><?= my_date(htmlspecialchars($row['bill_date'])); ?></td>
+                                <td class="text-nowrap"><?= my_date(htmlspecialchars($row['bill_date'])); ?></td>
                                 <td><?= number_format($row['bill_total_amount'], 2); ?></td>
                                 <td>
                                     <a href="?viewID=<?php echo $row['id']; ?>" class="btn btn-sm btn-primary">
@@ -192,21 +192,34 @@ function generateUniqueBillNo($existingBillNumbers)
                         <label>SR.No</label>
                         <input type="text" id="srNo" class="form-control form-control-sm" value="1" readonly>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-2">
+                        <label>Date</label>
+                        <input type="date" id="date" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-md-3">
                         <label>Details</label>
                         <input type="text" id="details" class="form-control form-control-sm" placeholder="Enter Details">
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-1">
                         <label>Payment</label>
                         <input type="number" id="payment" class="form-control form-control-sm" min="0" placeholder="payment">
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-1">
                         <label>Currency</label>
                         <select id="currency" class="form-select form-select-sm">
                             <option value="" selected>Select</option>
                             <?php $currencies = fetch('currencies');
                             while ($crr = mysqli_fetch_assoc($currencies)) {
                                 echo '<option  value="' . $crr['name'] . '">' . $crr['name'] . ' - ' . $crr['symbol'] . '</option>';
+                            } ?>
+                        </select>
+                    </div>
+                    <div class="col-md-1">
+                        <label for="operator">Operator</label>
+                        <select name="operator" class="form-select form-select-sm" id="operator">
+                            <?php $ops = array('[*]' => '*', '[/]' => '/');
+                            foreach ($ops as $opName => $op) {
+                                echo '<option value="' . $op . '">' . $opName . '</option>';
                             } ?>
                         </select>
                     </div>
@@ -225,9 +238,11 @@ function generateUniqueBillNo($existingBillNumbers)
                     <thead>
                         <tr>
                             <th>SR.No</th>
+                            <th>Date</th>
                             <th>Details</th>
                             <th>Payment</th>
                             <th>Currency</th>
+                            <th>Operator</th>
                             <th>Rate</th>
                             <th>Total Amount</th>
                             <th>Action</th>
@@ -240,9 +255,11 @@ function generateUniqueBillNo($existingBillNumbers)
                             foreach ($entries as $entry): ?>
                                 <tr>
                                     <td><?= htmlspecialchars($sr_no); ?></td>
+                                    <td class="text-nowrap"><?= my_date(htmlspecialchars($entry['date'])); ?></td>
                                     <td><?= htmlspecialchars($entry['details']); ?></td>
                                     <td><?= htmlspecialchars($entry['payment']); ?></td>
                                     <td><?= htmlspecialchars($entry['currency']); ?></td>
+                                    <td><?= htmlspecialchars($entry['operator']); ?></td>
                                     <td><?= htmlspecialchars($entry['rate']); ?></td>
                                     <td><?= htmlspecialchars($entry['totalAmount']); ?></td>
                                     <td>
@@ -261,9 +278,11 @@ function generateUniqueBillNo($existingBillNumbers)
                     if (!empty($_GET['editID'])) {
                         $entries = json_decode($record['json_data'], true);
                         foreach ($entries as $entry): ?>
+                            <input type="hidden" name="date[]" value="<?= $entry['date']; ?>">
                             <input type="hidden" name="details[]" value="<?= $entry['details']; ?>">
                             <input type="hidden" name="payment[]" value="<?= $entry['payment']; ?>">
                             <input type="hidden" name="currency[]" value="<?= $entry['currency']; ?>">
+                            <input type="hidden" name="operator[]" value="<?= $entry['operator']; ?>">
                             <input type="hidden" name="rate[]" value="<?= $entry['rate']; ?>">
                             <input type="hidden" name="totalAmount[]" value="<?= $entry['totalAmount']; ?>">
                     <?php endforeach;
@@ -298,9 +317,11 @@ function generateUniqueBillNo($existingBillNumbers)
                         <thead>
                             <tr>
                                 <th style="width: 3%;">Sr.</th>
+                                <th>Date</th>
                                 <th style="width: 40%;">Details</th>
                                 <th>Payment</th>
                                 <th>Currency</th>
+                                <th>Operator</th>
                                 <th>Rate</th>
                                 <th>Total Amount</th>
                             </tr>
@@ -309,16 +330,20 @@ function generateUniqueBillNo($existingBillNumbers)
                             <?php $sr_no = 1;
                             if (isset($record['json_data'])):
                                 $entries = json_decode($record['json_data'], true);
+                                $viewBilltotalAmount = 0;
                                 foreach ($entries as $entry): ?>
                                     <tr>
                                         <td><?= htmlspecialchars($sr_no); ?></td>
+                                        <td class="text-nowrap"><?= my_date(htmlspecialchars($entry['date'])); ?></td>
                                         <td><?= htmlspecialchars($entry['details']); ?></td>
                                         <td><?= htmlspecialchars($entry['payment']); ?></td>
                                         <td><?= htmlspecialchars($entry['currency']); ?></td>
+                                        <td><?= htmlspecialchars($entry['operator']); ?></td>
                                         <td><?= htmlspecialchars($entry['rate']); ?></td>
                                         <td><?= number_format(htmlspecialchars($entry['totalAmount'])); ?></td>
                                     </tr>
                             <?php $sr_no++;
+                                    $viewBilltotalAmount += $entry['totalAmount'];
                                 endforeach;
                             endif; ?>
                         </tbody>
@@ -404,28 +429,37 @@ function generateUniqueBillNo($existingBillNumbers)
         function calculateTotals() {
             let qty = parseFloat($('#payment').val()) || 0;
             let rate = parseFloat($('#rate').val()) || 0;
-            let totalAmount = qty * rate;
+            let totalAmount;
+            if ($('#operator').val() === '/') {
+                totalAmount = qty / rate;
+            } else {
+                totalAmount = qty * rate;
+            }
             $('#totalAmount').val(totalAmount)
         }
 
         function clearInputBoxes() {
-            $('#details, #payment, #currency, #rate, #totalAmount').val('');
+            $('#details, #date, #payment, #currency, #operator, #rate, #totalAmount').val('');
             $('#details').focus();
         }
 
         function addRowToTable() {
+            let date = $('#date').val();
             let details = $('#details').val();
             let payment = $('#payment').val();
             let currency = $('#currency').val();
+            let operator = $('#operator').val();
             let rate = $('#rate').val();
             let totalAmount = $('#totalAmount').val();
             if (details && payment && rate) {
                 let newRow = `
             <tr>
                 <td>${srNo}</td>
+                <td>${date}</td>
                 <td>${details}</td>
                 <td>${payment}</td>
                 <td>${currency}</td>
+                <td>${operator}</td>
                 <td>${rate}</td>
                 <td>${totalAmount}</td>
                 <td>
@@ -448,14 +482,18 @@ function generateUniqueBillNo($existingBillNumbers)
             let rowCount = $('#addedRowsTable tbody tr').length;
             let hiddenInputs = '';
             $('#addedRowsTable tbody tr').each(function() {
-                let details = $(this).find('td:eq(1)').text();
-                let payment = $(this).find('td:eq(2)').text();
-                let currency = $(this).find('td:eq(3)').text();
-                let rate = $(this).find('td:eq(4)').text();
-                let totalAmount = $(this).find('td:eq(5)').text();
+                let date = $(this).find('td:eq(1)').text();
+                let details = $(this).find('td:eq(2)').text();
+                let payment = $(this).find('td:eq(3)').text();
+                let currency = $(this).find('td:eq(4)').text();
+                let operator = $(this).find('td:eq(5)').text();
+                let rate = $(this).find('td:eq(6)').text();
+                let totalAmount = $(this).find('td:eq(7)').text();
+                hiddenInputs += `<input type="hidden" name="date[]" value="${date}" />`;
                 hiddenInputs += `<input type="hidden" name="details[]" value="${details}" />`;
                 hiddenInputs += `<input type="hidden" name="payment[]" value="${payment}" />`;
                 hiddenInputs += `<input type="hidden" name="currency[]" value="${currency}" />`;
+                hiddenInputs += `<input type="hidden" name="operator[]" value="${operator}" />`;
                 hiddenInputs += `<input type="hidden" name="rate[]" value="${rate}" />`;
                 hiddenInputs += `<input type="hidden" name="totalAmount[]" value="${totalAmount}" />`;
             });
@@ -465,11 +503,11 @@ function generateUniqueBillNo($existingBillNumbers)
         function updateTotals() {
             let totalAmount = 0;
             $('#addedRowsTable tbody tr').each(function() {
-                totalAmount += parseFloat($(this).find('td:eq(5)').text()) || 0;
+                totalAmount += parseFloat($(this).find('td:eq(7)').text()) || 0;
             });
             $('#parentBillAmount').val(totalAmount.toFixed(2));
         }
-        $(document).on('input', '#payment, #rate', calculateTotals);
+        $(document).on('input', '#payment, #operator, #rate', calculateTotals);
         $(document).on('keydown', 'input', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -479,6 +517,8 @@ function generateUniqueBillNo($existingBillNumbers)
                 } else if (inputId === 'payment') {
                     $('#currency').focus();
                 } else if (inputId === 'currency') {
+                    $('#operator').focus();
+                } else if (inputId === 'operator') {
                     $('#rate').focus();
                 } else if (inputId === 'rate') {
                     calculateTotals();
@@ -492,11 +532,13 @@ function generateUniqueBillNo($existingBillNumbers)
                 isEditing = true;
                 let row = $(this).closest('tr');
                 $('#srNo').val(row.find('td:eq(0)').text());
-                $('#details').val(row.find('td:eq(1)').text());
-                $('#payment').val(row.find('td:eq(2)').text());
-                $('#currency').val(row.find('td:eq(3)').text());
-                $('#rate').val(row.find('td:eq(4)').text());
-                $('#totalAmount').val(row.find('td:eq(5)').text());
+                $('#date').val(row.find('td:eq(1)').text());
+                $('#details').val(row.find('td:eq(2)').text());
+                $('#payment').val(row.find('td:eq(3)').text());
+                $('#currency').val(row.find('td:eq(4)').text());
+                $('#operator').val(row.find('td:eq(5)').text());
+                $('#rate').val(row.find('td:eq(6)').text());
+                $('#totalAmount').val(row.find('td:eq(7)').text());
                 row.remove();
                 updateTotals();
                 addHiddenInputs();
@@ -557,16 +599,20 @@ if (isset($_POST['SubmitBill'])) {
     $entries = [];
 
     if (!empty($_POST['details']) && count($_POST['details']) > 0) {
+        $date = $_POST['date'];
         $details = $_POST['details'];
         $payments = $_POST['payment'];
         $currencies = $_POST['currency'];
+        $operators = $_POST['operator'];
         $rates = $_POST['rate'];
         $totalAmounts = $_POST['totalAmount'];
         for ($i = 0; $i < count($details); $i++) {
             $entries[] = [
+                'date' => mysqli_real_escape_string($connect, $date[$i]),
                 'details' => mysqli_real_escape_string($connect, $details[$i]),
                 'payment' => (float) $payments[$i],
                 'currency' => $currencies[$i],
+                'operator' => $operators[$i],
                 'rate' => (float) $rates[$i],
                 'totalAmount' => (float) $totalAmounts[$i],
             ];

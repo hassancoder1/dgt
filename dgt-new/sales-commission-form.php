@@ -209,18 +209,42 @@ $mypageURL = $pageURL;
                                 $commission[] = $commission_item;
                             }
                             $commission_item_qty = $commission_item_amt = 0;
+                            $sortedEnteries = $redEntries = $primaryEntries = $darkEntries = [];
                             while ($purchase = mysqli_fetch_assoc($purchases)) {
-                                $id = $purchase['id'];
+                                $_fields_single = transactionSingle($purchase['id']);
+                                $Qty = empty($_fields_single['items_sum']) ? '' : $_fields_single['items_sum']['sum_qty_no'];
                                 foreach ($commission as $com) {
-                                    if ($com['sale_id'] == $id) { // Check if the commission item matches the purchase ID
+                                    if ($com['sale_id'] == $purchase['id']) { // Check if the commission item matches the purchase ID
                                         $commission_item_qty += (float)$com['qty_no']; // Add the quantity to the total
                                         $commission_item_amt += (float)$com['final_amount']; // Add the quantity to the total
                                     }
                                 }
+                                $rowColor = '';
+                                $rowColor = $Qty != $commission_item_qty ? 'text-danger ' : ' text-dark ';
+                                $rowColor = $commission_item_qty === 0 ? 'text-danger' : ($Qty == $commission_item_qty ? 'text-dark' : 'text-primary');
+                                $commission_item_qty = 0;
+                                // Categorize entries based on color
+                                if ($rowColor == 'text-danger') {
+                                    $redEntries[] = $purchase;
+                                } elseif ($rowColor == 'text-primary') {
+                                    $primaryEntries[] = $purchase;
+                                } elseif ($rowColor == 'text-dark') {
+                                    $darkEntries[] = $purchase;
+                                }
+                            }
+                            $sortedEnteries = array_merge($redEntries, $primaryEntries, $darkEntries);
+                            foreach ($sortedEnteries as $purchase) {
+                                foreach ($commission as $com) {
+                                    if ($com['sale_id'] == $purchase['id']) { // Check if the commission item matches the purchase ID
+                                        $commission_item_qty += (float)$com['qty_no']; // Add the quantity to the total
+                                        $commission_item_amt += (float)$com['final_amount']; // Add the quantity to the total
+                                    }
+                                }
+                                $id = $purchase['id'];
                                 $p_sr = $purchase['sr'];
-                                $_fields_single = transactionSingle($id);
                                 $is_doc = $purchase['is_doc'];
                                 $locked = $purchase['locked'];
+                                $_fields_single = transactionSingle($purchase['id']);
                                 $cntrs = purchaseSpecificData($id, 'purchase_rows');
                                 $totals = purchaseSpecificData($id, 'product_details');
                                 $Goods = empty($_fields_single['items'][0]) ? '' : goodsName($_fields_single['items'][0]['goods_id']);
@@ -260,12 +284,6 @@ $mypageURL = $pageURL;
                                 }
 
                                 if ($is_search) {
-                                    // if ($start != '') {
-                                    //     if ($purchase['p_date'] < $start) continue;
-                                    // }
-                                    // if ($end != '') {
-                                    //     if ($purchase['p_date'] > $end) continue;
-                                    // }
                                     $GoodsKaNaam = $cntrs > 0 ? $totals['Goods'][0] : '';
                                     if ($goods_name != '') {
                                         if ($goods_name != $GoodsKaNaam) continue;
@@ -285,15 +303,14 @@ $mypageURL = $pageURL;
                                             if ($locked == 1) continue;
                                         }
                                     }
-                                    // if ($s_khaata_id != '') {
-                                    //     if ($s_khaata_id != $purchase['s_khaata_id']) continue;
-                                    // }
                                 }
                                 $p_qty_total += !empty($totals['Qty']) ? $totals['Qty'] : 0;
                                 $p_kgs_total += !empty($totals['KGs']) ? $totals['KGs'] : 0;
                                 $rowColor = '';
                                 $rowColor = $Qty != $commission_item_qty ? 'text-danger ' : ' text-dark ';
-                                $commission_item_qty = 0; ?>
+                                $rowColor = $commission_item_qty === 0 ? 'text-danger' : ($Qty == $commission_item_qty ? 'text-dark' : 'text-primary');
+                                $commission_item_qty = 0;
+                            ?>
                                 <tr class="text-nowrap">
                                     <td class="pointer <?php echo $rowColor; ?>" onclick="window.location.href='?view=1&t_id=<?= $id; ?>'">
                                         <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $p_sr;
@@ -432,9 +449,11 @@ if (isset($_POST['recordSubmit'])) {
             'tax_amount' => mysqli_real_escape_string($connect, $_POST['tax_amount']),
             'total_with_tax' => mysqli_real_escape_string($connect, $_POST['total_with_tax']),
             'name' => mysqli_real_escape_string($connect, $_POST['name']),
-            'details' => mysqli_real_escape_string($connect, $_POST['details']),
+            'details1' => mysqli_real_escape_string($connect, $_POST['details1']),
+            'details2' => mysqli_real_escape_string($connect, $_POST['details2']),
             'commission_percent' => mysqli_real_escape_string($connect, $_POST['commission_percent']),
             'commission_amount' => mysqli_real_escape_string($connect, $_POST['commission_amount']),
+            'additional_expense' => mysqli_real_escape_string($connect, $_POST['additional_expense']),
             'final_amount' => mysqli_real_escape_string($connect, (isset($_POST['total_with_tax']) && !empty($_POST['total_with_tax']) ? $_POST['total_with_tax'] : $_POST['final_amount']))
         );
         $data['sale_id'] = $sale_id;
@@ -603,5 +622,109 @@ if (isset($_POST['transferToFinal'])) {
         $msg = 'Transferred to Full Payment Form. ';
     }
     message($type, $pageURL, $msg);
+}
+
+if (isset($_POST['PaymentSubmit'])) {
+    unset($_POST['PaymentSubmit']);
+    $jmaa_khaata_no = mysqli_real_escape_string($connect, $_POST['p_acc_no']);
+    $jmaa_khaata_id = mysqli_real_escape_string($connect, $_POST['p_acc_id']);
+    $bnaam_khaata_no = mysqli_real_escape_string($connect, $_POST['s_acc_no']);
+    $bnaam_khaata_id = mysqli_real_escape_string($connect, $_POST['s_acc_id']);
+    $transfer_date = mysqli_real_escape_string($connect, $_POST['transfer_date']);
+    $amount = mysqli_real_escape_string($connect, $_POST['amount']);
+    $final_amount = mysqli_real_escape_string($connect, $_POST['final_amount']);
+    $details = mysqli_real_escape_string($connect, $_POST['details']) . " | Amount: $amount " . $_POST['currency1'] . " " . $_POST['opr'] . " " . $_POST['rate'] . ' = ' . $final_amount . " " . $_POST['currency2'];
+    $bill_id = mysqli_real_escape_string($connect, $_POST['id']);
+    // $type_post = "P/S Expenses";
+    // $url = $pageURL . '?viewID=' . $bill_id;
+    $type = 'Other Amt';
+    $transfered_from = 'sales-commission-form';
+    $r_type = 'Other Amt';
+    if ($jmaa_khaata_id > 0 && $bnaam_khaata_id > 0) {
+        $dataArray = array(
+            'r_type' => $r_type,
+            'transfered_from' => $transfered_from,
+            'transfered_from_id' => $bill_id,
+            'user_id' => $_SESSION['userId'],
+            'username' => $_SESSION['username'],
+            'r_date' => $transfer_date,
+            'roznamcha_no' => $bill_id,
+            'r_name' => $type,
+            'r_no' => $bill_id,
+            'created_at' => date('Y-m-d H:i:s')
+        );
+        $str = " Other Amt # " . $bill_id;
+        $done = false;
+        if (isset($_POST['r_id'])) {
+            $r_ids = $_POST['r_id'];
+            $i = 0;
+            $dataArrayUpdate = array();
+            foreach ($r_ids as $r_id) {
+                $i++;
+                if ($i == 1) {
+                    $k_datum = khaataSingle($jmaa_khaata_id);
+                    $dataArrayUpdate['details'] = 'Dr. A/c:' . $bnaam_khaata_no . " " . $details;
+                    $dataArrayUpdate['r_name'] = $type;
+                    $dataArrayUpdate['cat_id'] = $k_datum['cat_id'];
+                    $dataArrayUpdate['khaata_branch_id'] = $k_datum['branch_id'];
+                    $dataArrayUpdate['khaata_id'] = $jmaa_khaata_id;
+                    $dataArrayUpdate['khaata_no'] = $jmaa_khaata_no;
+                    $dataArrayUpdate['amount'] = $final_amount;
+                    $str .= "<span class='badge bg-dark mx-2'> Dr. " . $jmaa_khaata_no . "</span>";
+                }
+                if ($i == 2) {
+                    $k_datum = khaataSingle($bnaam_khaata_id);
+                    $dataArrayUpdate['details'] = 'Cr. A/c:' . $jmaa_khaata_no . " " . $details;
+                    $dataArrayUpdate['r_name'] = $type;
+                    $dataArrayUpdate['cat_id'] = $k_datum['cat_id'];
+                    $dataArrayUpdate['khaata_branch_id'] = $k_datum['branch_id'];
+                    $dataArrayUpdate['khaata_id'] = $bnaam_khaata_id;
+                    $dataArrayUpdate['khaata_no'] = $bnaam_khaata_no;
+                    $dataArrayUpdate['amount'] = $final_amount;
+                    $str .= "<span class='badge bg-dark mx-2'> Cr. " . $bnaam_khaata_no . "</span>";
+                }
+                $done = update('roznamchaas', $dataArrayUpdate, array('r_id' => $r_id));
+            }
+        } else {
+            for ($i = 1; $i <= 2; $i++) {
+                if ($i == 1) {
+                    $k_datum = khaataSingle($jmaa_khaata_id);
+                    $dataArray['branch_serial'] = 1;
+                    $dataArray['cat_id'] = $k_datum['cat_id'];
+                    $dataArray['khaata_branch_id'] = $k_datum['branch_id'];
+                    $dataArray['khaata_id'] = $jmaa_khaata_id;
+                    $dataArray['khaata_no'] = $jmaa_khaata_no;
+                    $dataArray['amount'] = $final_amount;
+                    $dataArray['dr_cr'] = 'dr';
+                    $dataArray['details'] = 'Dr. A/c:' . $bnaam_khaata_no . " " . $details;
+                    $str .= "<span class='badge bg-dark mx-2'>Dr." . $jmaa_khaata_no . "</span>";
+                }
+                if ($i == 2) {
+                    $k_datum = khaataSingle($bnaam_khaata_id);
+                    $dataArray['branch_serial'] = 1 + 1;
+                    $dataArray['cat_id'] = $k_datum['cat_id'];
+                    $dataArray['khaata_branch_id'] = $k_datum['branch_id'];
+                    $dataArray['khaata_id'] = $bnaam_khaata_id;
+                    $dataArray['khaata_no'] = $bnaam_khaata_no;
+                    $dataArray['amount'] = $final_amount;
+                    $dataArray['dr_cr'] = 'cr';
+                    $dataArray['details'] = 'Cr. A/c:' . $jmaa_khaata_no . " " . $details;
+                    $str .= "<span class='badge bg-dark mx-2'>Cr." . $bnaam_khaata_no . "</span>";
+                }
+                $done = insert('roznamchaas', $dataArray);
+            }
+        }
+        if ($done) {
+            $msg = 'Transferred to Business Roznamcha ' . $str;
+            $msgType = 'success';
+        } else {
+            $msg = 'Transfer Error ';
+            $msgType = 'danger';
+        }
+    } else {
+        $msg = 'Technical Problem. Contact Admin';
+        $msgType = 'warning';
+    }
+    message($msgType, '', $msg);
 }
 ?>

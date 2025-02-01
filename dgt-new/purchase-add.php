@@ -193,12 +193,13 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     $result = mysqli_query($connect, $query);
     $row = mysqli_fetch_assoc($result);
     $next_items_sr = $row['next_sr'] ?? 1;
-    $item_fields = ['p_s' => 'p', 'sr' => $next_items_sr, 'quality_report' => '', 'goods_id' => 0, 'size' => '', 'brand' => '', 'origin' => '', 'qty_name' => '', 'qty_no' => 0, 'qty_kgs' => 0, 'total_kgs' => 0, 'empty_kgs' => 0, 'total_qty_kgs' => 0, 'net_kgs' => 0, 'divide' => '', 'weight' => 0, 'total' => 0, 'price' => '', 'currency1' => '', 'rate1' => 0, 'amount' => 0, 'currency2' => 'AED', 'rate2' => '', 'opr' => '*', 'final_amount' => 0, 'tax_percent' => '', 'tax_amount' => '', 'total_with_tax' => '', 'show_in_vat' => $record['type'] === 'local' ? 'yes' : 'no'];
+    $item_fields = ['p_s' => 'p', 'sr' => $next_items_sr, 'quality_report' => '', 'goods_id' => 0, 'size' => '', 'brand' => '', 'origin' => '', 'qty_name' => '', 'qty_no' => 0, 'qty_kgs' => 0, 'total_kgs' => 0, 'empty_kgs' => 0, 'total_qty_kgs' => 0, 'net_kgs' => 0, 'divide' => '', 'weight' => 0, 'total' => 0, 'price' => '', 'currency1' => '', 'rate1' => 0, 'amount' => 0, 'currency2' => 'AED', 'rate2' => '', 'opr' => '*', 'final_amount' => 0, 'tax_percent' => '', 'tax_amount' => '', 'total_with_tax' => '', 'show_in_vat' => $record['type'] === 'local' ? 'yes' : 'no', 'show_in_loading' => 'no', 'show_in_warehouse' => 'no'];
     if (isset($_GET['item_id']) && $_GET['item_id'] > 0) {
         $item_id = mysqli_real_escape_string($connect, $_GET['item_id']);
         $records2 = fetch('transaction_items', array('id' => $item_id));
         $record2 = mysqli_fetch_assoc($records2);
-        $item_fields = ['p_s' => $record2['p_s'], 'sr' => $record2['sr'], 'quality_report' => $record2['quality_report'], 'allotment_name' => $record2['allotment_name'], 'goods_id' => $record2['goods_id'], 'size' => $record2['size'], 'brand' => $record2['brand'], 'origin' => $record2['origin'], 'qty_name' => $record2['qty_name'], 'qty_no' => $record2['qty_no'], 'qty_kgs' => $record2['qty_kgs'], 'total_kgs' => $record2['total_kgs'], 'empty_kgs' => $record2['empty_kgs'], 'total_qty_kgs' => $record2['total_qty_kgs'], 'net_kgs' => $record2['net_kgs'], 'divide' => $record2['divide'], 'weight' => $record2['weight'], 'total' => $record2['total'], 'price' => $record2['price'], 'currency1' => $record2['currency1'], 'rate1' => $record2['rate1'], 'amount' => $record2['amount'], 'currency2' => $record2['currency2'], 'rate2' => $record2['rate2'], 'opr' => $record2['opr'], 'final_amount' => $record2['final_amount'], 'tax_percent' => $record2['tax_percent'], 'tax_amount' => $record2['tax_amount'], 'total_with_tax' => $record2['total_with_tax'], 'show_in_vat' => $record2['show_in_vat']];
+        $show_in = json_decode($record2['show_in'], true);
+        $item_fields = ['p_s' => $record2['p_s'], 'sr' => $record2['sr'], 'quality_report' => $record2['quality_report'], 'allotment_name' => $record2['allotment_name'], 'goods_id' => $record2['goods_id'], 'size' => $record2['size'], 'brand' => $record2['brand'], 'origin' => $record2['origin'], 'qty_name' => $record2['qty_name'], 'qty_no' => $record2['qty_no'], 'qty_kgs' => $record2['qty_kgs'], 'total_kgs' => $record2['total_kgs'], 'empty_kgs' => $record2['empty_kgs'], 'total_qty_kgs' => $record2['total_qty_kgs'], 'net_kgs' => $record2['net_kgs'], 'divide' => $record2['divide'], 'weight' => $record2['weight'], 'total' => $record2['total'], 'price' => $record2['price'], 'currency1' => $record2['currency1'], 'rate1' => $record2['rate1'], 'amount' => $record2['amount'], 'currency2' => $record2['currency2'], 'rate2' => $record2['rate2'], 'opr' => $record2['opr'], 'final_amount' => $record2['final_amount'], 'tax_percent' => $record2['tax_percent'], 'tax_amount' => $record2['tax_amount'], 'total_with_tax' => $record2['total_with_tax'], 'show_in_vat' => $show_in['vat'] ?? ($record['type'] === 'local' ? 'yes' : 'no'), 'show_in_loading' => $show_in['loading'] ?? 'no', 'show_in_warehouse' => $show_in['warehouse'] ?? 'no'];
     }
 
     $bank_details = json_decode(decodeSpecialCharacters($record['third_party_bank']), true);
@@ -775,7 +776,7 @@ echo '<script>let purchaseReports = [];</script>';
                                     </div>
                                     <div class="col-md-5">
                                         <div class="input-group">
-                                            <label for="show_in_vat">VAT?</label>
+                                            <label for="show_in_vat">VAT Transfer: </label>
                                             <select class="form-select" name="show_in_vat" id="show_in_vat" required>
                                                 <option value="no" <?= $item_fields['show_in_vat'] === 'no' ? 'selected' : ''; ?>>No</option>
                                                 <option value="yes" <?= $item_fields['show_in_vat'] === 'yes' ? 'selected' : ''; ?>>Yes</option>
@@ -797,6 +798,15 @@ echo '<script>let purchaseReports = [];</script>';
                                     </div>
                                     <div class="col-md-5">
                                         <div class="input-group">
+                                            <label for="show_in_loading">Loading Trans</label>
+                                            <select class="form-select" name="show_in_loading" id="show_in_loading" required>
+                                                <option value="no" <?= $item_fields['show_in_loading'] === 'no' ? 'selected' : ''; ?>>No</option>
+                                                <option value="yes" <?= $item_fields['show_in_loading'] === 'yes' ? 'selected' : ''; ?>>Yes</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-7">
+                                        <div class="input-group">
                                             <label for="size">SIZE</label>
                                             <select class="form-select" name="size" id="size" required>
                                                 <option hidden value="">Select</option>
@@ -805,6 +815,15 @@ echo '<script>let purchaseReports = [];</script>';
                                                     $size_selected = $size_s['size'] == $item_fields['size'] ? 'selected' : '';
                                                     echo '<option ' . $size_selected . ' value="' . $size_s['size'] . '">' . $size_s['size'] . '</option>';
                                                 } ?>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <div class="input-group">
+                                            <label for="show_in_warehouse">Warehouse</label>
+                                            <select class="form-select" name="show_in_warehouse" id="show_in_warehouse" required>
+                                                <option value="no" <?= $item_fields['show_in_warehouse'] === 'no' ? 'selected' : ''; ?>>No</option>
+                                                <option value="yes" <?= $item_fields['show_in_warehouse'] === 'yes' ? 'selected' : ''; ?>>Yes</option>
                                             </select>
                                         </div>
                                     </div>
@@ -1084,6 +1103,336 @@ echo '<script>let purchaseReports = [];</script>';
                 </div>
             </div>
         <?php } ?>
+        <div class="container-fluid">
+  <form class="needs-validation" novalidate>
+    <div class="row g-3">
+      <!-- Left Column -->
+      <div class="col-lg-4">
+        <div class="card border">
+          <div class="card-body">
+            <div class="row g-3">
+              <!-- Static SR -->
+              <div class="col-12">
+                <h5 class="text-muted">
+                  <i class="fas fa-hashtag me-2"></i>
+                  SR#: <span class="text-dark"><?= $item_fields['sr'] ?></span>
+                </h5>
+              </div>
+
+              <!-- Allotment Name -->
+              <div class="col-12">
+                <label class="form-label">
+                  <i class="fas fa-signature me-2"></i>
+                  Allotment Name
+                </label>
+                <input type="text" class="form-control" name="allotment_name" required>
+              </div>
+
+              <!-- Transfer Selects -->
+              <div class="col-12">
+                <label class="form-label">
+                  <i class="fas fa-exchange-alt me-2"></i>
+                  VAT Transfer
+                </label>
+                <select class="form-select" name="vat_transfer">
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+
+              <div class="col-12">
+                <label class="form-label">
+                  <i class="fas fa-truck-loading me-2"></i>
+                  Loading Transfer
+                </label>
+                <select class="form-select" name="loading_transfer">
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+
+              <div class="col-12">
+                <label class="form-label">
+                  <i class="fas fa-warehouse me-2"></i>
+                  Warehouse Transfer
+                </label>
+                <select class="form-select" name="warehouse_transfer">
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+
+              <!-- Goods Select -->
+              <div class="col-12">
+                <label class="form-label">
+                  <i class="fas fa-boxes me-2"></i>
+                  Goods
+                </label>
+                <select class="form-select" name="goods">
+                  <?php foreach($goods as $good): ?>
+                    <option value="<?= $good['id'] ?>"><?= $good['name'] ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+
+              <!-- Size Select -->
+              <div class="col-12">
+                <label class="form-label">
+                  <i class="fas fa-ruler me-2"></i>
+                  Size
+                </label>
+                <select class="form-select" name="size">
+                  <!-- PHP options here -->
+                </select>
+              </div>
+
+              <!-- Brand Input -->
+              <div class="col-12">
+                <label class="form-label">
+                  <i class="fas fa-tag me-2"></i>
+                  Brand
+                </label>
+                <input type="text" class="form-control" name="brand">
+              </div>
+
+              <!-- Origin Select -->
+              <div class="col-12">
+                <label class="form-label">
+                  <i class="fas fa-globe me-2"></i>
+                  Origin
+                </label>
+                <select class="form-select" name="origin">
+                  <!-- PHP options here -->
+                </select>
+              </div>
+
+              <!-- Report Box -->
+              <div class="col-12">
+                <label class="form-label">
+                  <i class="fas fa-file-alt me-2"></i>
+                  Report
+                </label>
+                <textarea class="form-control" rows="3" name="report"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Middle Column -->
+      <div class="col-lg-4">
+        <div class="card border">
+          <div class="card-body">
+            <div class="row g-3">
+              <!-- Quantity Section -->
+              <div class="col-12">
+                <label class="form-label">
+                  <i class="fas fa-cube me-2"></i>
+                  Quantity Name
+                </label>
+                <input type="text" class="form-control" name="quantity_name">
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">
+                  <i class="fas fa-hashtag me-2"></i>
+                  Quantity No
+                </label>
+                <input type="number" class="form-control" name="quantity_no">
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">
+                  <i class="fas fa-weight me-2"></i>
+                  Empty KGS
+                </label>
+                <input type="number" class="form-control" name="empty_kgs">
+              </div>
+
+              <!-- Price Type -->
+              <div class="col-12">
+                <label class="form-label">
+                  <i class="fas fa-tag me-2"></i>
+                  Price Type
+                </label>
+                <select class="form-select" name="price_type">
+                  <option>P/TON</option>
+                  <option>P/KG</option>
+                </select>
+              </div>
+
+              <!-- Currency 1 -->
+              <div class="col-md-6">
+                <label class="form-label">
+                  <i class="fas fa-money-bill-wave me-2"></i>
+                  Currency 1
+                </label>
+                <select class="form-select" name="currency1">
+                  <?php foreach($currencies as $currency): ?>
+                    <option value="<?= $currency['code'] ?>">
+                      <?= $currency['name'] ?> (<?= $currency['symbol'] ?>)
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+
+              <!-- Rate 1 -->
+              <div class="col-md-6">
+                <label class="form-label">
+                  <i class="fas fa-percentage me-2"></i>
+                  Rate 1
+                </label>
+                <input type="number" class="form-control" name="rate1">
+              </div>
+
+              <!-- Divide Type -->
+              <div class="col-12">
+                <label class="form-label">
+                  <i class="fas fa-divide me-2"></i>
+                  Divide Type
+                </label>
+                <select class="form-select" name="divide_type">
+                  <option>D/TON</option>
+                  <option>D/KG</option>
+                </select>
+              </div>
+
+              <!-- Weight -->
+              <div class="col-12">
+                <label class="form-label">
+                  <i class="fas fa-weight-hanging me-2"></i>
+                  Weight
+                </label>
+                <input type="number" class="form-control" name="weight">
+              </div>
+
+              <!-- Quantity KGS -->
+              <div class="col-12">
+                <label class="form-label">
+                  <i class="fas fa-balance-scale me-2"></i>
+                  Quantity KGS
+                </label>
+                <input type="number" class="form-control" name="quantity_kgs">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div class="col-lg-4">
+        <div class="card border">
+          <div class="card-body">
+            <div class="row g-3">
+              <!-- Currency 2 -->
+              <div class="col-md-6">
+                <label class="form-label">
+                  <i class="fas fa-money-bill-wave me-2"></i>
+                  Currency 2
+                </label>
+                <select class="form-select" name="currency2">
+                  <?php foreach($currencies as $currency): ?>
+                    <option value="<?= $currency['code'] ?>">
+                      <?= $currency['name'] ?> (<?= $currency['symbol'] ?>)
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+
+              <!-- Rate 2 -->
+              <div class="col-md-6">
+                <label class="form-label">
+                  <i class="fas fa-percentage me-2"></i>
+                  Rate 2
+                </label>
+                <input type="number" class="form-control" name="rate2">
+              </div>
+
+              <!-- Operator -->
+              <div class="col-12">
+                <label class="form-label">
+                  <i class="fas fa-calculator me-2"></i>
+                  Operator
+                </label>
+                <select class="form-select" name="operator">
+                  <option value="*">Multiply (*)</option>
+                  <option value="/">Divide (/)</option>
+                </select>
+              </div>
+
+              <!-- Totals Card -->
+              <div class="col-12">
+                <div class="card border">
+                  <div class="card-body">
+                    <div class="row g-2">
+                      <div class="col-8">
+                        <i class="fas fa-weight me-2"></i>
+                        Total KGS:
+                      </div>
+                      <div class="col-4 text-end" id="total-kgs">0.00</div>
+
+                      <div class="col-8">
+                        <i class="fas fa-cube me-2"></i>
+                        Total Qty KGS:
+                      </div>
+                      <div class="col-4 text-end" id="total-qty-kgs">0.00</div>
+
+                      <div class="col-8">
+                        <i class="fas fa-minus-circle me-2"></i>
+                        NET KGS:
+                      </div>
+                      <div class="col-4 text-end" id="net-kgs">0.00</div>
+
+                      <div class="col-8">
+                        <i class="fas fa-calculator me-2"></i>
+                        Total:
+                      </div>
+                      <div class="col-4 text-end" id="total">0.00</div>
+
+                      <div class="col-8">
+                        <i class="fas fa-coins me-2"></i>
+                        Amount:
+                      </div>
+                      <div class="col-4 text-end" id="amount">0.00</div>
+
+                      <div class="col-8 fw-bold">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Final Amount:
+                      </div>
+                      <div class="col-4 text-end fw-bold" id="final-amount">0.00</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Submit Button -->
+              <div class="col-12">
+                <button type="submit" class="btn btn-primary w-100">
+                  <i class="fas fa-check-circle me-2"></i>
+                  Submit
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<style>
+  .card {
+    border: 1px solid #dee2e6 !important;
+    border-radius: 0.5rem;
+  }
+  .form-label {
+    font-weight: 500;
+    color: #2c3e50;
+  }
+  .card-body {
+    padding: 1.5rem;
+  }
+</style>
     </div>
 </div>
 <?php include("footer.php"); ?>
@@ -1575,7 +1924,12 @@ if (isset($_POST['recordSubmit'])) {
             insert('good_details', ['goods_id' => $_POST['goods_id'], 'size' => $_POST['size'], 'brand' => strtoupper($_POST['brand']), 'origin' => $_POST['origin']]);
         }
         $pageURL .= '?id=' . $hidden_id . '&type=' . $record['type'];
-
+        $show_in = mysqli_real_escape_string($connect, json_encode([
+            'vat' => $_POST['show_in_vat'],
+            'loading' => $_POST['show_in_loading'],
+            'warehouse' => $_POST['show_in_warehouse'],
+            'stock' => 'yes'
+        ]));
         $data = array(
             'sr' =>  mysqli_real_escape_string($connect, $_POST['sr']),
             'allotment_name' => mysqli_real_escape_string($connect, $_POST['allotment_name']),
@@ -1604,7 +1958,7 @@ if (isset($_POST['recordSubmit'])) {
             'tax_percent' => mysqli_real_escape_string($connect, $_POST['tax_percent']),
             'tax_amount' => mysqli_real_escape_string($connect, $_POST['tax_amount']),
             'total_with_tax' => mysqli_real_escape_string($connect, $_POST['total_with_tax']),
-            'show_in_vat' => mysqli_real_escape_string($connect, $_POST['show_in_vat']),
+            'show_in' => $show_in,
             'final_amount' => mysqli_real_escape_string($connect, (isset($_POST['total_with_tax']) && !empty($_POST['total_with_tax']) ? $_POST['total_with_tax'] : $_POST['final_amount'])),
         );
         if ($hidden_item_id > 0) {

@@ -2,64 +2,105 @@
 $page_title = 'Local Loading';
 $pageURL = 'local-loading';
 include("header.php");
+
+// Initialize variables
 $remove = $goods_name = $start_print = $end_print = $type = $acc_no = $p_sr = $route = $is_transferred = '';
 $is_search = false;
 global $connect;
 $results_per_page = 25;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $start_from = ($page - 1) * $results_per_page;
-$sql = "SELECT * FROM `transactions` WHERE type='local' AND sea_road IS NOT NULL";
+
+// Base SQL query
+$sql = "
+SELECT DISTINCT t.* 
+FROM transactions t
+JOIN transaction_items ti ON ti.parent_id = t.id
+WHERE t.type = 'local' 
+  AND JSON_EXTRACT(ti.show_in, '$.loading') = 'yes'
+";
+
+// Initialize conditions array
 $conditions = [];
 $print_filters = [];
+
+// Check for filters
 if ($_GET) {
     $remove = removeFilter('local-loading');
     $is_search = true;
+
+    // Transaction ID filter
     if (isset($_GET['p_id']) && !empty($_GET['p_id'])) {
         $p_sr = mysqli_real_escape_string($connect, $_GET['p_id']);
         $print_filters[] = 'p_id=' . $p_sr;
-        $conditions[] = "sr = '$p_sr'";
+        $conditions[] = "t.sr = '$p_sr'";
     }
+
+    // Date range filters
     if (isset($_GET['start']) && !empty($_GET['start'])) {
         $start_print = mysqli_real_escape_string($connect, $_GET['start']);
         $print_filters[] = 'start=' . $start_print;
-        $conditions[] = "_date >= '$start_print'";
+        $conditions[] = "t._date >= '$start_print'";
     }
     if (isset($_GET['end']) && !empty($_GET['end'])) {
         $end_print = mysqli_real_escape_string($connect, $_GET['end']);
         $print_filters[] = 'end=' . $end_print;
-        $conditions[] = "_date <= '$end_print'";
+        $conditions[] = "t._date <= '$end_print'";
     }
+
+    // Transfer status filter
     if (isset($_GET['is_transferred']) && $_GET['is_transferred'] !== '') {
         $is_transferred = mysqli_real_escape_string($connect, $_GET['is_transferred']);
         $print_filters[] = "is_transferred=" . $is_transferred;
         if ($is_transferred === '1') {
-            $conditions[] = "locked = '1'";
+            $conditions[] = "t.locked = '1'";
         } elseif ($is_transferred === '0') {
-            $conditions[] = "locked = '0'";
+            $conditions[] = "t.locked = '0'";
         }
     }
+
+    // Account number filter
     if (isset($_GET['acc_no']) && !empty($_GET['acc_no'])) {
         $acc_no = mysqli_real_escape_string($connect, $_GET['acc_no']);
         $print_filters[] = 'acc_no=' . $acc_no;
+        $conditions[] = "t.acc_no = '$acc_no'";
     }
+
+    // Page number filter
     if (isset($_GET['page']) && !empty($_GET['page'])) {
         $page = mysqli_real_escape_string($connect, $_GET['page']);
         $print_filters[] = 'page=' . $page;
     }
+
+    // Route filter (JSON field)
     if (isset($_GET['route']) && !empty($_GET['route'])) {
         $route = mysqli_real_escape_string($connect, $_GET['route']);
         $print_filters[] = 'route=' . $route;
-        $conditions[] = "JSON_EXTRACT(sea_road, '$.route') = '$route'";
+        $conditions[] = "JSON_EXTRACT(t.sea_road, '$.route') = '$route'";
     }
 }
+
+// Append conditions dynamically to the query if there are any
 if (count($conditions) > 0) {
     $sql .= ' AND ' . implode(' AND ', $conditions);
 }
-$sql .= " AND locked = '1' AND transfer_level >= '2' ORDER BY id DESC LIMIT $start_from, $results_per_page";
+
+// Final query with additional conditions
+$sql .= " 
+  AND t.locked IN ('1', '2') 
+  AND t.transfer_level >= '2'
+ORDER BY t.id DESC 
+LIMIT $start_from, $results_per_page
+";
+
+// Execute the query
 $purchases = mysqli_query($connect, $sql);
+
+// Generate query string for printing
 $query_string = implode('&', $print_filters);
 $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
 ?>
+
 
 <div class="fixed-top">
     <?php require_once('nav-links.php'); ?>
@@ -80,8 +121,12 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     $base_url = $url_parts['path'] . '?' . http_build_query($query_params);
 
                     $count_sql = "SELECT COUNT(id) AS total FROM `transactions` WHERE ";
-                    if (count($conditions) > 0) {
-                        $count_sql .= '' . implode(' AND ', $conditions);
+                    // Remove "t." from the conditions array for this query
+                    $count_conditions = array_map(function ($condition) {
+                        return str_replace("t.", "", $condition);
+                    }, $conditions);
+                    if (count($count_conditions) > 0) {
+                        $count_sql .= '' . implode(' AND ', $count_conditions);
                         $count_sql .= ' AND ';
                     }
                     $count_sql .= "locked = '1' AND transfer_level >= '2' ORDER BY id DESC";
@@ -283,10 +328,22 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     $payments = json_decode($purchase['payments'], true);
                     $cntrs = purchaseSpecificData($id, 'purchase_rows');
                     $totals = purchaseSpecificData($id, 'product_details');
-                    $Goods = empty($_fields_single['items'][0]) ? '' : goodsName($_fields_single['items'][0]['goods_id']);
-                    $Qty = empty($_fields_single['items_sum']) ? '' : $_fields_single['items_sum']['sum_qty_no'];
-                    $KGs = empty($_fields_single['items_sum']) ? '' : $_fields_single['items_sum']['sum_total_kgs'];
-
+                    $Goods = '';
+                    $Qty = 0;
+                    $KGs = 0;
+                    if (!empty($_fields_single['items'])) {
+                        $Goods = goodsName($_fields_single['items'][0]['goods_id']);
+                        foreach ($_fields_single['items'] as $item) {
+                            $show_in = isset($item['show_in']) ? json_decode($item['show_in'], true) : null;
+                            if (!empty($show_in) && isset($show_in['loading']) && $show_in['loading'] === 'yes') {
+                                $Qty += isset($item['qty_no']) ? $item['qty_no'] : 0;
+                                $KGs += isset($item['total_kgs']) ? $item['total_kgs'] : 0;
+                            }
+                        }
+                    } else {
+                        $Qty = '';
+                        $KGs = '';
+                    }
                     $sea_road = '';
                     $sea_road_array = json_decode(getSeaRoadArray($id));
                     $_fields_sr = ['l_country' => '', 'l_date' => '', 'r_country' => '', 'r_date' => ''];

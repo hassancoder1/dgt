@@ -138,8 +138,8 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                         <th>Type</th>
                         <th>BR.</th>
                         <th>Date</th>
-                        <th>A/c</th>
-                        <th>A/c Name</th>
+                        <th>Seller Acc.</th>
+                    <th>Purchaser Acc.</th>
                         <th>Goods Name</th>
                         <th>Qty</th>
                         <th>KGs</th>
@@ -229,11 +229,13 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                             <td class="<?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['type']); ?></td>
                             <td class="<?php echo $rowColor; ?>"><?php echo branchName($_fields_single['branch_id']); ?></td>
                             <td class="<?php echo $rowColor; ?>"><?php echo my_date($_fields_single['_date']); ?></td>
-                            <td class="acc_no <?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['cr_acc']); ?></td>
-                            <td class="acc_name <?php echo $rowColor; ?>"><?php echo $_fields_single['cr_acc_name']; ?></td>
+                            <td class="acc_no <?php echo $rowColor; ?>"><?= strtoupper($_fields_single['cr_acc']) . ' ' . $_fields_single['cr_acc_name']; ?></td>
+                        <td class="acc_no <?php echo $rowColor; ?>"><?= strtoupper($_fields_single['dr_acc']) . ' ' . $_fields_single['dr_acc_name']; ?></td>
+                        <!-- <td class="acc_no <?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['dr_acc']); ?></td> -->
+                        <!-- <td class="<?php echo $rowColor; ?>"><?php echo $_fields_single['dr_acc_name']; ?></td> -->
                             <td class="<?php echo $rowColor; ?>"><?php echo $Goods; ?></td>
-                            <td class="<?php echo $rowColor; ?>"><?php echo $Qty; ?></td>
-                            <td class="<?php echo $rowColor; ?>"><?php echo $KGs; ?></td>
+                            <td class="<?php echo $rowColor; ?>"><?php echo number_format($Qty, 2); ?></td>
+                            <td class="<?php echo $rowColor; ?>"><?php echo number_format($KGs, 2); ?></td>
                             <?php if ($sea_road == '') { ?>
                                 <td class="<?php echo $rowColor; ?>" colspan="3"></td>
                             <?php } else { ?>

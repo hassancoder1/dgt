@@ -810,6 +810,108 @@ function areTransactionItemsAdded($parent_id): bool
         return false;
     }
 }
+function convertNumberToWords($number)
+{
+    $ones = array(
+        0 => '',
+        1 => 'One',
+        2 => 'Two',
+        3 => 'Three',
+        4 => 'Four',
+        5 => 'Five',
+        6 => 'Six',
+        7 => 'Seven',
+        8 => 'Eight',
+        9 => 'Nine',
+        10 => 'Ten',
+        11 => 'Eleven',
+        12 => 'Twelve',
+        13 => 'Thirteen',
+        14 => 'Fourteen',
+        15 => 'Fifteen',
+        16 => 'Sixteen',
+        17 => 'Seventeen',
+        18 => 'Eighteen',
+        19 => 'Nineteen'
+    );
+
+    $tens = array(
+        2 => 'Twenty',
+        3 => 'Thirty',
+        4 => 'Forty',
+        5 => 'Fifty',
+        6 => 'Sixty',
+        7 => 'Seventy',
+        8 => 'Eighty',
+        9 => 'Ninety'
+    );
+
+    $words = array();
+    $integerPart = (int)abs($number);
+
+    if ($integerPart >= 10000000) {
+        $crore = (int)($integerPart / 10000000);
+        $integerPart %= 10000000;
+        $words[] = convertLessThanOneThousand($crore, $ones, $tens) . ' Crore';
+    }
+
+    if ($integerPart >= 100000) {
+        $lakh = (int)($integerPart / 100000);
+        $integerPart %= 100000;
+        $words[] = convertLessThanOneThousand($lakh, $ones, $tens) . ' Lakh';
+    }
+
+    if ($integerPart >= 1000) {
+        $thousand = (int)($integerPart / 1000);
+        $integerPart %= 1000;
+        $words[] = convertLessThanOneThousand($thousand, $ones, $tens) . ' Thousand';
+    }
+
+    if ($integerPart > 0) {
+        $words[] = convertLessThanOneThousand($integerPart, $ones, $tens);
+    }
+
+    $result = implode(' ', $words);
+
+    if ($number < 0) {
+        $result = 'Minus ' . $result;
+    }
+
+    return $result . ' Only';
+}
+function convertLessThanOneThousand($num, $ones, $tens)
+{
+    $word = '';
+    $hundreds = (int)($num / 100);
+    $remainder = $num % 100;
+
+    if ($hundreds > 0) {
+        $word .= $ones[$hundreds] . ' Hundred ';
+    }
+
+    if ($remainder > 0) {
+        if ($remainder < 20) {
+            $word .= $ones[$remainder];
+        } else {
+            $ten = (int)($remainder / 10);
+            $unit = $remainder % 10;
+            $word .= $tens[$ten];
+            if ($unit > 0) {
+                $word .= ' ' . $ones[$unit];
+            }
+        }
+    }
+
+    return trim($word);
+}
+
+function acc_bank_details($accNo)
+{
+    global $connect;
+    $accNo = strtoupper($accNo);
+    $data = mysqli_fetch_assoc($connect->query("SELECT bank_details FROM khaata WHERE UPPER(khaata_no) = UPPER('$accNo')")) ?? [];
+    return json_decode($data['bank_details'] ?? '[]', true);
+}
 
 function isSaleDetailsAdded($saleId)
 {

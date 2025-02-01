@@ -242,13 +242,13 @@ if ($id > 0) {
                                         <th></th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody id="goods_table">
                                     <?php $sr_details = 1;
                                     $qty_no = $qty_kgs = $total_kgs = $total_qty_kgs = $net_kgs = $total = $amount = $final_amount = $total_tax_amount = $total_total_with_tax = 0;
                                     $pur_d_q = fetch('transaction_items', array('parent_id' => $id));
                                     while ($details = mysqli_fetch_assoc($pur_d_q)) {
                                         $details_id = $details['id'];
-                                        echo '<tr>';
+                                        echo '<tr id="toHideRow_' . $details_id . '">';
                                         echo '<td>' . $details['sr'] . '</td>';
                                         echo '<td><a class="text-dark">' . goodsName($details['goods_id']) . '</a> / ' . $details['size'] . ' / ' . $details['brand'] . ' / ' . $details['origin'] . '</td>';
                                         echo '<td>' . $details['qty_no'] . '<sub>' . $details['qty_name'] . '</sub></td>';
@@ -333,6 +333,7 @@ if ($id > 0) {
                                 <table class="table table-hover mb-0">
                                     <thead>
                                         <tr class="text-nowrap">
+                                            <th><i class="fa fa-square-o"></i></th>
                                             <th>#</th>
                                             <th>Date</th>
                                             <th>GOODS / SIZE / BRAND / ORIGIN</th>
@@ -357,6 +358,7 @@ if ($id > 0) {
                                         <?php
                                         $sr_details = $commission_item = 1;
                                         $qty_no = $qty_kgs = $total_kgs = $total_qty_kgs = $net_kgs = $total = $amount = $final_amount = $total_tax_amount = $total_total_with_tax = 0;
+                                        $cEntryIds = [];
                                         foreach ($_fields['items'] as $myitem) {
                                             $hasChildItems = false;
                                             foreach ($commission_items as $oneCitem) {
@@ -374,9 +376,11 @@ if ($id > 0) {
                                                     if ($oneCitem['item_id'] !== $myitem['id']) {
                                                         continue;
                                                     }
+                                                    $cEntryIds[] = $oneCitem['id'];
                                                     $transferred_ = !empty($oneCitem['transferred']) ? json_decode($oneCitem['transferred'], true) : null;
                                                     $child_qty[$myitem['id']] += $oneCitem['qty_no'];
                                                     echo '<tr>';
+                                                    echo '<td><input type="checkbox" class="row-checkbox" value="' . $record['id'] . '-' . $oneCitem['id'] . '-' . $commission_item . '"></td>';
                                                     echo '<td>' . $commission_item . '</td>';
                                                     echo '<td class="text-nowrap">' . my_date($oneCitem['created_at']) . '</td>';
                                                     echo '<td>' . ($Parent_item ?? '// // // //') . '</td>';
@@ -402,11 +406,11 @@ if ($id > 0) {
                                                     echo '</td>';
                                                     echo '<td>' . ($transferred_ ? '<i class="fa fa-check text-success"></i>' : '<i class="fa fa-times text-danger"></i>') . '</td>';
                                                     echo '<td>
-        <a href="?view=1&t_id=' . $record['id'] . '&viewId=' . $oneCitem['id'] . '">View</a> | 
-        <a href="?view=1&t_id=' . $record['id'] . '&editId=' . $oneCitem['id'] . '">Edit</a> | 
-        <a href="?view=1&t_id=' . $record['id'] . '&deleteId=' . $oneCitem['id'] . '">Delete</a>
+        <a href="?view=1&t_id=' . $record['id'] . '&viewId=' . $oneCitem['id'] . '"><i class="fas me-1 text-primary fa-eye"></i></a> | 
+        <a href="?view=1&t_id=' . $record['id'] . '&editId=' . $oneCitem['id'] . '"><i class="fas me-1 text-warning fa-edit"></i></a> | 
+        <a href="?view=1&t_id=' . $record['id'] . '&deleteId=' . $oneCitem['id'] . '"><i class="fas me-1 text-danger fa-trash-alt"></i></a>
       </td>';
-
+                                                    // <a href="print/commission-item-print?t_id=' . $record['id'] . '&item_id=' . $oneCitem['id'] . '&item_sr=' . $commission_item . '&print_type=full">Print</a>
                                                     echo '</tr>';
                                                     $commission_item++;
                                                     $qty_no += $oneCitem['qty_no'];
@@ -469,7 +473,7 @@ if ($id > 0) {
                                 $structuredData[$item_fields['item_id']]['qty_no'] += $item_fields['qty_no'];
                             }
                         } else {
-                            $item_fields = ['p_s' => 'p', 'sr' => '', 'quality_report' => '', 'goods_id' => 0, 'size' => '', 'brand' => '', 'origin' => '', 'qty_name' => '', 'qty_no' => 0, 'qty_kgs' => 0, 'total_kgs' => 0, 'empty_kgs' => 0, 'total_qty_kgs' => 0, 'net_kgs' => 0, 'divide' => '', 'weight' => 0, 'total' => 0, 'price' => '', 'currency1' => '', 'rate1' => 0, 'amount' => 0, 'currency2' => 'AED', 'rate2' => '', 'opr' => '*', 'final_amount' => 0, 'tax_percent' => '', 'tax_amount' => '', 'total_with_tax' => '', 'name' => '', 'details' => '', 'commission_percent' => '', 'commission_amount' => 0];
+                            $item_fields = ['p_s' => 'p', 'sr' => '', 'quality_report' => '', 'goods_id' => 0, 'size' => '', 'brand' => '', 'origin' => '', 'qty_name' => '', 'qty_no' => 0, 'qty_kgs' => 0, 'total_kgs' => 0, 'empty_kgs' => 0, 'total_qty_kgs' => 0, 'net_kgs' => 0, 'divide' => '', 'weight' => 0, 'total' => 0, 'price' => '', 'currency1' => '', 'rate1' => 0, 'amount' => 0, 'currency2' => 'AED', 'rate2' => '', 'opr' => '*', 'final_amount' => 0, 'tax_percent' => '', 'tax_amount' => '', 'total_with_tax' => '', 'name' => '', 'details1' => '', 'commission_percent' => '', 'commission_amount' => 0, 'additional_expense' => 0, 'details2' => ''];
                         }
                     }
                     if ($_POST['viewId'] == 0) {
@@ -494,17 +498,20 @@ if ($id > 0) {
                                                             <option value="">Select</option>
                                                             <?php
                                                             $allEnteriesDone = false;
+                                                            $hideGTableRowById = [];
                                                             foreach ($_fields['items'] as $myitem) {
                                                                 if (isset($child_qty[$myitem['id']]) && $child_qty[$myitem['id']] == $myitem['qty_no'] && $_POST['editId'] == 0) {
-                                                                    continue;
                                                                     $allEnteriesDone = true;
+                                                                    $hideGTableRowById[] = $myitem['id'];
+                                                                    continue;
                                                                 }
                                                                 $allEnteriesDone = false;
                                                                 echo '<option value="' . htmlspecialchars($myitem['id']) . '"'
                                                                     . (isset($item_fields['item_id']) && $myitem['id'] === $item_fields['item_id'] ? ' selected' : '') . '>'
                                                                     . htmlspecialchars($myitem['sr']) . '. ' . htmlspecialchars(goodsName($myitem['goods_id']))
                                                                     . '</option>';
-                                                            } ?>
+                                                            }
+                                                            ?>
                                                         </select>
                                                     </div>
                                                 </div>
@@ -610,7 +617,7 @@ if ($id > 0) {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div class="col-md-4">
+                                                <!-- <div class="col-md-4">
                                                     <div class="row g-0">
                                                         <label class="col-sm-4 col-form-label text-nowrap"
                                                             for="name">Name</label>
@@ -620,17 +627,13 @@ if ($id > 0) {
                                                                 class="form-control currency">
                                                         </div>
                                                     </div>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <div class="row g-0">
-                                                        <label class="col-sm-4 col-form-label text-nowrap"
-                                                            for="details">Details</label>
-                                                        <div class="col-sm">
-                                                            <input value="<?php echo $item_fields['details']; ?>" id="details"
-                                                                name="details"
-                                                                class="form-control currency">
-                                                        </div>
-                                                    </div>
+                                                </div> -->
+                                                <div class="col-md-8 d-flex gap-1" style="align-items:center;">
+                                                    <label class="form-label text-nowrap"
+                                                        for="details1">Details1</label>
+                                                    <input value="<?php echo $item_fields['details1']; ?>" id="details1"
+                                                        name="details1"
+                                                        class="form-control currency">
                                                 </div>
                                                 <div class="col-md-4">
                                                     <div class="row g-0">
@@ -640,6 +643,50 @@ if ($id > 0) {
                                                             <input value="<?= !empty($item_fields['commission_percent']) ? $item_fields['commission_percent'] : 0; ?>" id="commission_percent"
                                                                 name="commission_percent"
                                                                 class="form-control currency">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-7 d-flex gap-1" style="align-items:center;">
+                                                    <label class="form-label text-nowrap"
+                                                        for="details2">Details2</label>
+                                                    <input value="<?php echo $item_fields['details2']; ?>" id="details2"
+                                                        name="details2"
+                                                        class="form-control currency">
+                                                </div>
+                                                <div class="col-md-1">
+                                                    <!-- Button to Open Second Modal -->
+                                                    <span class="btn btn-sm btn-outline-secondary" id="openOtherPaymentPopup">
+                                                        <i class="fa fa-plus"></i>
+                                                    </span>
+                                                </div>
+
+                                                <!-- JavaScript to Manually Handle Modal -->
+                                                <script>
+                                                    document.getElementById("openOtherPaymentPopup").addEventListener("click", function() {
+                                                        var secondModal = new bootstrap.Modal(document.getElementById("otherPaymentPopup"));
+                                                        secondModal.show();
+                                                    });
+
+                                                    // Close second modal properly
+                                                    document.querySelectorAll(".close-second-modal").forEach(btn => {
+                                                        btn.addEventListener("click", function() {
+                                                            var secondModalEl = document.getElementById("otherPaymentPopup");
+                                                            var secondModal = bootstrap.Modal.getInstance(secondModalEl);
+                                                            if (secondModal) {
+                                                                secondModal.hide();
+                                                            }
+                                                        });
+                                                    });
+                                                </script>
+
+                                                <div class="col-md-4">
+                                                    <div class="row g-0">
+                                                        <label class="col-sm-4 col-form-label text-nowrap"
+                                                            for="additional_expense">Additional Expense</label>
+                                                        <div class="col-sm">
+                                                            <input value="<?= $item_fields['additional_expense']; ?>" id="additional_expense"
+                                                                name="additional_expense"
+                                                                class="form-control">
                                                         </div>
                                                     </div>
                                                 </div>
@@ -739,6 +786,8 @@ if ($id > 0) {
                                                     echo '<tr><th class="fw-normal">TOTAL </th><th><span id="total_span"></span></th></tr>';
                                                     echo '<tr><th class="fw-normal">AMOUNT  </th><th><span id="amount_span"></span></th></tr>';
                                                     echo '<tr><th class="fw-normal">Com.Amt  </th><th><span id="commission_span">0</span></th></tr>';
+                                                    echo '<tr><th class="fw-normal">Other.Amt  </th><th><span id="other_span">0</span></th></tr>';
+                                                    echo '<tr><th class="fw-normal">Rem.Amt  </th><th><span id="rem_span">0</span></th></tr>';
                                                     if ($record['type'] !== 'local') {
                                                         echo '<tr><th class="fw-normal text-danger">FINAL  </th><th><span id="final_amount_span"></span></th></tr>';
                                                     } else {
@@ -989,34 +1038,11 @@ if ($id > 0) {
                             TRANSFER
                         </button>
                     </form>
-                <?php } /* if ($_POST['page'] !== "bill-transfer" && $_POST['page'] !== "general-stock-form") { ?>
-                    <button class="btn btn-dark btn-sm w-100 mt-3" onclick="openModal('', '')">Add Reports</button>
-                <?php } */ ?>
+                <?php } ?>
 
-                <!-- <div id="customModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); z-index: 1000;">
-                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 75%; padding: 20px; background-color: white; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);">
-                        <button style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 24px; cursor: pointer;" onclick="closeModal()">
-                            <i class="fa fa-times"></i>
-                        </button>
-                        <h3 id="modalHeading">Add Report</h3>
-                        <mark>Note: Please Don't use these words OR combination of these words => (\n, \r, \r\n, \n\r). This will effect reports functionality. Thank You!</mark>
-                        <form method="post" class="mt-3">
-                            <input type="hidden" name="p_id_hidden" value="<?php echo $id; ?>">
-                            <select name="reportType" class="form-control" id="reportType">
-                                <option value="" selected disabled>Select Report Type</option>
-                                <option value="payment_details">Payment Details</option>
-                                <option value="goods_details">Goods Details</option>
-                                <option value="loading_details">Loading Details</option>
-                                <option value="contract_details">Contract Details</option>
-                            </select>
-                            <textarea placeholder="Write Report..." rows="6" name="reportBox" id="reportBox" class="form-control mt-1"></textarea>
-                            <button id="modalButton" name="purchaseReports" type="submit" class="btn btn-dark btn-sm w-100 mt-3">Add Report</button>
-                        </form>
-                    </div>
-                </div>
-                </div> -->
                 <div class="bottom-buttons">
                     <div class="px-2">
+                        <button id="printEnteriesBtn" class="btn btn-sm btn-success">PRINT</button>
                         <?php if ($_POST['viewId'] == 0) { ?>
                             <button class="btn btn-warning btn-sm" onclick="document.querySelector('.transfer-form').classList.toggle('d-none');">Toggle Form</button>
                         <?php } ?>
@@ -1041,15 +1067,199 @@ if ($id > 0) {
                 </div>
             </div>
         <?php }
+
+
         ?>
+        <!-- Modal Structure -->
+        <div class="modal fade" id="otherPaymentPopup" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-centered"> <!-- Extra-large & centered modal -->
+                <div class="modal-content border border-2">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalLabel">Additional Amount Transfer</h5>
+                        <button type="button" class="btn-close close-second-modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" class="m-4">
+                            <div class="row gx-3 gy-4 align-items-center">
+                                <!-- Purchaser Account -->
+                                <div class="col-md-2">
+                                    <small class="fw-bold text-dark d-none my-1" id="p_acc_name"></small>
+                                    <label for="p_acc" class="form-label fw-bold text-danger">Purchaser Account</label>
+                                    <input type="text" value="<?= $_fields['dr_acc'] ?? ''; ?>" id="p_acc" name="p_acc_no"
+                                        onkeyup="searchAcc('#p_acc')" tabindex="-1" class="form-control form-control-sm" required
+                                        placeholder="Enter Purchaser Acc">
+
+                                    <input type="hidden" name="p_acc_id" id="p_acc_id" value="<?= $_fields['dr_acc_id'] ?? ''; ?>">
+                                </div>
+
+                                <!-- Seller Account -->
+                                <div class="col-md-2">
+                                    <small class="fw-bold text-dark d-none my-1" id="s_acc_name"></small>
+                                    <label for="s_acc" class="form-label fw-bold text-success">Seller Account</label>
+                                    <input type="text" value="<?= $_fields['cr_acc'] ?? ''; ?>" id="s_acc" name="s_acc_no"
+                                        onkeyup="searchAcc('#s_acc')" tabindex="-1" class="form-control form-control-sm" required
+                                        placeholder="Enter Seller Acc">
+                                    <input type="hidden" name="s_acc_id" id="s_acc_id" value="<?= $_fields['cr_acc_id'] ?? ''; ?>">
+                                </div>
+
+                                <!-- Currency -->
+                                <div class="col-md-2">
+                                    <label for="currency1" class="form-label fw-bold">Primary Currency</label>
+                                    <select id="currency1" name="currency1" class="form-select form-select-sm" required>
+                                        <option value="" hidden>Select</option>
+                                        <?php $currencies = fetch('currencies');
+                                        while ($crr = mysqli_fetch_assoc($currencies)) {
+                                            // $sel_curr = $roznamcha['currency1'] == $crr['name'] ? 'selected' : '';
+                                            echo '<option value="' . $crr['name'] . '">' . $crr['name'] . ' - ' . $crr['symbol'] . '</option>';
+                                        } ?>
+                                    </select>
+                                </div>
+
+                                <!-- Amount -->
+                                <div class="col-md-2">
+                                    <label for="otheramount" class="form-label fw-bold">Amount</label>
+                                    <input type="text" id="otheramount" name="amount" class="form-control form-control-sm" onkeyup="mylastAmount()"
+                                        readonly required placeholder="0.00">
+                                </div>
+
+                                <!-- Secondary Currency and Rate -->
+                                <div class="col-md-4">
+                                    <div class="row gx-2">
+                                        <div class="col-7">
+                                            <label for="currency2" class="form-label fw-bold">Secondary Currency</label>
+                                            <select id="currency2" name="currency2" class="form-select form-select-sm" required>
+                                                <option value="" hidden>Select</option>
+                                                <?php $currencies = fetch('currencies');
+                                                while ($crr = mysqli_fetch_assoc($currencies)) {
+                                                    // $sel_curr2 = $roznamcha['currency2'] == $crr['name'] ? 'selected' : '';
+                                                    echo '<option value="' . $crr['name'] . '">' . $crr['name'] . ' - ' . $crr['symbol'] . '</option>';
+                                                } ?>
+                                            </select>
+                                        </div>
+                                        <div class="col-5">
+                                            <label for="rate" class="form-label fw-bold">Rate</label>
+                                            <input type="text" name="rate" id="otherrate" class="form-control form-control-sm" required
+                                                onkeyup="mylastAmount()" placeholder="0.00">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Operation -->
+                                <div class="col-md-2">
+                                    <label for="opr" class="form-label fw-bold">Operation</label>
+                                    <select name="opr" class="form-select form-select-sm" id="otheropr" required onchange="mylastAmount()">
+                                        <?php $ops = array('[*]' => '*', '[/]' => '/');
+                                        foreach ($ops as $opName => $op) {
+                                            // $sel_op = $roznamcha['opr'] == $op ? 'selected' : '';
+                                            echo '<option value="' . $op . '">' . $opName . '</option>';
+                                        } ?>
+                                    </select>
+                                </div>
+
+                                <!-- Final Amount and Date -->
+                                <div class="col-md-4">
+                                    <div class="row gx-2">
+                                        <div class="col-6">
+                                            <label for="final_amount" class="form-label fw-bold">Final Amount</label>
+                                            <input type="text" name="final_amount" id="otherfinal_amount" class="form-control form-control-sm" required
+                                                readonly tabindex="-1" placeholder="0.00">
+                                        </div>
+                                        <div class="col-6">
+                                            <label for="transfer_date" class="form-label fw-bold">Transfer Date</label>
+                                            <input type="date" class="form-control form-control-sm" id="transfer_date" name="transfer_date"
+                                                required>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Details -->
+                                <div class="col-md-6">
+                                    <label for="details" class="form-label fw-bold">Details</label>
+                                    <input type="text" name="details" id="details" class="form-control form-control-sm" placeholder="Enter transaction details" value="">
+                                </div>
+
+                                <!-- Submit Button -->
+                                <div class="col-md-2">
+                                    <button name="PaymentSubmit" type="submit" id="SubmitForm"
+                                        class="btn btn-primary btn-sm "><i class="fa-solid fa-money-bill-transfer"></i> Transfer</button>
+                                </div>
+
+                                <!-- Hidden Inputs -->
+                                <input type="hidden" name="id" value="<?= $record['id']; ?>">
+                            </div>
+                            <?php
+                            $rozQ = fetch('roznamchaas', array('r_type' => 'Other Amt', 'transfered_from_id' => $record['id'], 'transfered_from' => 'sales-commission-form'));
+                            if (mysqli_num_rows($rozQ) > 0) { ?>
+                                <table class="table table-sm table-bordered my-3">
+                                    <thead>
+                                        <tr>
+                                            <th>Sr#</th>
+                                            <th>Date</th>
+                                            <th>A/c#</th>
+                                            <th>Roz.#</th>
+                                            <th>Name</th>
+                                            <th>No</th>
+                                            <th>Details</th>
+                                            <th>Dr.</th>
+                                            <th>Cr.</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php while ($roz = mysqli_fetch_assoc($rozQ)) {
+                                            $dr = $cr = 0; ?>
+                                            <input type="hidden" value="<?php echo $roz['r_date']; ?>"
+                                                id="temp_transfer_date">
+                                            <input type="hidden" value="<?php echo $roz['r_id']; ?>"
+                                                name="r_id[]">
+                                            <input type="hidden" value="<?php echo $roz['branch_serial']; ?>"
+                                                name="b_serial[]">
+                                            <tr>
+                                                <td>
+                                                    <?php echo SuperAdmin() ? $roz['r_id'] . '-' . $roz['branch_serial'] : $roz['branch_serial']; ?>
+                                                </td>
+                                                <td><?php echo $roz['r_date']; ?></td>
+                                                <td>
+                                                    <a href="ledger?back-khaata-no=<?php echo $roz['khaata_no']; ?>"
+                                                        target="_blank"><?php echo $roz['khaata_no']; ?></a>
+                                                </td>
+                                                <td><?php echo $roz['roznamcha_no']; ?></td>
+                                                <td class="small"><?php echo $roz['r_name']; ?></td>
+                                                <td><?php echo $roz['r_no']; ?></td>
+                                                <td class="small"><?php echo $roz['details']; ?></td>
+                                                <?php if ($roz['dr_cr'] == "dr") {
+                                                    $dr = $roz['amount'];
+                                                } else {
+                                                    $cr = $roz['amount'];
+                                                } ?>
+                                                <td class="text-success"><?php echo $dr; ?></td>
+                                                <td class="text-danger"><?php echo $cr; ?></td>
+                                            </tr>
+                                        <?php } ?>
+                                    </tbody>
+                                </table>
+                            <?php
+                            } ?>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary close-second-modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
         <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
         <script>
             let remaining;
             $(document).ready(function() {
+                let hideRows = JSON.parse('<?= json_encode($hideGTableRowById); ?>');
+                $.each(hideRows, function(index, rowId) {
+                    let someId = "#toHideRow_" + rowId;
+                    $(someId).hide();
+                });
                 if (<?= $_POST['editId'] !== 0; ?>) {
                     finalAmount();
                 }
-                $('#qty_no,#qty_kgs,#empty_kgs,#weight,#rate1,#rate2,#opr,#commission_percent').on('change', function() {
+                $('#qty_no,#qty_kgs,#empty_kgs,#weight,#rate1,#rate2,#opr,#commission_percent,#additional_expense').on('change', function() {
                     finalAmount();
                     // if (remaining === undefined) {
                     //     remaining = JSON.parse($('#child_qty').val())[$('#item_id').val()];
@@ -1068,6 +1278,18 @@ if ($id > 0) {
 
                 });
             });
+            let printRows = [];
+            $('.row-checkbox').change(function() {
+                printRows = []; // Reset array to store only checked values
+                $('.row-checkbox:checked').each(function() {
+                    printRows.push($(this).val()); // Add only checked checkboxes
+                });
+            });
+            $('#printEnteriesBtn').click(function() {
+                let enteriesString = printRows.join('~');
+                window.location.href = 'print/commission-item-print?print_enteries=' + enteriesString + '&print_type=full';
+            });
+
 
             function fillInputs(item_id) {
                 let goods_json = JSON.parse($('#goods_json').val());
@@ -1140,13 +1362,16 @@ if ($id > 0) {
                     amount = amount.toFixed(3);
                     final_amount = amount;
                 }
-
                 $("#amount").val(isNaN(amount) ? '' : amount);
                 $("#amount_span").text(isNaN(amount) ? '' : amount);
                 var commission_amt = amount * (parseFloat($('#commission_percent').val()) / 100);
                 amount -= commission_amt;
                 $("#commission_amount").val(isNaN(commission_amt) ? '' : commission_amt.toFixed(2));
                 $("#commission_span").text(isNaN(commission_amt) ? '' : commission_amt.toFixed(2));
+                $('#other_span').text($('#additional_expense').val());
+                amount -= $('#additional_expense').val();
+                $('#otheramount').val($('#additional_expense').val());
+                $('#rem_span').text(amount.toFixed(2));
                 updateTaxAndTotal(amount);
                 //if ($("#is_qty").prop('checked') == true) {
                 var rate2 = parseFloat($("#rate2").val()) || 0;
@@ -1263,6 +1488,23 @@ if ($id > 0) {
                 }
             }
 
+            function mylastAmount() {
+                let amount = $("#otheramount").val();
+                let rate = $("#otherrate").val();
+                let opr = $('#otheropr').find(":selected").val();
+                let final_amount;
+
+                if (amount && rate) { // Ensure both amount and rate have values
+                    if (opr === "/") {
+                        final_amount = Number(amount) / Number(rate);
+                    } else {
+                        final_amount = Number(amount) * Number(rate);
+                    }
+                    final_amount = final_amount.toFixed(2);
+                    $("#otherfinal_amount").val(final_amount);
+                }
+            }
+
             function fetchKhaata(inputField, khaataId, responseId, prefix, khaataImageId, recordSubmitId) {
                 let khaata_no = $(inputField).val();
                 $.ajax({
@@ -1342,3 +1584,4 @@ if ($id > 0) {
             });
             fetchKhaata("#khaata_no2", "#s_khaata_id", "#s_response", "#s", "#s_khaata_image", "recordSubmit");
         </script>
+        </div>

@@ -10,22 +10,22 @@ if (recordExists('vat_direct', ['unique_code' => $unique_code])) {
     echo '<script>let printUrl = "' . $print_url . '";</script>';
 } else {
     $data = mysqli_fetch_assoc(fetch('transactions', ['id' => $TID]));
-    $Ldata = mysqli_fetch_all(fetch('transaction_items', ['parent_id' => $TID]), MYSQLI_ASSOC);
+    $Ldata = mysqli_fetch_assoc(fetch('transaction_items', ['id' => $LID]));
     $Tdata = array_merge(
         ['id' => $data['id']],
         transactionSingle($data['id']),
         ['sea_road_array' => json_decode($data['sea_road'], true)] ?? [],
         ['notify_party_details' => json_decode($data['notify_party_details'], true)] ?? [],
         ['third_party_bank' => json_decode($data['third_party_bank'], true)] ?? [],
-        ['goods' => $Ldata ?? []],
+        ['good' => $Ldata ?? []],
         ['reports' => json_decode($data['reports'], true)] ?? []
     );
     $Notify = json_decode($data['notify_party_details'], true) ?? [];
-    $Goods = $Ldata;
+    $Good = $Ldata;
 }
 ?>
 <div class="modal-header d-flex justify-content-between bg-white align-items-center mb-2">
-    <h5 class="modal-title fw-bold" id="staticBackdropLabel">EDIT => <?= ucfirst($Tdata['p_s']) . '# ' . $Tdata['sr']; ?></h5>
+    <h5 class="modal-title fw-bold" id="staticBackdropLabel">EDIT => <?= ucfirst($Tdata['p_s']) . '# ' . $Tdata['sr'] . ' (' . $Ldata['sr'] . ')'; ?></h5>
     <div class="d-flex align-items-center gap-2">
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
     </div>

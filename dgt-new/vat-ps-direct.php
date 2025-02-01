@@ -3,7 +3,6 @@ $page_title = 'P/S GENERAL TRANSFER';
 include("header.php");
 $pageURL = "vat-ps-direct";
 $print_url = 'print/' . $pageURL;
-$_GET['CCWpage'] = 'all';
 $allot = $goods_id = $size = $brand = $origin = $date_from = $date_to = '';
 $filters = [
     'size' => '',
@@ -26,7 +25,6 @@ function escapeInput($input)
     return mysqli_real_escape_string($connect, $input);
 }
 
-// Build conditions based on filters
 if ($_GET) {
     $allot = $_GET['allot'] ?? '';
     $goods_id = $_GET['goods_id'] ?? '';
@@ -63,7 +61,6 @@ if ($_GET) {
         }
     }
 }
-
 $where_clause = !empty($conditions) ? ' WHERE ' . implode(' AND ', $conditions) : '';
 $sql = "SELECT * FROM transactions $where_clause";
 $data = mysqli_query($connect, $sql);
@@ -74,55 +71,44 @@ while ($direct_one = mysqli_fetch_assoc($direct)) {
 }
 $entries = [];
 while ($one = mysqli_fetch_assoc($data)) {
-    $entries[] = array_merge(
+    $entry = array_merge(
         transactionSingle($one['id']),
-        ['sea_road_array' => json_decode($one['sea_road'], true)] ?? [],
-        ['notify_party_details' => json_decode($one['notify_party_details'], true)] ?? [],
-        ['third_party_bank' => json_decode($one['third_party_bank'], true)] ?? [],
-        ['reports' => json_decode($one['reports'], true)] ?? [],
+        ['sea_road_array' => json_decode($one['sea_road'], true) ?? []],
+        ['notify_party_details' => json_decode($one['notify_party_details'], true) ?? []],
+        ['third_party_bank' => json_decode($one['third_party_bank'], true) ?? []],
+        ['reports' => json_decode($one['reports'], true) ?? []],
         ["id" => $one['id'], "p_sr" => $one['sr']]
     );
+
+    if (!isset($entries[$one['id']])) {
+        $entries[$one['id']] = $entry;
+        $entries[$one['id']]['items'] = [];
+    }
+    $entries[$one['id']]['items'] = array_merge($entries[$one['id']]['items'], $entry['items'] ?? []);
 }
-$i = 1;
-$sortedEntries = [];
+
 $totalAmount = $totalTax = $totalWithTax = 0;
 $soldAmount = $soldTax = $soldWithTax = 0;
+$sortedEntries = [];
+
 foreach ($entries as $entry) {
     if (empty($entry['items'])) continue;
     foreach ($entry['items'] as $item) {
-        $unique_code = $entry['p_s'] . $entry['type'][0] . (isset($entry['sea_road_array']['route']) ? ($entry['sea_road_array']['route'] === 'local' ? 'ld' : 'wr') : ($entry['sea_road_array']['sea_road'] === 'sea' ? 'se' : 'rd')) . '_' . $entry['id'] . '_' . $item['id'];
-        if ($item['show_in_vat'] === 'no') {
-            continue;
-        }
-        if (array_key_exists($unique_code, $directEntries)) {
-            $entry = json_decode($directEntries[$unique_code]['tdata'], true);
-            $item = $entry['good'];
-            $isPurchase = !isset($entry['p_s']) || $entry['p_s'] !== 's';
-            $rowColor = $isPurchase ? 'text-success' : 'text-danger';
-            $amount = floatval($item['amount'] ?? 0);
-            $taxAmount = floatval($item['tax_amount'] ?? 0);
-            $totalWithTaxAmount = floatval($item['total_with_tax'] ?? $amount);
-            if ($isPurchase) {
-                $totalAmount += $amount;
-                $totalTax += $taxAmount;
-                $totalWithTax += $totalWithTaxAmount;
-            } else {
-                $soldAmount += $amount;
-                $soldTax += $taxAmount;
-                $soldWithTax += $totalWithTaxAmount;
-            }
-            $sortedEntries[] = [
-                'row_color' => $rowColor,
-                'unique_code' => $unique_code,
-                'tdata' => $directEntries[$unique_code]['tdata']
-            ];
-            continue;
-        }
+        $show_in = json_decode($item['show_in'], true);
+        $show_in['vat'] = $show_in['vat'] ?? 'no';
+        $unique_code = $entry['p_s'] . $entry['type'][0] . (isset($entry['sea_road_array']['route'])
+            ? ($entry['sea_road_array']['route'] === 'local' ? 'ld' : 'wr')
+            : ($entry['sea_road_array']['sea_road'] === 'sea' ? 'se' : 'rd')) . '_' . $entry['id'] . '_' . $item['id'];
+
+        if ($show_in['vat'] === 'no') continue;
+
         $isPurchase = !isset($entry['p_s']) || $entry['p_s'] !== 's';
         $rowColor = $isPurchase ? 'text-success' : 'text-danger';
+
         $amount = floatval($item['amount'] ?? 0);
         $taxAmount = floatval($item['tax_amount'] ?? 0);
         $totalWithTaxAmount = floatval($item['total_with_tax'] ?? $amount);
+
         if ($isPurchase) {
             $totalAmount += $amount;
             $totalTax += $taxAmount;
@@ -132,10 +118,11 @@ foreach ($entries as $entry) {
             $soldTax += $taxAmount;
             $soldWithTax += $totalWithTaxAmount;
         }
-        $sortedEntries[] = [
-            "row_color" => $rowColor,
-            "unique_code" => $unique_code,
-            "tdata" => json_encode(array_merge($entry, ['good' => $item]))
+
+        $sortedEntries[$entry['id']] = [
+            'row_color' => $rowColor,
+            'unique_code' => $unique_code,
+            'tdata' => json_encode(array_merge($entry, ['good' => $item]))
         ];
     }
 }
@@ -149,9 +136,9 @@ $totals = [
     "sold_amount" => $soldAmount,
     "sold_tax" => $soldTax,
     "sold_with_tax" => $soldWithTax,
-    "remaining_amount" => $remainingAmount,
-    "remaining_tax" => $remainingTax,
-    "remaining_with_tax" => $remainingWithTax
+    "remaining_amount" => $totalAmount - $soldAmount,
+    "remaining_tax" => $totalTax - $soldTax,
+    "remaining_with_tax" => $totalWithTax - $soldWithTax
 ];
 ?>
 <div class="fixed-top">
@@ -382,7 +369,7 @@ $totals = [
                             ?>
                                 <tr class="text-nowrap">
                                     <td class="<?= $entry['row_color']; ?> pointer" onclick="window.location.href='<?= $pageURL; ?>?view=1&unique_code=<?= $entry['unique_code']; ?>&print_type=contract&CCWpage=all&sr_no=<?= $tdata['good']['sr']; ?>'">
-                                        <b><?= ucfirst($tdata['p_s']); ?>#</b> <?= htmlspecialchars($tdata['sr']); ?> (<?= htmlspecialchars($tdata['good']['sr']); ?>)
+                                        <b><?= ucfirst($tdata['p_s']); ?>#</b> <?= htmlspecialchars($tdata['sr']); ?>
                                     </td>
                                     <td class="fw-bold"><?= ucfirst(htmlspecialchars($tdata['type'] ?? 'N/A')); ?></td>
                                     <td class="fw-bold"><?= my_date(htmlspecialchars($tdata['_date'] ?? 'N/A')); ?></td>
@@ -397,9 +384,9 @@ $totals = [
                                     <td class="<?= $entry['row_color']; ?>"><?= ($appendDash ? '-' : '+') . htmlspecialchars($netWeight); ?></td>
                                     <td class="<?= $entry['row_color']; ?>"><?= ($appendDash ? '-' : '+') . htmlspecialchars($grossWeight); ?></td>
                                     <td class="<?= $entry['row_color']; ?>"><?= htmlspecialchars($tdata['good']['goods_json']['rate1'] ?? 'N/A') . ' ' . htmlspecialchars($tdata['good']['goods_json']['price'] ?? 'N/A'); ?></td>
-                                    <td class="<?= $entry['row_color']; ?>"><?= ($appendDash ? '-' : '+') . htmlspecialchars($amount); ?></td>
-                                    <td class="<?= $entry['row_color']; ?>"><?= ($appendDash ? '-' : '+') . htmlspecialchars(!empty($tax) ? $tax : 0); ?></td>
-                                    <td class="<?= $entry['row_color']; ?>"><?= ($appendDash ? '-' : '+') . htmlspecialchars($total); ?></td>
+                                    <td class="<?= $entry['row_color']; ?>"><?= ($appendDash ? '-' : '+') . number_format(htmlspecialchars(!empty($amount) ? $amount : 0), 2); ?></td>
+                                    <td class="<?= $entry['row_color']; ?>"><?= ($appendDash ? '-' : '+') . number_format(htmlspecialchars(!empty($tax) ? $tax : 0), 2); ?></td>
+                                    <td class="<?= $entry['row_color']; ?>"><?= ($appendDash ? '-' : '+') . number_format(htmlspecialchars(!empty($total) ? $total : 0), 2); ?></td>
                                 </tr>
                             <?php
                             }
