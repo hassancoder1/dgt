@@ -582,7 +582,7 @@ if (isset($_POST['ttrFirstSubmit'])) {
         if ($done) {
             $url .= '&view=1&viewId=' . $_POST['com_item_id'];
             $trans_level = isset($_POST['check_full_payment']) && $_POST['check_full_payment'] === 'true' ? 6 : 2;
-            $preData = array('khaata_tr1' => $post_json, 'transfer_level' => $trans_level, '`from`' => 'bill-transfer');
+            $preData = array('khaata_tr1' => $post_json, 'transfer_level' => 2, '`from`' => 'bill-transfer');
             $comItem = update('commission_items', ['transferred' => $post_json], ['id' => $_POST['com_item_id']]);
             $tlUpdated = update('transactions', $preData, array('id' => $p_id));
             $msg = 'Transferred to Business Roznamcha ' . $str;
@@ -597,19 +597,22 @@ if (isset($_POST['ttrFirstSubmit'])) {
     }
     message($msgType, $url, $msg);
 }
-// if (isset($_POST['deleteTransaction'])) {
-//     $type = 'danger';
-//     $msg = 'DB Failed';
-//     $url_ = "purchases";
-//     $p_id_hidden = mysqli_real_escape_string($connect, $_POST['p_id_hidden']);
-//     $done = mysqli_query($connect, "DELETE FROM `purchase_details` WHERE parent_id='$p_id_hidden'");
-//     $done = mysqli_query($connect, "DELETE FROM `purchases` WHERE id='$p_id_hidden'");
-//     if ($done) {
-//         $msg = " Deleted Booking Purchase #" . $_POST['p_sr'];
-//         $type = "success";
-//     }
-//     message($type, $url_, $msg);
-// }
+if (isset($_GET['DeleteOtherPaymentEntry'])) {
+    $type = 'danger';
+    $msg = 'DB Failed';
+    $id = $pays_id = $_GET['t_id'];
+    $url_ = "sales-commission-form?view=1&t_id=" . $id;
+    $r_ids = explode('~', mysqli_real_escape_string($connect, $_GET['rids']));
+    $done = mysqli_query($connect, "DELETE FROM `purchase_pays` WHERE id='$pays_id'");
+    foreach ($r_ids as $r_id) {
+        $done = mysqli_query($connect, "DELETE FROM `roznamchaas` WHERE r_id='$r_id'");
+    }
+    if ($done) {
+        $msg = " Deleted! #" . $_GET['id'];
+        $type = "success";
+    }
+    message($type, $url_, $msg);
+}
 if (isset($_POST['transferToFinal'])) {
     $type = 'danger';
     $msg = 'DB Failed';
@@ -636,7 +639,7 @@ if (isset($_POST['PaymentSubmit'])) {
     $details = mysqli_real_escape_string($connect, $_POST['details']) . " | Amount: $amount " . $_POST['currency1'] . " " . $_POST['opr'] . " " . $_POST['rate'] . ' = ' . $final_amount . " " . $_POST['currency2'];
     $bill_id = mysqli_real_escape_string($connect, $_POST['id']);
     // $type_post = "P/S Expenses";
-    // $url = $pageURL . '?viewID=' . $bill_id;
+    $url = $pageURL . '?view=1t_id' . $_POST['id'] . '&editId=' . $bill_id;
     $type = 'Other Amt';
     $transfered_from = 'sales-commission-form';
     $r_type = 'Other Amt';
@@ -725,6 +728,6 @@ if (isset($_POST['PaymentSubmit'])) {
         $msg = 'Technical Problem. Contact Admin';
         $msgType = 'warning';
     }
-    message($msgType, '', $msg);
+    // message($msgType, $url, $msg);
 }
 ?>

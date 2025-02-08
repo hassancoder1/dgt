@@ -97,279 +97,324 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
 </div>
 <div class="mx-5 bg-white p-3" style="margin-top:-30px;">
     <div class="d-flex justify-content-between align-items-center w-100">
-        <h1 class="mb-2" style="font-size: 2rem; font-weight: 700; color: #333; text-transform: uppercase; letter-spacing: 1.5px; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">
-            Purchases
-        </h1>
-        <div class="d-flex gap-2">
-            <?php
-            // Calculate the total number of entries
-            $count_sql = "SELECT COUNT(id) AS total FROM `transactions` WHERE p_s='p'";
-            if (count($conditions) > 0) {
-                $count_sql .= ' AND ' . implode(' AND ', $conditions);
-            }
-            $count_result = mysqli_query($connect, $count_sql);
-            $row = mysqli_fetch_assoc($count_result);
-            $total_entries = $row['total'];
-            $results_per_page = 25; // Define the number of results per page
-            $total_pages = ceil($total_entries / $results_per_page);
-
-            // Determine the current page
-            $page = isset($_GET['page']) && is_numeric($_GET['page']) ? intval($_GET['page']) : 1;
-            $page = max(1, min($page, $total_pages)); // Ensure the page is within range
-
-            // Calculate the start and end entry numbers
-            $start_entry = ($page - 1) * $results_per_page + 1;
-            $end_entry = min($page * $results_per_page, $total_entries);
-
-            // Generate the base URL for pagination
-            $current_url = $_SERVER['REQUEST_URI'];
-            $url_parts = parse_url($current_url);
-            parse_str($url_parts['query'] ?? '', $query_params);
-            unset($query_params['page']);
-            $base_url = $url_parts['path'] . '?' . http_build_query($query_params);
-            ?>
-
-            <!-- Showing X-Y entries of Z -->
-            <div class="text-center mb-2">
-                <p>Showing <?= $start_entry; ?>-<?= $end_entry; ?> entries of <?= $total_entries; ?></p>
+        <form name="datesSubmit" class="mt-2" method="get">
+            <div class="input-group input-group-sm">
+                <div class="form-group">
+                    <label for="p_id" class="form-label">P#</label>
+                    <input type="number" name="p_id" value="<?php echo $p_sr; ?>" id="p_id" class="form-control form-control-sm mx-1" style="max-width:80px;" placeholder="e.g. 33">
+                </div>
+                <div class="form-group">
+                    <label for="date_type" class="form-label">Date Type</label>
+                    <select class="form-select form-select-sm" name="date_type" style="max-width:130px;" id="date_type" onchange="toggleDates()">
+                        <option value="" <?= !in_array($date_type, ['purchase', 'loading', 'receiving']) ? 'selected' : ''; ?>>All</option>
+                        <option value="purchase" <?= $date_type == 'purchase' ? 'selected' : ''; ?>>Purchase</option>
+                        <option value="loading" <?= $date_type == 'loading' ? 'selected' : ''; ?>>Loading</option>
+                        <option value="receiving" <?= $date_type == 'receiving' ? 'selected' : ''; ?>>Receiving</option>
+                    </select>
+                </div>
+                <div class="form-group <?= !in_array($date_type, ['purchase', 'loading', 'receiving']) ? 'd-none' : ''; ?>" id="startInput">
+                    <label for="start" class="form-label">Start Date</label>
+                    <input type="date" name="start" value="<?php echo $start_print; ?>" id="start" class="form-control form-control-sm mx-1" style="max-width:160px;">
+                </div>
+                <div class="form-group <?= !in_array($date_type, ['purchase', 'loading', 'receiving']) ? 'd-none' : ''; ?>" id="endInput">
+                    <label for="end" class="form-label">End Date</label>
+                    <input type="date" name="end" value="<?php echo $end_print; ?>" id="end" class="form-control form-control-sm mx-2" style="max-width:160px;">
+                </div>
+                <div class="form-group mx-1">
+                    <label for="type" class="form-label">Purchase Type</label>
+                    <select class="form-select form-select-sm" name="type" style="max-width:130px;" id="type">
+                        <option value="" selected>All</option>
+                        <?php
+                        $static_types = fetch('static_types', ['type_for' => 'ps_types']);
+                        while ($static_type = mysqli_fetch_assoc($static_types)) {
+                            $sel_tran = $type == $static_type['type_name'] ? 'selected' : '';
+                            echo '<option ' . $sel_tran . '  value="' . $static_type['type_name'] . '">' . strtoupper(htmlspecialchars($static_type['details'])) . '</option>';
+                        }
+                        ?>
+                    </select>
+                </div>
+                <div class="form-group mx-1">
+                    <label for="branch" class="form-label">Branch</label>
+                    <select class="form-select form-select-sm" name="branch" style="max-width:130px;" id="branch">
+                        <option value="" selected>All</option>
+                        <?php
+                        $branches = fetch('branches');
+                        while ($b = mysqli_fetch_assoc($branches)) {
+                            $b_select = $b['b_code'] == $branch ? 'selected' : '';
+                            echo '<option ' . $b_select . ' value="' . $b['b_code'] . '">' . $b['b_code'] . '</option>';
+                        }
+                        ?>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="payment_type" class="form-label">Payment Type</label>
+                    <select class="form-select form-select-sm" name="payment_type" style="max-width:130px;" id="payment_type">
+                        <option value="" selected>All</option>
+                        <option value="credit" <?= $payment_type === 'credit' ? 'selected' : ''; ?>>Credit</option>
+                        <option value="full" <?= $payment_type === 'full' ? 'selected' : ''; ?>>Full</option>
+                        <option value="advance" <?= $payment_type === 'advance' ? 'selected' : ''; ?>>Advance</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="sea_road" class="form-label">SEA/ROAD</label>
+                    <select class="form-select form-select-sm" name="sea_road" style="max-width:130px;" id="sea_road">
+                        <option value="" selected>All</option>
+                        <option value="sea" <?= $sea_road === 'sea' ? 'selected' : ''; ?>>by Sea</option>
+                        <option value="road" <?= $sea_road === 'road' ? 'selected' : ''; ?>>by Road</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="is_transferred" class="form-label">Transfer Status</label>
+                    <select class="form-select form-select-sm" name="is_transferred" style="max-width:180px;" id="is_transferred">
+                        <option value="" selected>All</option>
+                        <?php $imp_exp_array = array(1 => 'transferred', 0 => 'not transferred');
+                        foreach ($imp_exp_array as $item => $value) {
+                            $sel_tran = $is_transferred == $item ? 'selected' : '';
+                            echo '<option ' . $sel_tran . '  value="' . $item . '">' . strtoupper($value) . '</option>';
+                        } ?>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="acc_no" class="form-label">Account No.</label>
+                    <input type="text" class="form-control form-control-sm mx-1" style="max-width:90px;" name="acc_no" placeholder="Acc No." value="<?php echo $acc_no; ?>" id="acc_no">
+                </div>
+                <div class="form-group mx-1">
+                    <label for="country_type" class="form-label">Country Type</label>
+                    <select class="form-select form-select-sm" name="country_type" style="max-width:130px;" id="country_type" onchange="toggleCountry()">
+                        <option value="" <?= !in_array($country_type, ['purchase', 'loading', 'receiving']) ? 'selected' : ''; ?>>All</option>
+                        <option value="purchase" <?= $country_type == 'purchase' ? 'selected' : ''; ?>>Purchase</option>
+                        <option value="loading" <?= $country_type == 'loading' ? 'selected' : ''; ?>>Loading</option>
+                        <option value="receiving" <?= $country_type == 'receiving' ? 'selected' : ''; ?>>Receiving</option>
+                    </select>
+                </div>
+                <div class="form-group mx-1 <?= !in_array($country_type, ['purchase', 'loading', 'receiving']) ? 'd-none' : ''; ?>" id="countryInput">
+                    <label for="country" class="form-label">Country Name</label>
+                    <input type="text" name="country" value="<?php echo $country; ?>" id="country" class="form-control form-control-sm mx-1" style="max-width:130px;">
+                </div>
+                <div class="form-group mt-4 pt-1">
+                    <?= $remove ? '<a href="' . $pageURL . '" class="btn btn-sm btn-danger"><i class="fa fa-sync-alt"></i></a>' : ''; ?>
+                    <button type="submit" class="btn btn-sm btn-success">Search</button>
+                </div>
             </div>
+        </form>
+        <div class="d-flex justify-content-between align-items-center">
 
-            <nav aria-label="Page navigation example">
-                <ul class="pagination justify-content-center pagination-sm">
-                    <?php
-                    // Previous button
-                    if ($page > 1) {
-                        echo "<li class='page-item'><a class='page-link' href='" . $base_url . "&page=" . ($page - 1) . "'>Prev</a></li>";
-                    } else {
-                        echo "<li class='page-item disabled'><span class='page-link'>Prev</span></li>";
-                    }
+            <div class="d-flex gap-2">
+                <?php
+                // Calculate the total number of entries
+                $count_sql = "SELECT COUNT(id) AS total FROM `transactions` WHERE p_s='p'";
+                if (count($conditions) > 0) {
+                    $count_sql .= ' AND ' . implode(' AND ', $conditions);
+                }
+                $count_result = mysqli_query($connect, $count_sql);
+                $row = mysqli_fetch_assoc($count_result);
+                $total_entries = $row['total'];
+                $results_per_page = 25; // Define the number of results per page
+                $total_pages = ceil($total_entries / $results_per_page);
 
-                    // Display current page
-                    echo "<li class='page-item active'><span class='page-link'>$page</span></li>";
+                // Determine the current page
+                $page = isset($_GET['page']) && is_numeric($_GET['page']) ? intval($_GET['page']) : 1;
+                $page = max(1, min($page, $total_pages)); // Ensure the page is within range
 
-                    // Display the next page, if it exists
-                    if ($page + 1 <= $total_pages) {
-                        echo "<li class='page-item'><a class='page-link' href='" . $base_url . "&page=" . ($page + 1) . "'>" . ($page + 1) . "</a></li>";
-                    }
+                // Calculate the start and end entry numbers
+                $start_entry = ($page - 1) * $results_per_page + 1;
+                $end_entry = min($page * $results_per_page, $total_entries);
 
-                    // Next button
-                    if ($page < $total_pages) {
-                        echo "<li class='page-item'><a class='page-link' href='" . $base_url . "&page=" . ($page + 1) . "'>Next</a></li>";
-                    } else {
-                        echo "<li class='page-item disabled'><span class='page-link'>Next</span></li>";
-                    }
-                    ?>
-                </ul>
-            </nav>
+                // Generate the base URL for pagination
+                $current_url = $_SERVER['REQUEST_URI'];
+                $url_parts = parse_url($current_url);
+                parse_str($url_parts['query'] ?? '', $query_params);
+                unset($query_params['page']);
+                $base_url = $url_parts['path'] . '?' . http_build_query($query_params);
+                ?>
+
+                <!-- Showing X-Y entries of Z -->
+                <div>
+                    <h1 class="mb-2" style="font-size: 2rem; font-weight: 700; color: #333; text-transform: uppercase; letter-spacing: 1.5px; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">
+                        Purchases
+                    </h1>
+                    <div class="text-center mb-2">
+                        <p>Showing <?= $start_entry; ?>-<?= $end_entry; ?> entries of <?= $total_entries; ?></p>
+                    </div>
+                </div>
+
+                <nav aria-label="Page navigation example">
+                    <ul class="pagination justify-content-center pagination-sm">
+                        <?php
+                        // Previous button
+                        if ($page > 1) {
+                            echo "<li class='page-item'><a class='page-link' href='" . $base_url . "&page=" . ($page - 1) . "'>Prev</a></li>";
+                        } else {
+                            echo "<li class='page-item disabled'><span class='page-link'>Prev</span></li>";
+                        }
+
+                        // Display current page
+                        echo "<li class='page-item active'><span class='page-link'>$page</span></li>";
+
+                        // Display the next page, if it exists
+                        if ($page + 1 <= $total_pages) {
+                            echo "<li class='page-item'><a class='page-link' href='" . $base_url . "&page=" . ($page + 1) . "'>" . ($page + 1) . "</a></li>";
+                        }
+
+                        // Next button
+                        if ($page < $total_pages) {
+                            echo "<li class='page-item'><a class='page-link' href='" . $base_url . "&page=" . ($page + 1) . "'>Next</a></li>";
+                        } else {
+                            echo "<li class='page-item disabled'><span class='page-link'>Next</span></li>";
+                        }
+                        ?>
+                    </ul>
+                </nav>
 
 
 
 
-            <div class="dropdown me-2">
-                <button class="btn btn-dark btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown">
-                    New
-                </button>
-                <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                    <?php
-                    $static_types = fetch('static_types', ['type_for' => 'ps_types']);
-                    while ($static_type = mysqli_fetch_assoc($static_types)) {
-                        echo '<li><a class="dropdown-item" href="purchase-add?type=' . urlencode($static_type['type_name']) . '">' . htmlspecialchars($static_type['details']) . '</a></li>';
-                    }
-                    ?>
-                </ul>
-            </div>
-            <div class="dropdown">
-                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="fa fa-print"></i>
-                </button>
-                <ul class="dropdown-menu mt-2" aria-labelledby="dropdownMenuButton">
-                    <li>
-                        <a class="dropdown-item" href="<?= $print_url; ?>" target="_blank">
-                            <i class="fas text-secondary fa-eye me-2"></i> Print Preview
-                        </a>
-                    </li>
+                <div class="dropdown me-2">
+                    <button class="btn btn-dark btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown">
+                        New
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                        <?php
+                        $static_types = fetch('static_types', ['type_for' => 'ps_types']);
+                        while ($static_type = mysqli_fetch_assoc($static_types)) {
+                            echo '<li><a class="dropdown-item" href="purchase-add?type=' . urlencode($static_type['type_name']) . '">' . htmlspecialchars($static_type['details']) . '</a></li>';
+                        }
+                        ?>
+                    </ul>
+                </div>
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fa fa-print"></i>
+                    </button>
+                    <ul class="dropdown-menu mt-2" aria-labelledby="dropdownMenuButton">
+                        <li>
+                            <a class="dropdown-item" href="<?= $print_url; ?>" target="_blank">
+                                <i class="fas text-secondary fa-eye me-2"></i> Print Preview
+                            </a>
+                        </li>
 
-                    <li>
-                        <a class="dropdown-item" href="javascript:void(0);" onclick="openAndPrint('<?= $print_url; ?>')">
-                            <i class="fas text-secondary fa-print me-2"></i> Print
-                        </a>
-                    </li>
+                        <li>
+                            <a class="dropdown-item" href="javascript:void(0);" onclick="openAndPrint('<?= $print_url; ?>')">
+                                <i class="fas text-secondary fa-print me-2"></i> Print
+                            </a>
+                        </li>
 
-                    <li>
-                        <a class="dropdown-item" href="#" onclick="getFileThrough('pdf', '<?= $print_url; ?>')">
-                            <i id="pdfIcon" class="fas text-secondary fa-file-pdf me-2"></i> Download PDF
-                        </a>
-                    </li>
+                        <li>
+                            <a class="dropdown-item" href="#" onclick="getFileThrough('pdf', '<?= $print_url; ?>')">
+                                <i id="pdfIcon" class="fas text-secondary fa-file-pdf me-2"></i> Download PDF
+                            </a>
+                        </li>
 
-                    <li>
-                        <a class="dropdown-item" href="#" onclick="getFileThrough('word', '<?= $print_url; ?>')">
-                            <i id="wordIcon" class="fas text-secondary fa-file-word me-2"></i> Download Word File
-                        </a>
-                    </li>
+                        <li>
+                            <a class="dropdown-item" href="#" onclick="getFileThrough('word', '<?= $print_url; ?>')">
+                                <i id="wordIcon" class="fas text-secondary fa-file-word me-2"></i> Download Word File
+                            </a>
+                        </li>
 
-                    <li>
-                        <a class="dropdown-item" href="#" onclick="getFileThrough('whatsapp', '<?= $print_url; ?>')">
-                            <i id="whatsappIcon" class="fa text-secondary fa-whatsapp me-2"></i> Send in WhatsApp
-                        </a>
-                    </li>
+                        <li>
+                            <a class="dropdown-item" href="#" onclick="getFileThrough('whatsapp', '<?= $print_url; ?>')">
+                                <i id="whatsappIcon" class="fa text-secondary fa-whatsapp me-2"></i> Send in WhatsApp
+                            </a>
+                        </li>
 
-                    <li>
-                        <a class="dropdown-item" href="#" onclick="getFileThrough('email', '<?= $print_url; ?>')">
-                            <i id="emailIcon" class="fas text-secondary fa-envelope me-2"></i> Send In Email
-                        </a>
-                    </li>
-                </ul>
+                        <li>
+                            <a class="dropdown-item" href="#" onclick="getFileThrough('email', '<?= $print_url; ?>')">
+                                <i id="emailIcon" class="fas text-secondary fa-envelope me-2"></i> Send In Email
+                            </a>
+                        </li>
+                    </ul>
 
+                </div>
             </div>
         </div>
     </div>
-    <form name="datesSubmit" class="mt-2" method="get">
-        <div class="input-group input-group-sm">
-            <div class="form-group">
-                <label for="p_id" class="form-label">P#</label>
-                <input type="number" name="p_id" value="<?php echo $p_sr; ?>" id="p_id" class="form-control form-control-sm mx-1" style="max-width:80px;" placeholder="e.g. 33">
-            </div>
-            <div class="form-group">
-                <label for="date_type" class="form-label">Date Type</label>
-                <select class="form-select form-select-sm" name="date_type" style="max-width:130px;" id="date_type" onchange="toggleDates()">
-                    <option value="" <?= !in_array($date_type, ['purchase', 'loading', 'receiving']) ? 'selected' : ''; ?>>All</option>
-                    <option value="purchase" <?= $date_type == 'purchase' ? 'selected' : ''; ?>>Purchase</option>
-                    <option value="loading" <?= $date_type == 'loading' ? 'selected' : ''; ?>>Loading</option>
-                    <option value="receiving" <?= $date_type == 'receiving' ? 'selected' : ''; ?>>Receiving</option>
-                </select>
-            </div>
-            <div class="form-group <?= !in_array($date_type, ['purchase', 'loading', 'receiving']) ? 'd-none' : ''; ?>" id="startInput">
-                <label for="start" class="form-label">Start Date</label>
-                <input type="date" name="start" value="<?php echo $start_print; ?>" id="start" class="form-control form-control-sm mx-1" style="max-width:160px;">
-            </div>
-            <div class="form-group <?= !in_array($date_type, ['purchase', 'loading', 'receiving']) ? 'd-none' : ''; ?>" id="endInput">
-                <label for="end" class="form-label">End Date</label>
-                <input type="date" name="end" value="<?php echo $end_print; ?>" id="end" class="form-control form-control-sm mx-2" style="max-width:160px;">
-            </div>
-            <div class="form-group mx-1">
-                <label for="type" class="form-label">Purchase Type</label>
-                <select class="form-select form-select-sm" name="type" style="max-width:130px;" id="type">
-                    <option value="" selected>All</option>
-                    <?php
-                    $static_types = fetch('static_types', ['type_for' => 'ps_types']);
-                    while ($static_type = mysqli_fetch_assoc($static_types)) {
-                        $sel_tran = $type == $static_type['type_name'] ? 'selected' : '';
-                        echo '<option ' . $sel_tran . '  value="' . $static_type['type_name'] . '">' . strtoupper(htmlspecialchars($static_type['details'])) . '</option>';
-                    }
-                    ?>
-                </select>
-            </div>
-            <div class="form-group mx-1">
-                <label for="branch" class="form-label">Branch</label>
-                <select class="form-select form-select-sm" name="branch" style="max-width:130px;" id="branch">
-                    <option value="" selected>All</option>
-                    <?php
-                    $branches = fetch('branches');
-                    while ($b = mysqli_fetch_assoc($branches)) {
-                        $b_select = $b['b_code'] == $branch ? 'selected' : '';
-                        echo '<option ' . $b_select . ' value="' . $b['b_code'] . '">' . $b['b_code'] . '</option>';
-                    }
-                    ?>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="payment_type" class="form-label">Payment Type</label>
-                <select class="form-select form-select-sm" name="payment_type" style="max-width:130px;" id="payment_type">
-                    <option value="" selected>All</option>
-                    <option value="credit" <?= $payment_type === 'credit' ? 'selected' : ''; ?>>Credit</option>
-                    <option value="full" <?= $payment_type === 'full' ? 'selected' : ''; ?>>Full</option>
-                    <option value="advance" <?= $payment_type === 'advance' ? 'selected' : ''; ?>>Advance</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="sea_road" class="form-label">SEA/ROAD</label>
-                <select class="form-select form-select-sm" name="sea_road" style="max-width:130px;" id="sea_road">
-                    <option value="" selected>All</option>
-                    <option value="sea" <?= $sea_road === 'sea' ? 'selected' : ''; ?>>by Sea</option>
-                    <option value="road" <?= $sea_road === 'road' ? 'selected' : ''; ?>>by Road</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="is_transferred" class="form-label">Transfer Status</label>
-                <select class="form-select form-select-sm" name="is_transferred" style="max-width:180px;" id="is_transferred">
-                    <option value="" selected>All</option>
-                    <?php $imp_exp_array = array(1 => 'transferred', 0 => 'not transferred');
-                    foreach ($imp_exp_array as $item => $value) {
-                        $sel_tran = $is_transferred == $item ? 'selected' : '';
-                        echo '<option ' . $sel_tran . '  value="' . $item . '">' . strtoupper($value) . '</option>';
-                    } ?>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="acc_no" class="form-label">Account No.</label>
-                <input type="text" class="form-control form-control-sm mx-1" style="max-width:90px;" name="acc_no" placeholder="Acc No." value="<?php echo $acc_no; ?>" id="acc_no">
-            </div>
-            <div class="form-group mx-1">
-                <label for="country_type" class="form-label">Country Type</label>
-                <select class="form-select form-select-sm" name="country_type" style="max-width:130px;" id="country_type" onchange="toggleCountry()">
-                    <option value="" <?= !in_array($country_type, ['purchase', 'loading', 'receiving']) ? 'selected' : ''; ?>>All</option>
-                    <option value="purchase" <?= $country_type == 'purchase' ? 'selected' : ''; ?>>Purchase</option>
-                    <option value="loading" <?= $country_type == 'loading' ? 'selected' : ''; ?>>Loading</option>
-                    <option value="receiving" <?= $country_type == 'receiving' ? 'selected' : ''; ?>>Receiving</option>
-                </select>
-            </div>
-            <div class="form-group mx-1 <?= !in_array($country_type, ['purchase', 'loading', 'receiving']) ? 'd-none' : ''; ?>" id="countryInput">
-                <label for="country" class="form-label">Country Name</label>
-                <input type="text" name="country" value="<?php echo $country; ?>" id="country" class="form-control form-control-sm mx-1" style="max-width:130px;">
-            </div>
-            <div class="form-group mt-4 pt-1">
-                <?= $remove ? '<a href="' . $pageURL . '" class="btn btn-sm btn-danger"><i class="fa fa-sync-alt"></i></a>' : ''; ?>
-                <button type="submit" class="btn btn-sm btn-success">Search</button>
-            </div>
-        </div>
-    </form>
 
     <style>
+        /* Modern Scrollbar Styling */
+        #RecordsTable::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        #RecordsTable::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        #RecordsTable::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+
+        #RecordsTable::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* Table Container */
         #RecordsTable {
             height: calc(100vh - 250px);
             overflow-y: auto;
             display: block;
             width: 100%;
+            border: 2px solid #dee2e6;
+            background: white;
         }
 
+        /* Table Structure */
         #RecordsTable table {
             width: 100%;
             border-collapse: collapse;
+            background: white;
         }
 
+        /* Sticky Header */
         #RecordsTable thead {
             position: sticky;
-            top: -1px;
+            top: 0;
             z-index: 2;
-            background-color: #f8f9fa !important;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            background: #6c757d;
+            color: white;
+            border-bottom: 2px solid #455a64;
+            /* Darker border for header */
         }
 
+        /* Header Cells */
         #RecordsTable thead th {
-            background-color: #f8f9fa !important;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #dee2e6;
+            border-right: 2px solid #ced4da;
         }
 
+        /* Table Cells */
         #RecordsTable th,
         #RecordsTable td {
-            padding: 8px;
+            padding: 10px;
             text-align: left;
-            border: 1px solid #ddd;
+            border: 1px solid #e9ecef;
+            /* Solid border for cells */
         }
 
+        /* Row Hover Effect */
+        #RecordsTable tbody tr {
+            transition: background-color 0.3s ease;
+        }
+
+        #RecordsTable tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        /* Sticky Columns */
         #RecordsTable .sticky-column {
             position: sticky;
-            background-color: #f8f9fa !important;
+            background: white;
             z-index: 1;
-            /* Ensures sticky columns are on top of the other content */
+            border-right: 1px solid #ced4da;
+            /* Border for sticky columns */
         }
 
-        #RecordsTable .sticky-row {
-            position: sticky;
-            top: 0;
-            background-color: #f8f9fa;
-            z-index: 3;
-        }
-
+        /* First Three Columns Sticky */
         #RecordsTable .sticky-column:first-child {
             left: 0;
         }
@@ -381,7 +426,55 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
         #RecordsTable .sticky-column:nth-child(3) {
             left: 149px;
         }
+
+        /* Typography */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        #RecordsTable th,
+        #RecordsTable td {
+            font-size: 14px;
+        }
+
+        /* Clickable Items */
+        .pointer {
+            cursor: pointer;
+        }
+
+        .pointer:hover {
+            text-decoration: underline;
+        }
+
+        /* Icons */
+        .fa-download {
+            color: #28a745;
+            transition: color 0.3s ease;
+        }
+
+        .fa-download:hover {
+            color: #218838;
+        }
+
+        .fa-lock {
+            color: #28a745;
+        }
+
+        /* Color Coding for Rows */
+        .text-danger {
+            color: #dc3545 !important;
+        }
+
+        .text-warning {
+            color: #ffc107 !important;
+        }
+
+        .text-dark {
+            color: #343a40 !important;
+        }
     </style>
+
+
     <div class="table-responsive mt-4" id="RecordsTable">
         <table class="table table-bordered">
             <thead>
@@ -407,7 +500,8 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                 </tr>
             </thead>
             <tbody>
-                <?php $purchases = mysqli_query($connect, $sql);
+                <?php
+                $purchases = mysqli_query($connect, $sql);
                 $row_count = $p_qty_total = $p_kgs_total = 0;
                 while ($purchase = mysqli_fetch_assoc($purchases)) {
                     $id = $purchase['id'];
@@ -456,18 +550,16 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     $p_kgs_total += !empty($totals['KGs']) ? $totals['KGs'] : 0;
                     $rowColor = $purchase['color_priority'] == 1 ? ' text-danger ' : ($purchase['color_priority'] == 2 ? ' text-warning ' : ' text-dark '); ?>
                     <tr class="text-nowrap">
-                        <td class="sticky-column pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $id; ?>)"
-                            data-bs-toggle="modal" data-bs-target="#KhaataDetails">
+                        <td class="sticky-column pointer <?php echo $rowColor; ?>" onclick="viewPurchase(<?php echo $id; ?>)" data-bs-toggle="modal" data-bs-target="#KhaataDetails">
                             <?php echo '<b>' . ucfirst($_fields_single['p_s']) . '#</b>' . $purchase['sr'];
-                            echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?></td>
+                            echo $locked == 1 ? '<i class="fa fa-lock text-success"></i>' : ''; ?>
+                        </td>
                         <td class="sticky-column <?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['type']); ?></td>
                         <td class="sticky-column <?= $rowColor; ?>"><?= $_fields_single['items'][0]['allotment_name'] ?? ''; ?></td>
                         <td class="<?php echo $rowColor; ?> branch"><?php echo branchName($_fields_single['branch_id']); ?></td>
-                        <td class="<?php echo $rowColor; ?>"><?php echo my_date($_fields_single['_date']);; ?></td>
+                        <td class="<?php echo $rowColor; ?>"><?php echo my_date($_fields_single['_date']); ?></td>
                         <td class="acc_no <?php echo $rowColor; ?>"><?= strtoupper($_fields_single['cr_acc']) . ' ' . $_fields_single['cr_acc_name']; ?></td>
                         <td class="acc_no <?php echo $rowColor; ?>"><?= strtoupper($_fields_single['dr_acc']) . ' ' . $_fields_single['dr_acc_name']; ?></td>
-                        <!-- <td class="acc_no <?php echo $rowColor; ?>"><?php echo strtoupper($_fields_single['dr_acc']); ?></td> -->
-                        <!-- <td class="<?php echo $rowColor; ?>"><?php echo $_fields_single['dr_acc_name']; ?></td> -->
                         <td class="<?php echo $rowColor; ?>"><?php echo $Goods; ?></td>
                         <td class="<?php echo $rowColor; ?>"><?php echo number_format($Qty, 2); ?></td>
                         <td class="<?php echo $rowColor; ?>"><?php echo number_format($KGs, 2); ?></td>

@@ -53,13 +53,9 @@ if ($id > 0) {
         $next_sr_no = $max_sr_no + 1;
         $total_quantity_no = $total_gross_weight = $total_net_weight = 0;
         foreach ($_fields['items'] as $calcItem) {
-            $show_in = json_decode($calcItem['show_in'], true);
-            $show_in['loading'] = $show_in['loading'] ?? '';
-            if ($show_in['loading'] == 'yes') {
-                $total_quantity_no += $calcItem['qty_no'];
-                $total_gross_weight += $calcItem['total_kgs'];
-                $total_net_weight += $calcItem['net_kgs'];
-            }
+            $total_quantity_no += $calcItem['qty_no'];
+            $total_gross_weight += $calcItem['total_kgs'];
+            $total_net_weight += $calcItem['net_kgs'];
         }
         $remaining_quantity_no = $total_quantity_no - $total_loaded_quantity_no;
         $remaining_gross_weight = $total_gross_weight - $total_loaded_gross_weight;
@@ -167,11 +163,6 @@ if ($id > 0) {
                                     $items = $_fields['items'];
                                     $qty_no = $total_kgs = $net_kgs = $final_amount = $total_tax_amount = $total_with_tax = 0;
                                     foreach ($items as $details) {
-                                        $show_in = json_decode($details['show_in'], true);
-                                        $show_in['loading'] = $show_in['loading'] ?? '';
-                                        if ($show_in['loading'] !== 'yes') {
-                                            continue;
-                                        }
                                         echo '<tr class="goodRow" data-empty-kgs="' . $details['empty_kgs'] . '" data-rate="' . $details['qty_kgs'] . '" data-quantity="' . $details['qty_no'] . '" data-quantity-name="' . $details['qty_name'] . '" data-net-kgs="' . round($details['net_kgs'], 2) . '" data-gross-kgs="' . round($details['total_kgs'], 2) . '" data-goodsjson=\'' . json_encode($details) . '\'>';
                                         echo '<td>' . $details['sr'] . '</td>';
                                         echo '<td class="TgoodsId d-none">' . $details['goods_id'] . '</td>';
@@ -227,7 +218,7 @@ if ($id > 0) {
                                     <th class="bg-dark text-white">Qty No</th>
                                     <th class="bg-dark text-white">G.W.KGS</th>
                                     <th class="bg-dark text-white">N.W.KGS</th>
-                                    <?php if ($route['sea_road'] === 'sea'): ?>
+                                    <?php if ($route['lwl'] === 'local'): ?>
                                         <th class="bg-dark text-white">Truck No.</th>
                                         <th class="bg-dark text-white">Truck Name</th>
                                         <th class="bg-dark text-white">L WareHouse</th>
@@ -253,7 +244,7 @@ if ($id > 0) {
                                         <td class="border quantity_no border-dark"><?= json_decode($row['goods_details'], true)['quantity_no']; ?></td>
                                         <td class="border border-dark"><?= json_decode($row['goods_details'], true)['gross_weight']; ?></td>
                                         <td class="border border-dark"><?= json_decode($row['goods_details'], true)['net_weight']; ?></td>
-                                        <?php if ($route['sea_road'] === 'sea'): ?>
+                                        <?php if ($route['lwl'] === 'local'): ?>
                                             <td class="border border-dark"><?= json_decode($row['transfer_details'], true)['truck_no']; ?></td>
                                             <td class="border border-dark"><?= json_decode($row['transfer_details'], true)['truck_name']; ?></td>
                                             <td class="border border-dark"><?= json_decode($row['transfer_details'], true)['loading_warehouse']; ?></td>

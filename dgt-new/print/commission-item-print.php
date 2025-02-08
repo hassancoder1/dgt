@@ -276,19 +276,20 @@ $print_url = 'print/commission-item-print.php?print_enteries=' . $_GET['print_en
                 $lastIndex = count($Items) - 1; // Get the last index
                 foreach ($Items as $index => $SItem) {
                     $paddingStyle = ($index === $lastIndex) ? 'padding-bottom: 100px;' : ''; // Apply padding only to last row
+                    $borderbottom = ($index != $lastIndex) ? 'border-bottom-0' : ''; // Apply padding only to last row
                 ?>
-                    <tr>
-                        <td style="<?= $paddingStyle; ?>" class="text-center"><?= $itemSrs[$index]; ?></td>
-                        <td style="<?= $paddingStyle; ?>" class="border-start border-dark">
+                    <tr cla>
+                        <td style="<?= $paddingStyle; ?>" class="text-center <?= $borderbottom; ?>"><?= $itemSrs[$index]; ?></td>
+                        <td style="<?= $paddingStyle; ?>" class="border-start <?= $borderbottom; ?> border-dark">
                             <?= goodsName($parent_item['goods_id']) . ' / <b>Size:</b> ' . $parent_item['size'] . ' / <b>Brand:</b> ' . $parent_item['brand'] . ' / <b>Origin:</b> ' . $parent_item['origin'] ?>
                         </td>
-                        <td style="<?= $paddingStyle; ?>" class="border-start border-dark"><?= $SItem['qty_no'] . ' ' . $parent_item['qty_name']; ?></td>
-                        <td style="<?= $paddingStyle; ?>" class="border-start border-dark"><?= $SItem['total_kgs']; ?> / <?= $SItem['net_kgs']; ?></td>
-                        <td style="<?= $paddingStyle; ?>" class="border-start border-dark"><?= $SItem['total'] . ' ' . $SItem['divide']; ?></td>
-                        <td style="<?= $paddingStyle; ?>" class="border-start border-dark text-nowrap">
+                        <td style="<?= $paddingStyle; ?>" class="border-start <?= $borderbottom; ?> border-dark"><?= $SItem['qty_no'] . ' ' . $parent_item['qty_name']; ?></td>
+                        <td style="<?= $paddingStyle; ?>" class="border-start <?= $borderbottom; ?> border-dark"><?= $SItem['total_kgs']; ?> / <?= $SItem['net_kgs']; ?></td>
+                        <td style="<?= $paddingStyle; ?>" class="border-start <?= $borderbottom; ?> border-dark"><?= $SItem['total'] . ' ' . $SItem['divide']; ?></td>
+                        <td style="<?= $paddingStyle; ?>"  class="border-start <?= $borderbottom; ?> border-dark text-nowrap">
                             <?= number_format($SItem['rate1'], 2) . ' ' . $SItem['currency1'] ?>
                         </td>
-                        <td style="<?= $paddingStyle; ?>" class="border-start border-dark">
+                        <td style="<?= $paddingStyle; ?>" class="border-start <?= $borderbottom; ?> border-dark">
                             <?= number_format($SItem['amount']) . ' ' . $SItem['currency1']; ?>
                         </td>
                     </tr>
@@ -299,12 +300,12 @@ $print_url = 'print/commission-item-print.php?print_enteries=' . $_GET['print_en
                 } ?>
 
                 <tr>
-                    <td colspan="2">TOTALS: </td>
-                    <td class="border-start border-dark"><?= $totalQty ?? ''; ?></td>
-                    <td class="border-start border-dark"><?= $totalNetKGS ?? ''; ?></td>
-                    <td class="border-start border-dark"></td>
-                    <td class="border-start border-dark text-nowrap"></td>
-                    <td class="border-start border-dark"><?= number_format($totalAmount ?? 0); ?></td>
+                    <td class="fw-bold" colspan="2">TOTALS: </td>
+                    <td class="border-start border-dark fw-bold"><?= $totalQty ?? ''; ?></td>
+                    <td class="border-start border-dark fw-bold"><?= $totalNetKGS ?? ''; ?></td>
+                    <td class="border-start border-dark fw-bold"></td>
+                    <td class="border-start border-dark fw-bold text-nowrap"></td>
+                    <td class="border-start border-dark fw-bold"><?= number_format($totalAmount ?? 0); ?></td>
                 </tr>
             </tbody>
         </table>

@@ -34,24 +34,25 @@ if ($_GET) {
 } else {
     $sql .= " AND r_date = '$start_date'";
 }
-//echo $sql;?>
+//echo $sql;
+?>
 <div class="fixed-top">
     <?php require_once('nav-links.php'); ?>
     <div class="bg-light shadow p-2 border-bottom border-warning d-flex gap-0 align-items-center justify-content-between mb-md-2">
         <div class="fs-5 text-uppercase"><?php echo $page_title; ?></div>
         <div class="d-flex gap-md-2">
             <div class="lh-1"><b>Dr. </b><span id="dr_total_span"></span><br><b>Cr. </b><span
-                        id="cr_total_span"></span></div>
+                    id="cr_total_span"></span></div>
             <div class="lh-1"><b>Bal. </b><span id="bal_span"></span><br><b>Rows </b><span id="rows_span"></span>
             </div>
         </div>
         <form name="datesSubmit" method="get">
             <div class="input-group input-group-sm">
                 <input id="r_date_start" name="r_date_start" type="date"
-                       value="<?php echo $start_date; ?>" class="form-control">
+                    value="<?php echo $start_date; ?>" class="form-control">
                 <label for="r_date_end" class="d-none">To</label>
                 <input id="r_date_end" name="r_date_end" value="<?php echo $end_date; ?>" type="date"
-                       class="form-control">
+                    class="form-control">
                 <select id="branch_id" name="branch_id" class="form-select">
                     <option value="0" <?php echo ($selectedBranchId == 0) ? 'selected' : ''; ?>>All
                         Branches
@@ -71,7 +72,7 @@ if ($_GET) {
                     } ?>
                 </select>
                 <input type="text" id="username" name="username" class="form-control "
-                       placeholder="Search user ID" value="<?php echo $searchUserName; ?>">
+                    placeholder="Search user ID" value="<?php echo $searchUserName; ?>">
                 <?php echo $removeFilter; ?>
             </div>
         </form>
@@ -99,105 +100,105 @@ if ($_GET) {
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead>
-                        <tr>
-                            <th>SR#</th>
-                            <th>USER</th>
-                            <?php if (SuperAdmin()) {
-                                echo '<th>BR.</th>';
-                            } ?>
-                            <th>DATE</th>
-                            <th>TYPE</th>
-                            <th>A/C</th>
-                            <th>RZ#</th>
-                            <th>NAME</th>
-                            <th>NO.</th>
-                            <th>DETAILS</th>
-                            <th>Dr.</th>
-                            <th>Cr.</th>
-                            <th></th>
-                        </tr>
+                            <tr>
+                                <th>SR#</th>
+                                <th>USER</th>
+                                <?php if (SuperAdmin()) {
+                                    echo '<th>BR.</th>';
+                                } ?>
+                                <th>DATE</th>
+                                <th>TYPE</th>
+                                <th>A/C</th>
+                                <th>RZ#</th>
+                                <th>NAME</th>
+                                <th>NO.</th>
+                                <th>DETAILS</th>
+                                <th>Dr.</th>
+                                <th>Cr.</th>
+                                <th></th>
+                            </tr>
                         </thead>
                         <tbody>
-                        <?php $records = mysqli_query($connect, $sql);
-                        $cr_total = $dr_total = 0;
-                        $rows = mysqli_num_rows($records);
-                        if ($rows > 0) {
-                            while ($roz = mysqli_fetch_assoc($records)) {
-                                $dr = $cr = 0;
-                                $r_id = $roz["r_id"];
-                                $tool = SuperAdmin() ? 'G.Sr#' . $roz['r_id'] . '&nbsp;&nbsp;&nbsp;' . 'Branch Sr#' . $roz['branch_serial'] : 'Branch Sr#' . $roz['branch_serial']; ?>
-                                <tr>
-                                    <td class="text-nowrap">
-                                        <a href="<?php echo 'roznamcha-add?id=' . $r_id; ?>"
-                                           class="text-dark" data-bs-toggle="tooltip"
-                                           title="<?php echo $tool; ?>">
-                                            <?php echo SuperAdmin() ? $roz['r_id'] . '-' . $roz['branch_serial'] : $roz['branch_serial']; ?>
-                                        </a>
-                                    </td>
-                                    <td><?php echo userName($roz['user_id']); ?></td>
-                                    <td class="text-nowrap"><?php if (SuperAdmin()) {
-                                            echo branchName($roz['branch_id']);
-                                            echo !empty($roz['transfered_from']) ? roznamchaName($roz['transfered_from']) : '';
+                            <?php $records = mysqli_query($connect, $sql);
+                            $cr_total = $dr_total = 0;
+                            $rows = mysqli_num_rows($records);
+                            if ($rows > 0) {
+                                while ($roz = mysqli_fetch_assoc($records)) {
+                                    $dr = $cr = 0;
+                                    $r_id = $roz["r_id"];
+                                    $tool = SuperAdmin() ? 'G.Sr#' . $roz['r_id'] . '&nbsp;&nbsp;&nbsp;' . 'Branch Sr#' . $roz['branch_serial'] : 'Branch Sr#' . $roz['branch_serial']; ?>
+                                    <tr>
+                                        <td class="text-nowrap">
+                                            <a href="<?php echo 'roznamcha-add?id=' . $r_id; ?>"
+                                                class="text-dark" data-bs-toggle="tooltip"
+                                                title="<?php echo $tool; ?>">
+                                                <?php echo SuperAdmin() ? $roz['r_id'] . '-' . $roz['branch_serial'] : $roz['branch_serial']; ?>
+                                            </a>
+                                        </td>
+                                        <td><?php echo userName($roz['user_id']); ?></td>
+                                        <td class="text-nowrap"><?php if (SuperAdmin()) {
+                                                                    echo branchName($roz['branch_id']);
+                                                                    echo !empty($roz['transfered_from']) ? roznamchaName($roz['transfered_from']) : '';
+                                                                } ?>
+                                        </td>
+                                        <td class="text-nowrap"><?php echo my_date($roz['r_date']); ?></td>
+                                        <td class="text-nowrap"><?php echo badge(shortName($roz['r_type']), 'secondary');
+                                                                echo $roz['img'] != '' ? '<img src="' . $roz['img'] . '" width="20" height="20" class="img-fluid m-0">' : ''; ?>
+                                        </td>
+                                        <td><?php echo $roz['khaata_no']; ?></td>
+                                        <td><?php echo $roz['roznamcha_no']; ?></td>
+                                        <td><?php echo $roz['r_name']; ?></td>
+                                        <td><?php echo $roz['r_no']; ?></td>
+                                        <td class="small">
+                                            <?php echo $roz['details'];
+                                            if ($roz['r_type'] == 'Bill') {
+                                                echo $roz['currency'] . ' AMOUNT' . $roz['qty'] . ' Per Price ' . $roz['per_price'];
+                                            }
+                                            if ($roz['r_type'] == 'Bank') {
+                                                echo ' Bank:' . bankName($roz['bank_id']) . ' Date:' . my_date($roz['r_date_payment']);
+                                            } ?>
+                                        </td>
+                                        <?php if ($roz['dr_cr'] == "dr") {
+                                            $dr = $roz['amount'];
+                                            $dr_total += $dr;
+                                        } else {
+                                            $cr = $roz['amount'];
+                                            $cr_total += $cr;
                                         } ?>
-                                    </td>
-                                    <td class="text-nowrap"><?php echo my_date($roz['r_date']); ?></td>
-                                    <td class="text-nowrap"><?php echo badge(shortName($roz['r_type']), 'secondary');
-                                        echo $roz['img'] != '' ? '<img src="' . $roz['img'] . '" width="20" height="20" class="img-fluid m-0">' : ''; ?>
-                                    </td>
-                                    <td><?php echo $roz['khaata_no']; ?></td>
-                                    <td><?php echo $roz['roznamcha_no']; ?></td>
-                                    <td><?php echo $roz['r_name']; ?></td>
-                                    <td><?php echo $roz['r_no']; ?></td>
-                                    <td class="small">
-                                        <?php echo $roz['details'];
-                                        if ($roz['r_type'] == 'Bill') {
-                                            echo $roz['currency'] . ' AMOUNT' . $roz['qty'] . ' Per Price ' . $roz['per_price'];
-                                        }
-                                        if ($roz['r_type'] == 'Bank') {
-                                            echo ' Bank:' . bankName($roz['bank_id']) . ' Date:' . my_date($roz['r_date_payment']);
-                                        } ?>
-                                    </td>
-                                    <?php if ($roz['dr_cr'] == "dr") {
-                                        $dr = $roz['amount'];
-                                        $dr_total += $dr;
-                                    } else {
-                                        $cr = $roz['amount'];
-                                        $cr_total += $cr;
-                                    } ?>
-                                    <td class="text-success"><?php echo round($dr); ?></td>
-                                    <td class="text-danger"><?php echo round($cr); ?></td>
-                                    <td>
-                                        <?php if (SuperAdmin()) { ?>
-                                            <div class="d-flex gap-2">
-                                                <a href="<?php echo 'print/roznamcha-single?r_id=' . base64_encode($r_id) . '&secret=' . base64_encode('powered-by-upsol'); ?>"
-                                                   target="_blank" class="btn btn-sm btn-outline-dark py-0"
-                                                   data-bs-toggle="tooltip" title="Print">
-                                                    <i class="fa fa-print"></i>
-                                                </a>
-                                                <!--<a onclick="deleteRoznamcha(this)" id="<?php /*echo $roz['r_id']; */ ?>" data-url="roznamcha" data-r-type="<?php /*echo $roz['r_type']; */ ?>" data-amount="<?php /*echo $roz['amount']; */ ?>" class="btn btn-danger bg-gradient btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete"><i data-eva="trash-2" data-eva-height="14" data-eva-width="14" class="fill-white align-text-top"></i></a>-->
-                                                <form method="post"
-                                                      onsubmit="return confirm('Are you sure to delete?\nRoznamcha Type: <?php echo $roz['r_type']; ?>\nAmount: <?php echo $roz['amount']; ?>');">
-                                                    <input type="hidden" name="r_id_hidden"
-                                                           value="<?php echo $roz['r_id']; ?>">
-                                                    <input type="hidden" name="r_type_hidden"
-                                                           value="<?php echo $roz['r_type']; ?>">
-                                                    <button type="submit" name="deleteRoznamchaSubmit"
+                                        <td class="text-success"><?php echo round($dr); ?></td>
+                                        <td class="text-danger"><?php echo round($cr); ?></td>
+                                        <td>
+                                            <?php if (SuperAdmin()) { ?>
+                                                <div class="d-flex gap-2">
+                                                    <a href="<?php echo 'print/roznamcha-single?r_id=' . base64_encode($r_id) . '&secret=' . base64_encode('powered-by-upsol'); ?>"
+                                                        target="_blank" class="btn btn-sm btn-outline-dark py-0"
+                                                        data-bs-toggle="tooltip" title="Print">
+                                                        <i class="fa fa-print"></i>
+                                                    </a>
+                                                    <!--<a onclick="deleteRoznamcha(this)" id="<?php /*echo $roz['r_id']; */ ?>" data-url="roznamcha" data-r-type="<?php /*echo $roz['r_type']; */ ?>" data-amount="<?php /*echo $roz['amount']; */ ?>" class="btn btn-danger bg-gradient btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete"><i data-eva="trash-2" data-eva-height="14" data-eva-width="14" class="fill-white align-text-top"></i></a>-->
+                                                    <form method="post"
+                                                        onsubmit="return confirm('Are you sure to delete?\nRoznamcha Type: <?php echo $roz['r_type']; ?>\nAmount: <?php echo $roz['amount']; ?>');">
+                                                        <input type="hidden" name="r_id_hidden"
+                                                            value="<?php echo $roz['r_id']; ?>">
+                                                        <input type="hidden" name="r_type_hidden"
+                                                            value="<?php echo $roz['r_type']; ?>">
+                                                        <button type="submit" name="deleteRoznamchaSubmit"
                                                             class="btn btn-sm btn-outline-danger py-0"
                                                             data-bs-toggle="tooltip" title="Delete">
-                                                        <i class="fa fa-trash-alt"></i>
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        <?php } ?>
-                                    </td>
-                                </tr>
+                                                            <i class="fa fa-trash-alt"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            <?php } ?>
+                                        </td>
+                                    </tr>
                             <?php }
-                        } else {
-                            echo '<tr class="text-center"><th colspan="12">No record(s)</th></tr>';
-                        } ?>
-                        <input type="hidden" id="rows" value="<?php echo $rows; ?>">
-                        <input type="hidden" id="dr_total" value="<?php echo $dr_total; ?>">
-                        <input type="hidden" id="cr_total" value="<?php echo $cr_total; ?>">
+                            } else {
+                                echo '<tr class="text-center"><th colspan="12">No record(s)</th></tr>';
+                            } ?>
+                            <input type="hidden" id="rows" value="<?php echo $rows; ?>">
+                            <input type="hidden" id="dr_total" value="<?php echo $dr_total; ?>">
+                            <input type="hidden" id="cr_total" value="<?php echo $cr_total; ?>">
                         </tbody>
                     </table>
                 </div>
@@ -223,7 +224,6 @@ if ($_GET) {
         }
     }
     messageNew($type, $pageURL, $msg);
-
 } ?>
 <script>
     $("#rows_span").text($("#rows").val());
@@ -240,11 +240,9 @@ if ($_GET) {
     } else if (bal < 0) {
         $("#bal_span").addClass('text-danger');
     }
-
-
 </script>
 <script>
-    document.onkeydown = function (evt) {
+    document.onkeydown = function(evt) {
         var keyCode = evt ? (evt.which ? evt.which : evt.keyCode) : event.keyCode;
         if (keyCode == 13) {
             //your function call here
@@ -258,8 +256,8 @@ if ($_GET) {
     }
 </script>
 <script type="text/javascript">
-    $(function () {
-        $('#r_date_start, #r_date_end, #branch_id,#r_type').change(function () {
+    $(function() {
+        $('#r_date_start, #r_date_end, #branch_id,#r_type').change(function() {
             document.datesSubmit.submit();
         });
     });

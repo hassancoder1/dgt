@@ -101,9 +101,6 @@ while ($entry = mysqli_fetch_assoc($entries)) {
 $total_pages = ceil($total_rows / $rows_per_page);
 $paginated_entries = array_slice($processed_entries, 0, $rows_per_page);
 ?>
-
-
-
 <div class="fixed-top">
     <?php require_once('nav-links.php'); ?>
 </div>

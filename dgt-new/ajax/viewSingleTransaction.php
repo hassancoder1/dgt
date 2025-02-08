@@ -8,13 +8,14 @@ if ($id > 0) {
     $sea_road = json_decode($record['sea_road'], true);
     $_fields = transactionSingle($id);
     $_fields['sea_road_array'] = array_merge($_fields['sea_road_array'], !empty($sea_road) ? $sea_road : []);
-    $notify_party = isset($record['notify_party_details']) ? json_decode($record['notify_party_details'], true) : false;
+    $NP_details = $notify_party = isset($record['notify_party_details']) ? json_decode($record['notify_party_details'], true) : false;
     if ($record['type'] === 'local') {
         $notify_party = '';
     }
     $_POST['print_type'] = $_POST['print_type'] ?? '';
     $print_url .= '?t_id=' . $id . '&print_type=' . $_POST['print_type'] . "&timestamp=" . ($_POST['timestamp'] ?? '');
     $payments = json_decode($record['payments'], true);
+    $bank_details = json_decode($record['third_party_bank'], true);
     if (!empty($_fields)) { ?>
         <?php if (in_array($_POST['page'], ['purchases', 'sales', 'bill-transfer'])) { ?>
             <div class="modal-header d-flex justify-content-between bg-white align-items-center">
@@ -711,7 +712,66 @@ if ($id > 0) {
                 <?php } elseif ($_fields['locked'] == 2 && $_POST['page'] !== 'bill-transfer') {
                     echo '<span class="fw-bold text-success"> <i class="fa fa-check"></i> Transferred to Bill</span>';
                 } ?>
+                <div class="mt-3">
+                    <h6 class="fw-bold text-dark mb-2">Details Added:</h6>
+                    <ul class="details-list list-unstyled mb-2">
+                        <?php
+                        if (!empty($sea_road['sea_road'])) {
+                            if (in_array($record['type'], ['booking', 'commission'])) {
+                                $routeText = ($sea_road['sea_road'] == 'sea') ? 'Sea' : 'Road';
+                            }
+                        } elseif (!empty($sea_road['lwl'])) {
+                            if ($sea_road['lwl'] == 'local' && !empty($sea_road['loading_date'])) {
+                                $routeText = 'Loading';
+                            } elseif ($sea_road['lwl'] == 'warehouse') {
+                                $routeText = 'Warehouse';
+                            } elseif ($sea_road['lwl'] == 'launch') {
+                                $routeText = 'Launch';
+                            }
+                        } else {
+                            $routeText = '';
+                        }
+                        // var_dump($sea_road);
+                        ?>
+                        <li class="<?= !empty($routeText) ? 'text-success' : 'text-danger'; ?> fw-bold d-flex align-items-center">
+                            <i class="fa <?= !empty($routeText) ? 'fa-check' : 'fa-times'; ?> me-2"></i>
+                            Routes <?= !empty($routeText) ? '(' . $routeText . ')' : ''; ?>
+                        </li>
 
+                        <?php
+                        $payments = !empty($_fields['payment_details']) ? json_decode(json_encode($_fields['payment_details']), true) : null;
+                        $paymentType = $payments ? ($payments['full_advance'] === 'advance' ? 'Advance' : ($payments['full_advance'] === 'full' ? 'Full' : 'Credit')) : '';
+                        ?>
+                        <li class="<?= !empty($payments) ? 'text-success' : 'text-danger'; ?> fw-bold d-flex align-items-center">
+                            <i class="fa <?= !empty($payments) ? 'fa-check' : 'fa-times'; ?> me-2"></i>
+                            Payments <?= !empty($payments) ? '(' . $paymentType . ')' : ''; ?>
+                        </li>
+
+                        <li class="<?= !empty($bank_details['bank_name']) ? 'text-success' : 'text-danger'; ?> fw-bold d-flex align-items-center">
+                            <i class="fa <?= !empty($bank_details['bank_name']) ? 'fa-check' : 'fa-times'; ?> me-2"></i>
+                            Third-Party Bank
+                        </li>
+                        <li class="<?= !empty($NP_details['np_acc']) ? 'text-success' : 'text-danger'; ?> fw-bold d-flex align-items-center">
+                            <i class="fa <?= !empty($NP_details['np_acc']) ? 'fa-check' : 'fa-times'; ?> me-2"></i>
+                            Notify Party
+                        </li>
+                    </ul>
+                    <h6 class="fw-bold text-dark mb-2">Reports</h6>
+                    <ul class="details-list list-unstyled mb-2">
+                        <?php
+                        $purchase_reports = !empty($record['reports']) && $record['reports'] !== '[]' ? json_decode($record['reports'], true) : [];
+                        $report_keys = ['payment_details', 'contract_details', 'loading_details', 'goods_details'];
+
+                        foreach ($report_keys as $key) {
+                            $exists = !empty($purchase_reports[$key]);
+                        ?>
+                            <li class="<?= $exists ? 'text-success' : 'text-danger'; ?> fw-bold d-flex align-items-center">
+                                <i class="fa <?= $exists ? 'fa-check' : 'fa-times'; ?> me-2"></i>
+                                <?= ucfirst(str_replace('_', ' ', $key)); ?>
+                            </li>
+                        <?php } ?>
+                    </ul>
+                </div>
                 <?php /* if ($_POST['page'] !== "bill-transfer" && $_POST['page'] !== "general-stock-form") { ?>
                     <button class="btn btn-dark btn-sm w-100 mt-3" onclick="openModal('', '')">Add Reports</button>
                 <?php } */ ?>

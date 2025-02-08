@@ -653,12 +653,12 @@ if ($id > 0) {
                                                         name="details2"
                                                         class="form-control currency">
                                                 </div>
-                                                <div class="col-md-1">
-                                                    <!-- Button to Open Second Modal -->
-                                                    <span class="btn btn-sm btn-outline-secondary" id="openOtherPaymentPopup">
-                                                        <i class="fa fa-plus"></i>
-                                                    </span>
-                                                </div>
+                                                <?php if ($_POST['editId'] > 0) { ?> <div class="col-md-1">
+                                                        <span class="btn btn-sm btn-outline-secondary" id="openOtherPaymentPopup">
+                                                            <i class="fa fa-plus"></i>
+                                                        </span>
+                                                    </div>
+                                                <?php } ?>
 
                                                 <!-- JavaScript to Manually Handle Modal -->
                                                 <script>
@@ -1084,22 +1084,22 @@ if ($id > 0) {
                                 <!-- Purchaser Account -->
                                 <div class="col-md-2">
                                     <small class="fw-bold text-dark d-none my-1" id="p_acc_name"></small>
-                                    <label for="p_acc" class="form-label fw-bold text-danger">Purchaser Account</label>
-                                    <input type="text" value="<?= $_fields['dr_acc'] ?? ''; ?>" id="p_acc" name="p_acc_no"
+                                    <label for="p_acc" class="form-label fw-bold text-danger">Cr. Account</label>
+                                    <input type="text" value="" id="p_acc" name="p_acc_no"
                                         onkeyup="searchAcc('#p_acc')" tabindex="-1" class="form-control form-control-sm" required
-                                        placeholder="Enter Purchaser Acc">
+                                        placeholder="Enter Cr. Account">
 
-                                    <input type="hidden" name="p_acc_id" id="p_acc_id" value="<?= $_fields['dr_acc_id'] ?? ''; ?>">
+                                    <input type="hidden" name="p_acc_id" id="p_acc_id" value="">
                                 </div>
 
                                 <!-- Seller Account -->
                                 <div class="col-md-2">
                                     <small class="fw-bold text-dark d-none my-1" id="s_acc_name"></small>
-                                    <label for="s_acc" class="form-label fw-bold text-success">Seller Account</label>
-                                    <input type="text" value="<?= $_fields['cr_acc'] ?? ''; ?>" id="s_acc" name="s_acc_no"
+                                    <label for="s_acc" class="form-label fw-bold text-success">Dr. Account</label>
+                                    <input type="text" value="" id="s_acc" name="s_acc_no"
                                         onkeyup="searchAcc('#s_acc')" tabindex="-1" class="form-control form-control-sm" required
-                                        placeholder="Enter Seller Acc">
-                                    <input type="hidden" name="s_acc_id" id="s_acc_id" value="<?= $_fields['cr_acc_id'] ?? ''; ?>">
+                                        placeholder="Enter Dr. Account">
+                                    <input type="hidden" name="s_acc_id" id="s_acc_id" value="">
                                 </div>
 
                                 <!-- Currency -->
@@ -1186,6 +1186,7 @@ if ($id > 0) {
 
                                 <!-- Hidden Inputs -->
                                 <input type="hidden" name="id" value="<?= $record['id']; ?>">
+                                <!-- <input type="hidden" name="com_id" value="<?= $_POST['editId']; ?>"> -->
                             </div>
                             <?php
                             $rozQ = fetch('roznamchaas', array('r_type' => 'Other Amt', 'transfered_from_id' => $record['id'], 'transfered_from' => 'sales-commission-form'));
@@ -1205,7 +1206,11 @@ if ($id > 0) {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <?php while ($roz = mysqli_fetch_assoc($rozQ)) {
+
+                                        <?php
+                                        $rid_delete_array = [];
+                                        while ($roz = mysqli_fetch_assoc($rozQ)) {
+                                            $rid_delete_array[] = $roz['r_id'];
                                             $dr = $cr = 0; ?>
                                             <input type="hidden" value="<?php echo $roz['r_date']; ?>"
                                                 id="temp_transfer_date">
@@ -1237,6 +1242,7 @@ if ($id > 0) {
                                         <?php } ?>
                                     </tbody>
                                 </table>
+                                <a href="?DeleteOtherPaymentEntry=true&rids=<?= implode('~', $rid_delete_array); ?>&t_id=<?= $record['id']; ?>" class="btn btn-sm btn-danger text-end">Delete Entry</a>
                             <?php
                             } ?>
                         </form>
@@ -1583,5 +1589,29 @@ if ($id > 0) {
                 fetchKhaata("#khaata_no2", "#s_khaata_id", "#s_response", "#s", "#s_khaata_image", "recordSubmit");
             });
             fetchKhaata("#khaata_no2", "#s_khaata_id", "#s_response", "#s", "#s_khaata_image", "recordSubmit");
+
+            function searchAcc(Acc) {
+                var AccNo = $(Acc).val().toUpperCase();
+                $.ajax({
+                    type: 'POST',
+                    url: 'ajax/fetchAgentDetails.php',
+                    data: 'acc_no=' + AccNo,
+                    success: function(html) {
+                        let data = JSON.parse(html).data;
+                        if (data.acc_no !== '') {
+                            $(Acc).addClass('is-valid');
+                            $(Acc).removeClass('is-invalid');
+                            $(Acc + '_name').html('( ' + data.acc_name + ' )').removeClass('d-none');
+                            $(Acc + '_id').val(data.row_id);
+                        } else {
+                            $(Acc).removeClass('is-valid');
+                            $(Acc).addClass('is-invalid');
+                        }
+                    },
+                    error: function(err) {
+
+                    }
+                });
+            }
         </script>
         </div>

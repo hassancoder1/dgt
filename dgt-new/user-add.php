@@ -53,7 +53,7 @@ if (isset($_GET['id']) && $_GET['id'] > 0) {
 } ?>
 <!-- Main Container -->
 <div class="fixed-top bg-light shadow-sm border-bottom">
-<?php require_once('nav-links.php'); ?>
+    <?php require_once('nav-links.php'); ?>
 </div>
 <div class="container-fluid py-4">
     <!-- Header Section -->
@@ -217,6 +217,7 @@ if (isset($_GET['id']) && $_GET['id'] > 0) {
 
                                 <!-- Action Buttons -->
                                 <div class="d-grid gap-2">
+                                    <input type="hidden" name="hidden_id" value="<?php echo $id; ?>">
                                     <button type="submit" name="recordSubmit" class="btn btn-primary">
                                         <i class="bi bi-check2-circle me-2"></i>Submit
                                     </button>

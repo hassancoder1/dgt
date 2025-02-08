@@ -6,7 +6,7 @@ if (isset($_POST["goods_id"])) {
 
     // Fetch purchased and sold quantities grouped by allotment_name, size, brand, origin, and qty_name
     $query = "
-        SELECT 
+        SELECT id,
             allotment_name,
             quality_report,
             size, 
@@ -83,7 +83,8 @@ if (isset($_POST["goods_id"])) {
             'purchased_quantity' => $purchased_quantity,
             'sold_quantity' => $sold_quantity,
             'remaining_quantity' => $remaining_quantity,
-            'quality_report' => $quality_report
+            'quality_report' => $quality_report,
+            'item_id' => $row['id'],
         ];
     }
 

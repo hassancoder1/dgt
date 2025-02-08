@@ -187,7 +187,7 @@ function calculateValues($qtyNo, $qtyKgs, $emptyKgs, $weight, $rate1, $rate2, $o
 function getTransactionSr($t_id)
 {
     global $connect;
-    return mysqli_fetch_assoc(mysqli_query($connect, "SELECT sr FROM transactions WHERE id=$t_id"))['sr'];
+    return mysqli_fetch_assoc(mysqli_query($connect, "SELECT sr FROM transactions WHERE id=$t_id"))['sr'] ?? '';
 }
 function calcNewValues($quantity, $goodsDetails, $type)
 {

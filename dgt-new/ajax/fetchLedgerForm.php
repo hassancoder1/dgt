@@ -26,9 +26,9 @@ if (isset($_POST['khaata_id'])) {
             $output .= '<td class="text-nowrap font-size-12">' . $datum["r_date"] . '</td>';
             $output .= '<td>' . $datum['r_id'] . '-' . $datum['branch_serial'] . '</td>';
             $output .= '<td>' . $datum['username'] . '</td>';
-            $output .= '<td>' . $datum['roznamcha_no'] . '</td>';
+            $output .= '<td>' . (count(explode('.', $datum['r_name'])) == 2 ? (!empty(getTransactionSr($datum['roznamcha_no'])) ? getTransactionSr($datum['roznamcha_no']) : $datum['roznamcha_no']) : $datum['roznamcha_no']) . '</td>';
             $output .= '<td class="font-size-11">' . $datum['r_name'] . '</td>';
-            $output .= '<td class="text-nowrap">' . $datum['r_no'] . '</td>';
+            $output .= '<td class="text-nowrap">' . (count(explode('.', $datum['r_name'])) == 2 ? (!empty(getTransactionSr($datum['roznamcha_no'])) ? getTransactionSr($datum['roznamcha_no']) : $datum['roznamcha_no']) : $datum['r_no']) . '</td>';
             if ($datum['dr_cr'] == "dr") {
                 $dr = $datum['amount'];
                 $dr_total += $dr;
