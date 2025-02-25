@@ -1,10 +1,9 @@
 <?php
+$goods_id = $size = $brand = $origin = '';
 $page_title = 'CUSTOM CLEARING => WAREHOUSE';
-
-// Determine the CCW Page based on GET parameter
 $CCWPageMapping = [
     'transit' => 'Transit',
-    'freezone-import' => 'Free Zone Import',
+    'free-zone-import' => 'Free Zone Import',
     'local-import' => 'Local Import',
     'import-re-export' => 'Import Re-Export',
     'local-export' => 'Local Export',
@@ -15,8 +14,6 @@ $CCWPage = $CCWPageMapping[$_GET['CCWpage'] ?? ''] ?? '';
 $page_title .= " ($CCWPage)";
 $pageURL = "custom-clearing-warehouse?CCWpage=" . ($_GET['CCWpage'] ?? '');
 include("header.php");
-
-// Initialize filter variables
 $filters = [
     'size' => '',
     'brand' => '',
@@ -28,19 +25,13 @@ $filters = [
     'qty_no' => ''
 ];
 $is_search = false;
-
-// Pagination setup
 $rows_per_page = 50;
 $current_page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($current_page - 1) * $rows_per_page;
-
 global $connect;
 $conditions = [];
-
-// Handle filters
 if ($_GET) {
     $resetFilters = removeFilter($pageURL);
-
     foreach ($filters as $key => &$value) {
         if (!empty($_GET[$key])) {
             $value = mysqli_real_escape_string($connect, $_GET[$key]);
@@ -69,25 +60,123 @@ if ($_GET) {
 }
 $print_url = '';
 if ($_GET['CCWpage'] !== 'all') {
-    $NotAll = "data_for='$CCWPage' AND";
+    // $NotAll = "data_for='$CCWPage' AND";
 } else {
-    $NotAll = '';
+    // $NotAll = '';
     $print_url = 'print/print-custom-warehouse-general?CCWpage=all';
 }
 $where_clause = !empty($conditions) ? ' AND ' . implode(' AND ', $conditions) : '';
-$sql = "SELECT * FROM data_copies WHERE $NotAll unique_code LIKE 'p%'";
+$sql = "SELECT * FROM warehouses WHERE p_s='p'";
 $count_sql = "SELECT COUNT(*) AS total FROM ({$sql}) AS subquery";
 $total_rows_result = mysqli_query($connect, $count_sql);
 $total_rows = mysqli_fetch_assoc($total_rows_result)['total'];
 $sql .= " ORDER BY created_at DESC LIMIT $rows_per_page OFFSET $offset";
-$data = mysqli_query($connect, $sql);
-$entries = [];
-while ($one = mysqli_fetch_assoc($data)) {
-    if ($one['id'] !== null) {
-        $entries[] = $one;
+$data = mysqli_fetch_all(mysqli_query($connect, $sql), MYSQLI_ASSOC);
+$total_pages = ceil($total_rows / $rows_per_page);
+$Gdata = mysqli_fetch_all(mysqli_query($connect, "SELECT * FROM general_loading"), MYSQLI_ASSOC);
+$Ldata = mysqli_fetch_all(mysqli_query($connect, "SELECT * FROM local_loading"), MYSQLI_ASSOC);
+
+// Fetch sale entries from warehouses where p_s = 's'
+$myD = mysqli_fetch_all(fetch('warehouses', ['p_s' => 's']), MYSQLI_ASSOC);
+
+// Index general and local loading by their id
+$G = $L = [];
+foreach ($Gdata as $g) {
+    $G[$g['id']] = $g;
+}
+foreach ($Ldata as $l) {
+    $L[$l['id']] = $l;
+}
+
+// Build an array of sale entries (for each good_code, keep the first sale record)
+$sold = [];
+foreach ($myD as $my) {
+    // Only store the first sale entry for a given good_code
+    if (!isset($sold[$my['good_code']])) {
+        // Decode good_data so that we can later get the quantity_no, etc.
+        $my['good_data'] = json_decode($my['good_data'], true);
+        $sold[$my['good_code']] = $my;
     }
 }
-$total_pages = ceil($total_rows / $rows_per_page);
+
+$sortedEntries = [];
+$i = 1;
+foreach ($data as $entry) {
+    if ($_GET['CCWpage'] === 'all' || $entry['warehouse'] === $_GET['CCWpage']) {
+        $entry['good_data'] = json_decode($entry['good_data'], true);
+        $ps_info_decoded = json_decode($entry['ps_info'] ?? '[]', true);
+        $saleGoodsArray = $ps_info_decoded['sale_goods'] ?? [];
+        $soldQty = 0;
+        foreach ($saleGoodsArray as $goodCode) {
+            if (isset($sold[$goodCode])) {
+                $saleGoodData = $sold[$goodCode]['good_data'];
+                if (is_string($saleGoodData)) {
+                    $saleGoodData = json_decode($saleGoodData, true);
+                }
+                $soldQty += isset($saleGoodData['quantity_no']) ? $saleGoodData['quantity_no'] : 0;
+            }
+        }
+        $remaining = $entry['good_data']['quantity_no'] - $soldQty;
+        $sale_sr = $sale_warehouse = $sale_bluid = $sale_container_no = '';
+        if (!empty($saleGoodsArray)) {
+            $firstSaleGoodCode = $saleGoodsArray[0];
+            if (isset($sold[$firstSaleGoodCode])) {
+                $saleEntry = $sold[$firstSaleGoodCode];
+                $loading_id = $saleEntry['loading_id'];
+                $exploded = explode('~', $saleEntry['good_code']);
+                $bl_no   = $exploded[0] ?? '';
+                $s_loading_sr = $exploded[1] ?? '';
+                $container_no = isset($saleEntry['good_data']['container_no']) ? $saleEntry['good_data']['container_no'] : '';
+                $sale_loading = null;
+                if (isset($saleEntry['type']) && strtolower($saleEntry['type']) === 'local') {
+                    if (isset($L[$loading_id])) {
+                        $sale_loading = $L[$loading_id];
+                    }
+                    $bl_uid = 'UID: ';
+                } else {
+                    if (isset($G[$loading_id])) {
+                        $sale_loading = $G[$loading_id];
+                    }
+                    $bl_uid = 'BL: ';
+                }
+                if ($sale_loading) {
+                    // $sale_info = ucfirst($p_s_val) . "# $t_sr => $bl_uid $bl_no ($s_loading_sr) => $container_no";
+                    $sale_sr = ucfirst($sale_loading['p_s'] ?? '') . "# " . $sale_loading['t_sr'] ?? '';
+                    $sale_warehouse = $CCWPageMapping[$saleEntry['warehouse']];
+                    $sale_bluid = "$bl_uid $bl_no";
+                    $sale_container_no = $container_no;
+                }
+            }
+        }
+        if ($entry['type'] === 'local') {
+            $GL = $L[$entry['loading_id']] ?? [];
+        } else {
+            $GL = $G[$entry['loading_id']] ?? [];
+        }
+        $GL = is_array($GL) ? $GL : [$entry['loading_id'] => []];
+        $sortedEntries[] = [
+            'i'             => $i,
+            'p_s'           => $GL['p_s'] ?? '',
+            't_sr'          => $GL['t_sr'] ?? '',
+            'warehouse'     => $entry['warehouse'],
+            'sr'            => $entry['good_data']['sr'] ?? '',
+            'bl_uid'        => explode('~', $entry['good_code'])[0],
+            'type'          => $GL['t_type'] ?? '',
+            'allot'         => $entry['good_data']['good']['allotment_name'] ?? '',
+            'good_name'     => goodsName($entry['good_data']['good']['goods_id'] ?? ''),
+            'origin'        => $entry['good_data']['good']['origin'] ?? '',
+            'sale_sr' => $sale_sr,
+            'sale_warehouse' => $sale_warehouse,
+            'sale_bluid' => $sale_bluid,
+            'sale_container_no' => $sale_container_no,
+            'quantity_name' => $entry['good_data']['quantity_name'] ?? '',
+            'total_qty'     => $entry['good_data']['quantity_no'] ?? 0,
+            'sold_qty'      => $soldQty,
+            'remaining_qty' => $remaining
+        ];
+        $i++;
+    }
+}
 ?>
 <style>
     .mycontainer {
@@ -242,36 +331,6 @@ $total_pages = ceil($total_rows / $rows_per_page);
             <div class="card mb-3">
                 <div class="card-body p-0">
                     <div class="table-responsive mytable">
-                        <?php
-                        $i = $offset + 1;
-
-                        // Separate entries into categories
-                        $redEntries = [];
-                        $yellowEntries = [];
-                        $darkEntries = [];
-
-                        foreach ($entries as $entry) {
-                            $ldata = json_decode($entry['ldata'], true);
-                            $unique_code = $entry['unique_code'];
-                            [$Ttype, $Tcat, $Troute, $TID, $LID] = decode_unique_code($unique_code, 'all');
-                            $TotalQty = $ldata['good']['quantity_no'];
-                            $RemQty = $ldata['good']['goods_json']['qty_no'];
-                            $SoldQty = $TotalQty - $RemQty;
-
-                            // Categorize entries
-                            if ($SoldQty === 0) {
-                                $redEntries[] = $entry;
-                            } elseif ($RemQty > 0) {
-                                $yellowEntries[] = $entry;
-                            } else {
-                                $darkEntries[] = $entry;
-                            }
-                        }
-
-                        // Combine sorted entries
-                        $sortedEntries = array_merge($redEntries, $yellowEntries, $darkEntries);
-                        ?>
-
                         <style>
                             .mytable {
                                 max-height: 400px;
@@ -288,12 +347,12 @@ $total_pages = ceil($total_rows / $rows_per_page);
                                     <?php } ?>
                                     <th>BL / UID</th>
                                     <th>Type</th>
-                                    <?php if ($_GET['CCWpage'] === 'all') { ?>
-                                        <th>Transferred To P/S#</th>
-                                    <?php } ?>
                                     <th>Allot</th>
                                     <th>Goods Name / ORIGIN</th>
-                                    <th>Amount</th>
+                                    <th>Sale#</th>
+                                    <th>S.Warehouse</th>
+                                    <th>S.BL/UID</th>
+                                    <th>S.Container No</th>
                                     <th>Total Qty</th>
                                     <th>Sold Qty</th>
                                     <th>Rem Qty</th>
@@ -302,52 +361,28 @@ $total_pages = ceil($total_rows / $rows_per_page);
                             <tbody>
                                 <?php
                                 foreach ($sortedEntries as $entry) {
-                                    $ldata = json_decode($entry['ldata'], true);
-                                    $unique_code = $entry['unique_code'];
-                                    [$Ttype, $Tcat, $Troute, $TID, $LID] = decode_unique_code($unique_code, 'all');
-                                    $TotalQty = $ldata['good']['quantity_no'];
-                                    $RemQty = $ldata['good']['goods_json']['qty_no'];
-                                    $SoldQty = $TotalQty - $RemQty;
-
-                                    // Determine row color
-                                    if ($SoldQty === 0) {
-                                        $rowColor = 'fw-bold text-danger';
-                                    } elseif ($RemQty > 0) {
-                                        $rowColor = 'fw-bold text-warning';
-                                    } else {
-                                        $rowColor = 'fw-bold text-dark';
-                                    }
-                                    $trans = $ldata['transfer']['sold_to'] ?? $ldata['transfer']['sold_from'] ?? [];
-                                    $TIDS = [];
-                                    foreach ($trans as $one) {
-                                        $exploded = explode('~', $one);
-                                        $last_entry_index = count($exploded) - 1;
-                                        $TIDS[] = 'S#' . getTransactionSr(decode_unique_code($exploded[0], 'TID')) . "(" . $exploded[$last_entry_index] . ")";
-                                    }
-
-                                    // $TIDS = array_unique($TIDS);
-                                    $trans = implode(', ', $TIDS);
+                                    $rowColor = $trans = '';
                                 ?>
                                     <tr class="text-nowrap">
-                                        <td class="<?= $rowColor; ?>"><?= htmlspecialchars($i); ?></td>
+                                        <td class="<?= $rowColor; ?>"><?= htmlspecialchars($entry['i']); ?></td>
                                         <td class="<?= $rowColor; ?> pointer"
-                                            onclick="window.location.href = '?view=1&unique_code=<?= $unique_code; ?>&print_type=contract&CCWpage=<?= $_GET['CCWpage']; ?>';">
-                                            <b><?= ucfirst($ldata['type']); ?>#</b> <?= htmlspecialchars($ldata['p_sr']); ?> (<?= htmlspecialchars($ldata['sr_no']); ?>)
+                                            onclick="window.location.href = '?view=1&unique_code=&print_type=contract&CCWpage=<?= $_GET['CCWpage']; ?>';">
+                                            <b><?= ucfirst($entry['p_s']); ?>#</b> <?= htmlspecialchars($entry['t_sr']); ?> (<?= htmlspecialchars($entry['sr']); ?>)
                                         </td>
                                         <?php if ($_GET['CCWpage'] === 'all') { ?>
-                                            <td class="<?= $rowColor; ?>"><?= htmlspecialchars($ldata['transfer']['warehouse_transfer']); ?></td>
+                                            <td class="<?= $rowColor; ?>"><?= $CCWPageMapping[$entry['warehouse']]; ?></td>
                                         <?php } ?>
-                                        <td class="<?= $rowColor; ?>"><?= htmlspecialchars($Tcat !== 'l' ? 'B/L: ' . $ldata['bl_no'] : 'UID: ' . $ldata['uid']); ?></td>
-                                        <td class="<?= $rowColor; ?>"><?= ucfirst(htmlspecialchars($ldata['p_type'] ?? 'local')); ?></td>
-                                        <?php if ($_GET['CCWpage'] === 'all') { ?>
-                                            <td class="<?= $rowColor; ?>"><?= !empty($trans) ? $trans : 'Not Transferred!'; ?></td>
-                                        <?php } ?>
-                                        <td class="<?= $rowColor; ?>"><?= $ldata['good']['goods_json']['allotment_name']; ?></td>
-                                        <td class="<?= $rowColor; ?>"><?= goodsName(htmlspecialchars($ldata['good']['goods_id'])) . ' / ' . htmlspecialchars($ldata['good']['origin']); ?></td>
-                                        <td class="fw-bold text-dark"><?= round($ldata['good']['final_amount'], 2) ?></td>
-                                        <td class="fw-bold text-success"><?= htmlspecialchars($TotalQty); ?> <sub><?= htmlspecialchars($ldata['good']['goods_json']['qty_name']); ?></sub></td>
-                                        <td class="fw-bold text-danger"><?= htmlspecialchars($SoldQty); ?></td>
-                                        <td class="fw-bold text-primary"><?= htmlspecialchars($RemQty); ?></td>
+                                        <td class="<?= $rowColor; ?>"><?= htmlspecialchars($entry['bl_uid']); ?></td>
+                                        <td class="<?= $rowColor; ?>"><?= ucfirst(htmlspecialchars($entry['type'])); ?></td>
+                                        <td class="<?= $rowColor; ?>"><?= $entry['allot']; ?></td>
+                                        <td class="<?= $rowColor; ?>"><?= htmlspecialchars($entry['good_name']) . ' / ' . htmlspecialchars($entry['origin']); ?></td>
+                                        <td class="fw-bold text-dark"><?= $entry['sale_sr'] ?? '' ?></td>
+                                        <td class="fw-bold text-dark"><?= $entry['sale_warehouse'] ?? '' ?></td>
+                                        <td class="fw-bold text-dark"><?= $entry['sale_bluid'] ?? '' ?></td>
+                                        <td class="fw-bold text-dark"><?= $entry['sale_container_no'] ?? '' ?></td>
+                                        <td class="fw-bold text-success"><?= htmlspecialchars($entry['total_qty']); ?> <sub><?= htmlspecialchars($entry['quantity_name']); ?></sub></td>
+                                        <td class="fw-bold text-danger"><?= htmlspecialchars($entry['sold_qty']); ?></td>
+                                        <td class="fw-bold text-primary"><?= htmlspecialchars($entry['remaining_qty']); ?></td>
                                     </tr>
                                 <?php
                                     $i++;

@@ -1,4 +1,7 @@
-<?php require_once('header.php'); ?>
+<?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+require_once('header.php'); ?>
 <div class="fixed-top">
     <?php require_once('nav-links.php'); ?>
 
@@ -10,10 +13,14 @@
             <h1>New Software</h1>
             <hr class="text-warning">
             <?php echo $_SESSION['response'] ?? '';
-            //unset($_SESSION['response']); ?>
-            <?php //echo $_SESSION['pass'];?>
+            //unset($_SESSION['response']); 
+            ?>
+            <?php //echo $_SESSION['pass'];
+            ?>
         </div>
     </div>
 </div>
 <?php require_once('footer.php'); ?>
-<script>$("#home").addClass('active');</script>
+<script>
+    $("#home").addClass('active');
+</script>

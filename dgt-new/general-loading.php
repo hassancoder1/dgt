@@ -99,7 +99,8 @@ while ($transaction = mysqli_fetch_assoc($transactions)) {
         $T,
         [
             'sea_road_array' => json_decode($transaction['sea_road'] ?? '[]', true),
-            'row_color' => $rowColor
+            'row_color' => $rowColor,
+            'loaded_qty' => $totalLoadedQuantity
         ]
     );
 }
@@ -292,8 +293,10 @@ usort($sortedEntries, function ($a, $b) {
                     <th>Date</th>
                     <th>Seller Acc.</th>
                     <th>Purchaser Acc.</th>
+                    <th>Allot</th>
                     <th>Goods Name</th>
-                    <th>Qty</th>
+                    <th>T.Qty</th>
+                    <th>Loaded Qty</th>
                     <th>KGs</th>
                     <th>SEA/ROAD</th>
                     <th>L. DATE</th>
@@ -311,10 +314,12 @@ usort($sortedEntries, function ($a, $b) {
                         <td class="<?= $entry['row_color']; ?>"><?= strtoupper($entry['type']); ?></td>
                         <td class="<?= $entry['row_color']; ?>"><?= branchName(strtoupper($entry['branch_id'])); ?></td>
                         <td class="<?= $entry['row_color']; ?>"><?= my_date($entry['_date']); ?></td>
-                        <td class="<?= $entry['row_color']; ?>" class="acc_no <?php echo $rowColor; ?>"><?= strtoupper($entry['cr_acc']) . ' ' . $entry['cr_acc_name']; ?></td>
-                        <td class="<?= $entry['row_color']; ?>" class="acc_no <?php echo $rowColor; ?>"><?= strtoupper($entry['dr_acc']) . ' ' . $entry['dr_acc_name']; ?></td>
+                        <td class="<?= $entry['row_color']; ?>" style="font-size:12px !important;font-weight:700 !important;" class=" acc_no <?php echo $rowColor; ?>"><?= strtoupper($entry['cr_acc']) . ' ' . $entry['cr_acc_name']; ?></td>
+                        <td class="<?= $entry['row_color']; ?>" style="font-size:12px !important;font-weight:700 !important;" class=" acc_no <?php echo $rowColor; ?>"><?= strtoupper($entry['dr_acc']) . ' ' . $entry['dr_acc_name']; ?></td>
+                        <td class="<?= $entry['row_color']; ?>"><?= $entry['items'][0]['allotment_name']; ?></td>
                         <td class="<?= $entry['row_color']; ?>"><?= goodsName($entry['items'][0]['goods_id']); ?></td>
                         <td class="<?= $entry['row_color']; ?>"><?= $entry['items_sum']['sum_qty_no']; ?></td>
+                        <td class="<?= $entry['row_color']; ?>"><?= $entry['loaded_qty']; ?></td>
                         <td class="<?= $entry['row_color']; ?>"><?= $entry['items_sum']['sum_total_kgs']; ?></td>
                         <td class="<?= $entry['row_color']; ?>"><?= ucfirst($entry['sea_road']); ?></td>
                         <td class="<?= $entry['row_color']; ?>"><?= my_date($entry['sea_road_array']['l_date'] ?? $entry['sea_road_array']['l_date_road']); ?></td>
@@ -339,6 +344,7 @@ usort($sortedEntries, function ($a, $b) {
     function viewPurchase(id = null) {
         if (id) {
             let edit = '<?= isset($_GET['edit']) ? $_GET['edit'] : '' ?>'; // Check if action exists
+            let myDelete = '<?= isset($_GET['delete']) ? $_GET['delete'] : '' ?>'; // Check if action exists
             $.ajax({
                 url: 'ajax/viewGeneralLoading.php',
                 type: 'post',
@@ -346,6 +352,7 @@ usort($sortedEntries, function ($a, $b) {
                     id: id,
                     page: "general-loading",
                     edit: edit,
+                    delete: myDelete
                 },
                 success: function(response) {
                     $('#viewDetails').html(response);
@@ -373,7 +380,7 @@ usort($sortedEntries, function ($a, $b) {
 </script>
 <?php
 if (isset($_GET['t_id'], $_GET['view']) && is_numeric($_GET['t_id']) && $_GET['view'] == 1) {
-    $t_id = (int) $_GET['t_id']; // Convert to integer for safety
+    $t_id = (int) $_GET['t_id'];
     echo "<script>
         jQuery(document).ready(function ($) { 
             $('#KhaataDetails').modal('show');
@@ -381,36 +388,8 @@ if (isset($_GET['t_id'], $_GET['view']) && is_numeric($_GET['t_id']) && $_GET['v
         });
     </script>";
 }
-function clean_input($data)
-{
-    global $connect;
-    return htmlspecialchars(strip_tags(trim(mysqli_real_escape_string($connect, $data))));
-}
 
-function upload_files($files, $uploadDir = 'attachments/')
-{
-    $attachments = [];
-
-    if (!is_dir($uploadDir)) {
-        mkdir($uploadDir, 0777, true);
-    }
-
-    foreach ($files['name'] as $key => $filename) {
-        $tmpName = $files['tmp_name'][$key];
-        $newFilename = time() . '_' . basename($filename);
-        $destination = $uploadDir . $newFilename;
-
-        if (move_uploaded_file($tmpName, $destination)) {
-            $attachments[] = [$key, $newFilename];
-        }
-    }
-    return json_encode($attachments);
-}
-// ====================================================
-// INSERT SCENARIO: Triggered when the "Insert" button is clicked.
-// ====================================================
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['entryInsert'])) {
-    // 1. Prepare the loading information from the form.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['entrySubmit'])) {
     $loadingInfo = [
         'loading' => [
             'loading_date'      => clean_input($_POST['loading_date']),
@@ -452,133 +431,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['entryInsert'])) {
             'transfer_by'       => clean_input($_POST['transfer_by']),
         ],
         'report' => clean_input($_POST['report']),
-        'active' => true,
+        'transferred' => false,
     ];
-
-    // 2. Process attachments (if any)
     $attachments = !empty($_FILES['entry_file']['name'][0])
-                   ? upload_files($_FILES['entry_file'])
-                   : json_encode([]);
-
-    // 3. Prepare the goods information from the form.
-    //    A unique key is built based on the BL number and a serial (sr) for this good.
-    $newBlNo = clean_input($_POST['bl_no']);
-    $sr      = $_POST['sr']; // must be unique per good entry
-
-    $selectGood = json_decode($_POST['select_good'], true);
-    $currentGood = [
-        'sr'            => $sr,
-        'good'          => array_merge($selectGood, [
-                                'show_in'       => json_decode($selectGood['show_in'], true),
-                                'tracking_info' => json_decode($selectGood['tracking_info'], true),
-                            ]),
-        'quantity_name' => $_POST['quantity_name'],
-        'quantity_no'   => $_POST['quantity_no'],
-        'gross_weight'  => $_POST['gross_weight'],
-        'net_weight'    => $_POST['net_weight'],
-        'container_no'  => $_POST['container_no'],
-        'container_name'=> $_POST['container_name'],
-    ];
-
-    // 4. Prepare the base data for insertion.
-    $data = [
-        't_id'         => clean_input($_POST['t_id']),
-        't_sr'         => clean_input($_POST['t_sr']),
-        'p_s'          => clean_input($_POST['p_s']),
-        't_type'       => clean_input($_POST['t_type']),
-        'bl_no'        => $newBlNo,
-        'loading_info' => json_encode($loadingInfo),
-        'attachments'  => $attachments,
-    ];
-
-    // Build goods_info as a JSON object using a unique key "bl_no-sr"
-    $goods = [];
-    $goods[$newBlNo . '-' . $sr] = $currentGood;
-    $data['goods_info'] = json_encode($goods);
-
-    // 5. Insert the new record into the database.
-    $done = insert('general_loading', $data);
-
-    // 6. Finalize: Notify if successful.
-    if ($done) {
-        message('success', '?view=1&t_id=' . $_POST['t_id'], 'Insert Successful!');
-    }
-}
-
-// ====================================================
-// UPDATE SCENARIO: Triggered when the "Update" button is clicked.
-// ====================================================
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['entryUpdate'])) {
-    // 1. Prepare the loading information from the form.
-    $loadingInfo = [
-        'loading' => [
-            'loading_date'      => clean_input($_POST['loading_date']),
-            'loading_country'   => clean_input($_POST['loading_country']),
-            'loading_port_name' => clean_input($_POST['loading_port_name']),
-        ],
-        'receiving' => [
-            'receiving_date'      => clean_input($_POST['receiving_date']),
-            'receiving_country'   => clean_input($_POST['receiving_country']),
-            'receiving_port_name' => clean_input($_POST['receiving_port_name']),
-        ],
-        'importer' => [
-            'im_acc_id'      => clean_input($_POST['im_acc_id']),
-            'im_acc_no'      => clean_input($_POST['im_acc_no']),
-            'im_acc_name'    => clean_input($_POST['im_acc_name']),
-            'im_acc_kd_id'   => clean_input($_POST['im_acc_kd_id']),
-            'im_acc_details' => clean_input($_POST['im_acc_details']),
-        ],
-        'exporter' => [
-            'xp_acc_id'      => clean_input($_POST['xp_acc_id']),
-            'xp_acc_no'      => clean_input($_POST['xp_acc_no']),
-            'xp_acc_name'    => clean_input($_POST['xp_acc_name']),
-            'xp_acc_kd_id'   => clean_input($_POST['xp_acc_kd_id']),
-            'xp_acc_details' => clean_input($_POST['xp_acc_details']),
-        ],
-        'notify' => [
-            'np_acc_id'      => clean_input($_POST['np_acc_id']),
-            'np_acc_no'      => clean_input($_POST['np_acc_no']),
-            'np_acc_name'    => clean_input($_POST['np_acc_name']),
-            'np_acc_kd_id'   => clean_input($_POST['np_acc_kd_id']),
-            'np_acc_details' => clean_input($_POST['np_acc_details']),
-        ],
-        'shipping' => [
-            'shipping_name'     => clean_input($_POST['shipping_name']),
-            'shipping_phone'    => clean_input($_POST['shipping_phone']),
-            'shipping_whatsapp' => clean_input($_POST['shipping_whatsapp']),
-            'shipping_email'    => clean_input($_POST['shipping_email']),
-            'shipping_address'  => clean_input($_POST['shipping_address']),
-            'transfer_by'       => clean_input($_POST['transfer_by']),
-        ],
-        'report' => clean_input($_POST['report']),
-        'active' => true,
-    ];
-
-    // 2. Process attachments (if any)
-    $attachments = !empty($_FILES['entry_file']['name'][0])
-                   ? upload_files($_FILES['entry_file'])
-                   : json_encode([]);
-
-    // 3. Prepare the goods information from the form.
+        ? upload_files($_FILES['entry_file'])
+        : json_encode([]);
     $newBlNo = clean_input($_POST['bl_no']);
     $sr      = $_POST['sr'];
-
     $selectGood = json_decode($_POST['select_good'], true);
     $currentGood = [
         'sr'            => $sr,
         'good'          => array_merge($selectGood, [
-                                'show_in'       => json_decode($selectGood['show_in'], true),
-                                'tracking_info' => json_decode($selectGood['tracking_info'], true),
-                            ]),
+            'show_in'       => json_decode($selectGood['show_in'], true),
+            'tracking_info' => json_decode($selectGood['tracking_info'], true),
+        ]),
         'quantity_name' => $_POST['quantity_name'],
         'quantity_no'   => $_POST['quantity_no'],
         'gross_weight'  => $_POST['gross_weight'],
         'net_weight'    => $_POST['net_weight'],
         'container_no'  => $_POST['container_no'],
-        'container_name'=> $_POST['container_name'],
+        'container_name' => $_POST['container_name'],
     ];
-
-    // 4. Prepare the base data for update.
     $data = [
         't_id'         => clean_input($_POST['t_id']),
         't_sr'         => clean_input($_POST['t_sr']),
@@ -588,93 +461,110 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['entryUpdate'])) {
         'loading_info' => json_encode($loadingInfo),
         'attachments'  => $attachments,
     ];
-
-    // 5. Fetch the existing record by its ID (the form must send an "id" value)
-    $existingData  = fetch('general_loading', ['id' => $_POST['id']]);
+    $existingData  = fetch('general_loading', ['bl_no' => $_POST['activeBl'] ?? '']);
     $existingEntry = mysqli_fetch_assoc($existingData);
-
     if ($existingEntry) {
-        $oldBlNo           = $existingEntry['bl_no'];
+        $oldBlNo = $existingEntry['bl_no'];
         $existingGoodsInfo = json_decode($existingEntry['goods_info'] ?? '[]', true);
-        $existingLoading   = json_decode($existingEntry['loading_info'] ?? '{}', true);
-
-        // Build a unique key for the good: "bl_no-sr"
-        $newGoodKey = $newBlNo . '-' . $sr;
-
+        $existingLoading = json_decode($existingEntry['loading_info'] ?? '{}', true);
         if ($newBlNo === $oldBlNo) {
-            // ------------------------------------------------
-            // CASE 1: BL remains the same.
-            // ------------------------------------------------
-            // Update (or add) the current good in the existing goods array.
-            $existingGoodsInfo[$newGoodKey] = $currentGood;
-            // Merge the new loading info with the existing one (adjust merge strategy as needed).
-            $mergedLoading = array_merge_recursive($existingLoading, $loadingInfo);
+            $existingGoodsInfo[$newBlNo . '~' . $sr] = $currentGood;
+            $mergedLoading = array_merge($existingLoading, $loadingInfo);
             $data['loading_info'] = json_encode($mergedLoading);
-            $data['goods_info']   = json_encode($existingGoodsInfo);
-
-            // Update the record using its unique ID.
-            $done = update('general_loading', $data, ['id' => $_POST['id']]);
+            $data['goods_info'] = json_encode($existingGoodsInfo);
+            $data['attachments'] = json_encode(array_merge(json_decode($data['attachments'], true), json_decode($existingEntry['attachments'], true)));
+            $done = update('general_loading', $data, ['bl_no' => $oldBlNo]);
         } else {
-            // ------------------------------------------------
-            // CASE 2: BL has been changed.
-            // ------------------------------------------------
-            // Remove the submitted good from the old BL record (if present).
-            $oldGoodKey = $oldBlNo . '-' . $sr;
+            $oldGoodKey = $oldBlNo . '~' . $sr;
             if (isset($existingGoodsInfo[$oldGoodKey])) {
                 unset($existingGoodsInfo[$oldGoodKey]);
             }
-            // Update the old record to reflect the removal.
-            update('general_loading', ['goods_info' => json_encode($existingGoodsInfo)], ['id' => $_POST['id']]);
-
-            // Now handle the new BL record:
-            // Check if a record with the new BL already exists.
+            update('general_loading', ['goods_info' => json_encode($existingGoodsInfo)], ['bl_no' => $oldBlNo]);
             $newBlCheck = fetch('general_loading', ['bl_no' => $newBlNo]);
             if ($newBlCheck->num_rows > 0) {
-                // If the new BL record exists, fetch its data.
-                $newRecord      = mysqli_fetch_assoc($newBlCheck);
-                $newGoodsInfo   = json_decode($newRecord['goods_info'] ?? '[]', true);
+                $newRecord = mysqli_fetch_assoc($newBlCheck);
+                $newGoodsInfo = json_decode($newRecord['goods_info'] ?? '[]', true);
                 $newLoadingInfo = json_decode($newRecord['loading_info'] ?? '{}', true);
-
-                // Add or update only the current good for this new BL.
-                $newGoodsInfo[$newGoodKey] = $currentGood;
-                // Merge loading information as needed.
-                $mergedLoading = array_merge_recursive($newLoadingInfo, $loadingInfo);
+                $newGoodsInfo[$newBlNo . '~' . $sr] = $currentGood;
+                $mergedLoading = array_merge($newLoadingInfo, $loadingInfo);
                 $updateData = [
                     'loading_info' => json_encode($mergedLoading),
                     'goods_info'   => json_encode($newGoodsInfo),
+                    'attachments' => json_encode(array_merge(json_decode($data['attachments'], true), json_decode($newRecord['attachments'], true)))
                 ];
                 $done = update('general_loading', $updateData, ['bl_no' => $newBlNo]);
             } else {
-                // If no record exists for the new BL, insert a new record.
-                $newGoods = [];
-                $newGoods[$newGoodKey] = $currentGood;
+                $newGoods = [$newBlNo . '~' . $sr => $currentGood];
                 $data['goods_info'] = json_encode($newGoods);
                 $done = insert('general_loading', $data);
             }
         }
+    } else {
+        $newGoods = [$newBlNo . '~' . $sr => $currentGood];
+        $data['goods_info'] = json_encode($newGoods);
+        $done = insert('general_loading', $data);
     }
-
-    // 6. Finalize: Notify if successful.
     if ($done) {
         message('success', '?view=1&t_id=' . $_POST['t_id'], 'Update Successful!');
+    } else {
+        message('error', '', 'An error occurred while processing the entry.');
     }
 }
-
-if (isset($_GET['updateActiveBlStatus'], $_GET['t_id'], $_GET['bl_no'])) {
+if (isset($_GET['transferBL'], $_GET['t_id'], $_GET['bl_no'])) {
     $t_id = clean_input($_GET['t_id']);
     $bl_no = clean_input($_GET['bl_no']);
-    $result = $connect->query("SELECT loading_info FROM general_loading WHERE bl_no = '$bl_no'");
-    if ($result && $row = mysqli_fetch_assoc($result)) {
-        $loadingInfo = json_decode($row['loading_info'], true);
-        if (is_array($loadingInfo)) {
-            $loadingInfo['active'] = false;
-            $updatedLoadingInfo = json_encode($loadingInfo, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            if ($updatedLoadingInfo !== false) {
-                if (update('general_loading', ['loading_info' => $updatedLoadingInfo], ['bl_no' => $bl_no])) {
-                    message('success', "?view=1&t_id=$t_id", 'BL closed successfully!');
+    $stmt = $connect->prepare("SELECT loading_info FROM general_loading WHERE bl_no = ?");
+    $stmt->bind_param("s", $bl_no);
+    $stmt->execute();
+    $stmt->store_result();
+    $stmt->bind_result($loading_info);
+
+    if ($stmt->num_rows > 0) {
+        $stmt->fetch();
+        $loadingInfo = json_decode(html_entity_decode($loading_info), true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($loadingInfo)) {
+            array_walk_recursive($loadingInfo, function (&$value, $key) {
+                if (is_string($value)) {
+                    $value = str_replace(["\r", "\n"], ' ', $value); // replace newlines and carriage returns with a space
                 }
+            });
+            $loadingInfo['transferred'] = true;
+            $updatedLoadingInfo = json_encode($loadingInfo, JSON_UNESCAPED_UNICODE);
+            if ($updatedLoadingInfo !== false) {
+                $updateStmt = $connect->prepare("UPDATE general_loading SET loading_info = ? WHERE bl_no = ?");
+                $updateStmt->bind_param("ss", $updatedLoadingInfo, $bl_no);
+                if ($updateStmt->execute()) {
+                    message('success', "?view=1&t_id=$t_id", 'BL closed successfully!');
+                } else {
+                    message('error', "?view=1&t_id=$t_id", 'Error updating the record.');
+                }
+            } else {
+                message('error', "?view=1&t_id=$t_id", 'Failed to encode the updated loading info.');
             }
+        } else {
+            message('error', "?view=1&t_id=$t_id", 'Invalid JSON format in loading_info.');
+        }
+    } else {
+        message('error', "?view=1&t_id=$t_id", 'BL not found.');
+    }
+    $stmt->close();
+}
+if (isset($_GET['print'], $_GET['bl_no'])) {
+    message('', "print/bl-no-print.php?loading=general&bl_no=" . $_GET['bl_no'], '');
+}
+if (isset($_GET['t_id'], $_GET['delete'])) {
+    $existingD = mysqli_fetch_assoc(fetch('general_loading', ['t_id' => $_GET['t_id']]));
+    if ($existingD) {
+        $goods = json_decode($existingD['goods_info'], true);
+        if (isset($goods[$_GET['delete']])) {
+            unset($goods[$_GET['delete']]);
+        }
+        $goods = json_encode($goods);
+        $done = update('general_loading', ['goods_info' => $goods], ['t_id' => $_GET['t_id']]);
+        if ($done) {
+            message('success', '?view=1&t_id=' . $_GET['t_id'], 'Delete Successful!');
         }
     }
 }
+
 ?>

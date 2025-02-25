@@ -1,59 +1,26 @@
 <?php
-$page_title = 'L. Loading UID Print';
-$pageURL = 'uid-print';
+$page_title = 'G. Loading B/L Print';
+$pageURL = 'bl-no-print';
 require("../connection.php");
-$remove = $UIDSearch = '';
+$remove = $uid = '';
 $is_search = false;
 global $connect;
-$sql = "SELECT * FROM `local_loading`";
-$conditions = [];
-if ($_GET) {
-    $remove = removeFilter('uid-print');
-    $is_search = true;
-    if (!empty($_GET['UIDSearch'])) {
-        $UIDSearch = mysqli_real_escape_string($connect, $_GET['UIDSearch']);
-        $print_filters[] = 'UIDSearch=' . $UIDSearch;
-        $conditions[] = "uid='$UIDSearch'";
-    }
-}
-if (count($conditions) > 0) {
-    $sql .= " WHERE " . implode(' AND ', $conditions);
-}
-$sql .= " ORDER BY created_at ASC";
-$result = mysqli_query($connect, $sql);
-$containerCounts = $Loadings = $netWeights = $grossWeights = $quantityNos = [];
-$firstUID = null;
-while ($one = mysqli_fetch_assoc($result)) {
-    if ($firstUID === null) {
-        $firstUID = $one;
-    }
-    $Loadings[] = $one;
-    $UID = $one['uid'];
-    if (!isset($containerCounts[$UID])) {
-        $containerCounts[$UID] = 1;
-        $netWeights[$UID] = 0;
-        $grossWeights[$UID] = 0;
-        $quantityNos[$UID] = 0;
-    } else {
-        $containerCounts[$UID]++;
-    }
-    $goodsDetails = json_decode($one['goods_details'], true);
-    $netWeights[$UID] += $goodsDetails['net_weight'];
-    $grossWeights[$UID] += $goodsDetails['gross_weight'];
-    $quantityNos[$UID] += $goodsDetails['quantity_no'];
-}
+$uid = $_GET['uid'];
+$LoadingTable = 'local_loading';
+$UID = mysqli_fetch_assoc(fetch($LoadingTable, ['uid' => $uid]));
+$L = json_decode($UID['loading_info'] ?? '[]', true);
+$G = json_decode($UID['goods_info'] ?? '[]', true);
+$W = json_decode($UID['warehouse_info'] ?? '[]', true);
+$t_id = $UID['t_id'];
+$orders = [];
+$BlOrder = mysqli_fetch_all($connect->query("SELECT * FROM $LoadingTable WHERE t_id = '$t_id' ORDER BY created_at"), MYSQLI_ASSOC);
+foreach ($BlOrder as $key => $order) {
+    $orders[$order['uid']] = $key + 1;
+};
 
-$fTransfer = json_decode($firstUID['transfer_details'], true);
-$firstUIDPID = $firstUID['p_id'];
-$pIDQ = mysqli_query($connect, "SELECT  * FROM local_loading WHERE p_id='$firstUIDPID' ORDER BY created_at ASC");
-$UIDOrders = [];
-$currentOrder = 1;
-while ($SPid = mysqli_fetch_assoc($pIDQ)) {
-    $UID = $SPid['uid'];
-    if (!isset($UIDOrders[$UID])) {
-        $UIDOrders[$UID] = $currentOrder;
-        $currentOrder++;
-    }
+$print_url = 'print/uid-print.php?uid=' . $_GET['uid'];
+if (isset($_GET['agent-print'])) {
+    $print_url .= '&agent-print=' . $_GET['agent-print'];
 }
 ?>
 <!DOCTYPE html>
@@ -63,18 +30,21 @@ while ($SPid = mysqli_fetch_assoc($pIDQ)) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UID Print</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/fonts/lexend.css">
     <?php
     echo "<script>";
     include '../assets/fa/fontawesome.js';
-    include '../assets/js/jquery-3.7.1.min.js';
     echo "</script>";
     echo "<style>";
-    include '../assets/bs/css/bootstrap.min.css';
-    include '../assets/css/custom.css';
     include '../assets/css/custom.css';
     echo "</style>";
     ?>
     <style>
+        * {
+            font-family: 'Lexend', serif;
+        }
+
         body {
             font-size: 13px;
             background-color: #f8f9fa;
@@ -92,7 +62,7 @@ while ($SPid = mysqli_fetch_assoc($pIDQ)) {
         .custom-table th,
         .custom-table td {
             font-size: 12px;
-            /* text-align: center; */
+            text-align: center;
             vertical-align: middle;
         }
 
@@ -120,109 +90,319 @@ while ($SPid = mysqli_fetch_assoc($pIDQ)) {
         .row {
             position: relative;
         }
+
+        .container {
+            width: 210mm;
+        }
+
+        @media print {
+            body {
+                background-color: white !important;
+            }
+
+            .container {
+                max-width: 100vw !important;
+                border: none !important;
+            }
+
+            .hide-on-print {
+                display: none;
+            }
+
+        }
     </style>
 </head>
 
 <body>
-    <div class="mx-2 bg-white p-3">
-        <div class="row mb-4">
-            <!-- Right Column -->
-            <div class="col-12">
-                <div class="border p-2 pt-3 mb-2 d-flex justify-content-between align-items-center">
-                    <div class="header-logo">
-                        <img src="../assets/images/logo.png" alt="logo" class="img-fluid">
-                    </div>
-                    <div>
-                        <h6 class="fw-bold mt-2">DAMAAN GENERAL TRADING LLC</h6>
-                        <p class="text-muted">Booking Ref.: <?= ucfirst($firstUID['type']); ?>#<?= $firstUID['p_sr'] . " (" . $UIDOrders[$firstUID['uid']] . ")" ?> - UID: #<?= $firstUID['uid']; ?></p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Left Column -->
-            <div class="col-5" style="margin-left: 0.6rem;">
-                <div class="section-header mb-2">
-                    <h6 class="fw-bold">General Details</h6>
-                </div>
-                <ul class="list-unstyled fw-light-muted">
-                    <?php if (isset($fTransfer['truck_no'])) { ?>
-                        <li><b>Truck No:</b> <?= htmlspecialchars($fTransfer['truck_no']); ?></li>
-                        <li><b>Truck Name:</b> <?= htmlspecialchars($fTransfer['truck_name']); ?></li>
-                    <?php } else { ?>
-                        <li><b>Warehouse:</b> <?= htmlspecialchars($fTransfer['transfer_warehouse']); ?></li>
-                    <?php } ?>
+    <div class="container border bg-white p-3 pb-0 rounded m-3 mx-auto">
+        <div class="position-absolute top-0 end-0 mt-2 me-3 d-flex align-items-center gap-2 bg-white">
+            <div class="dropdown hide-on-print">
+                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fa fa-print"></i>
+                </button>
+                <ul class="dropdown-menu mt-2" aria-labelledby="dropdownMenuButton">
+                    <li>
+                        <a class="dropdown-item" href="javascript:void(0);" onclick="openAndPrint('<?= str_replace('print/', '', $print_url); ?>')">
+                            <i class="fas text-secondary fa-print me-2"></i> Print
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="getFileThrough('pdf', '<?= $print_url; ?>')">
+                            <i id="pdfIcon" class="fas text-secondary fa-file-pdf me-2"></i> Download PDF
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="getFileThrough('word', '<?= $print_url; ?>')">
+                            <i id="wordIcon" class="fas text-secondary fa-file-word me-2"></i> Download Word File
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="getFileThrough('whatsapp', '<?= $print_url; ?>')">
+                            <i id="whatsappIcon" class="fa text-secondary fa-whatsapp me-2"></i> Send in WhatsApp
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="getFileThrough('email', '<?= $print_url; ?>')">
+                            <i id="emailIcon" class="fas text-secondary fa-envelope me-2"></i> Send In Email
+                        </a>
+                    </li>
                 </ul>
             </div>
-            <div class="col-12 row mt-3" style="margin-left: 0.1rem;">
-                <div class="col-5">
+        </div>
+        <div>
+            <div class="row mb-4">
+                <!-- Left Column -->
+                <div class="col-6">
                     <div class="section-header mb-2">
-                        <h6 class="fw-bold">Loading Details</h6>
+                        <h6 class="fw-bold">Importer</h6>
                     </div>
                     <ul class="list-unstyled fw-light-muted">
-                        <li><b>Company Name:</b> <?= htmlspecialchars($fTransfer['loading_company_name']); ?></li>
-                        <li><b>Date:</b> <?= my_date(htmlspecialchars($fTransfer['loading_date'])); ?></li>
-                        <?php if (isset($fTransfer['truck_no'])) { ?>
-                            <li><b>Warehouse:</b> <?= htmlspecialchars($fTransfer['loading_warehouse']); ?></li>
-                        <?php } ?>
+                        <li><b>Company Name:</b> <?= htmlspecialchars($IMCompany); ?></li>
+                        <li><b>Company Details:</b> <?= htmlspecialchars(str_replace($IMCompany, '', $L['importer']['im_acc_details'])); ?></li>
                     </ul>
+
+                    <div class="section-header mb-2">
+                        <h6 class="fw-bold">Exporter</h6>
+                    </div>
+                    <ul class="list-unstyled fw-light-muted">
+                        <li><b>Company Name:</b> <?= htmlspecialchars($XPCompany); ?></li>
+                        <li><b>Company Details:</b> <?= htmlspecialchars(str_replace($XPCompany, '', $L['exporter']['xp_acc_details'])); ?></li>
+                    </ul>
+
+                    <div class="section-header mb-2">
+                        <h6 class="fw-bold">Notify</h6>
+                    </div>
+                    <ul class="list-unstyled fw-light-muted">
+                        <li><b>Company Name:</b> <?= htmlspecialchars($NPCompany); ?></li>
+                        <li><b>Company Details:</b> <?= htmlspecialchars(str_replace($NPCompany, '', $L['notify']['np_acc_details'])); ?></li>
+                    </ul>
+
+                    <div>
+                        <h6 class="fw-bold mt-3">Transfer Warehouse:</h6>
+                        <p class="fw-light-muted"><?= !empty($W) ? reset($W)['warehouse'] : 'N/A'; ?></p>
+                    </div>
                 </div>
-                <div class="col-2"></div>
-                <div class="col-5">
-                    <div class="section-header mb-2">
-                        <h6 class="fw-bold">Receiving Details</h6>
+
+                <!-- Right Column -->
+                <div class="col-6">
+                    <div class="border p-2 pt-3 mb-2 text-center">
+                        <div class="header-logo">
+                            <img src="../assets/images/logo.png" alt="logo" class="img-fluid">
+                        </div>
+                        <h6 class="fw-bold mt-2">DAMAAN GENERAL TRADING LLC</h6>
+                        <p class="text-muted">Booking Ref.: <?= ucfirst($UID['p_s']); ?>#<?= $UID['t_sr'] . " (" . $orders[$UID['uid']] . ")" ?> - B/L Number: #<?= $UID['uid']; ?></p>
                     </div>
-                    <ul class="list-unstyled fw-light-muted">
-                        <li><b>Company Name:</b> <?= htmlspecialchars($fTransfer['receiving_company_name']); ?></li>
-                        <li><b>Date:</b> <?= my_date(htmlspecialchars($fTransfer['receiving_date'])); ?></li>
-                        <?php if (isset($fTransfer['truck_no'])) { ?>
-                            <li><b>Warehouse:</b> <?= htmlspecialchars($fTransfer['receiving_warehouse']); ?></li>
-                        <?php } ?>
-                    </ul>
+
+                    <div class="border p-2 mb-2">
+                        <h6 class="fw-bold">Shipper</h6>
+                        <ul class="list-unstyled">
+                            <li><b>Name:</b> <?= htmlspecialchars($L['shipping']['shipping_name']); ?></li>
+                            <li><b>Address:</b> <?= htmlspecialchars($L['shipping']['shipping_address']); ?></li>
+                            <li><b>Phone:</b> <?= htmlspecialchars($L['shipping']['shipping_phone']); ?></li>
+                            <li><b>WhatsApp:</b> <?= htmlspecialchars($L['shipping']['shipping_whatsapp']); ?></li>
+                            <li><b>Email:</b> <?= htmlspecialchars($L['shipping']['shipping_email']); ?></li>
+                        </ul>
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <div class="border p-2">
+                                <h6 class="fw-bold">Loading</h6>
+                                <p class="mb-0"><b>Date:</b> <?= htmlspecialchars($L['loading']['loading_date']); ?></p>
+                                <p class="mb-0"><b>Country:</b> <?= htmlspecialchars($L['loading']['loading_country']); ?></p>
+                                <p><b><?= $L['shipping']['transfer_by'] === 'sea' ? 'Port' : 'Border'; ?>:</b> <?= htmlspecialchars($L['loading']['loading_port_name']); ?></p>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border p-2">
+                                <h6 class="fw-bold">Receiving</h6>
+                                <p class="mb-0"><b>Date:</b> <?= htmlspecialchars($L['receiving']['receiving_date']); ?></p>
+                                <p class="mb-0"><b>Country:</b> <?= htmlspecialchars($L['receiving']['receiving_country']); ?></p>
+                                <p><b><?= $L['shipping']['transfer_by'] === 'sea' ? 'Port' : 'Border'; ?>:</b> <?= htmlspecialchars($L['receiving']['receiving_port_name']); ?></p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="custom-table">
-            <table class="table table-bordered table-sm">
-                <thead class="bg-dark text-white">
-                    <tr>
-                        <th>Goods(Name / Size / Brand / Origin)</th>
-                        <th>Quantity</th>
-                        <th>Gross Weight</th>
-                        <th>Net Weight</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($Loadings as $SingleLoading) {
-                        $G = json_decode($SingleLoading['goods_details'], true);
-                    ?>
+            <div class="border p-2 pb-0 mb-2 d-flex justify-content-between">
+                <div>
+                    <h6 class="fw-bold">Clearing Agent:</h6>
+                    <p><b>Acc No:</b> <?= htmlspecialchars(isset($fAgent['ag_acc_no']) ? $fAgent['ag_acc_no'] : 'N/A'); ?> <b>Name:</b> <?= htmlspecialchars(isset($fAgent['ag_name']) ? $fAgent['ag_name'] : 'N/A'); ?></p>
+                </div>
+                <ul class="list-unstyled">
+                    <li><b>Company:</b> <?= htmlspecialchars(isset($AGCompany['company_name']) ? $AGCompany['company_name'] : 'N/A'); ?></li>
+                    <li><b>Weight No:</b> <?= htmlspecialchars(isset($AGCombine['WEIGHT']) ? $AGCombine['WEIGHT'] : 'N/A'); ?>
+                        <b> License No:</b> <?= htmlspecialchars(isset($AGCombine['License']) ? $AGCombine['License'] : 'N/A'); ?>
+                    </li>
+                    <li><b>Email:</b> <?= htmlspecialchars(isset($AGAcc['email']) ? $AGAcc['email'] : 'N/A'); ?> <b>Phone:</b> <?= htmlspecialchars(isset($AGAcc['phone']) ? $AGAcc['phone'] : 'N/A'); ?></li>
+                </ul>
+            </div>
+
+            <div class="custom-table">
+                <table class="table table-bordered table-sm">
+                    <thead class="bg-dark text-white">
                         <tr>
-                            <td><?= htmlspecialchars(goodsName($G['goods_id'])) . ' / ' . htmlspecialchars($G['size']) . ' / ' . htmlspecialchars($G['brand']) . ' / ' . htmlspecialchars($G['origin']); ?></td>
-                            <td><?= htmlspecialchars($G['quantity_no']) . ' / ' . htmlspecialchars($G['quantity_name']); ?></td>
-                            <td><?= htmlspecialchars($G['gross_weight']); ?></td>
-                            <td><?= htmlspecialchars($G['net_weight']); ?></td>
+                            <th>Container</th>
+                            <th>Quantity</th>
+                            <th>Goods Description</th>
+                            <th>Gross Weight</th>
+                            <th>Net Weight</th>
+                            <?php if (isset($_GET['agent-print'])) { ?>
+                                <th>BOE No</th>
+                                <th>PickUp.D</th>
+                                <th>Waiting Days</th>
+                                <th>Return.D</th>
+                                <th>Transporter</th>
+                                <th>Truck No.</th>
+                                <th>Details</th>
+                                <th>Driver Name</th>
+                                <th>Driver No</th>
+                            <?php } ?>
                         </tr>
-                    <?php }; ?>
-                </tbody>
-            </table>
-        </div>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($G as $key => $g) {
+                        ?>
+                            <tr>
+                                <td><?= htmlspecialchars($g['container_no']) . ' / ' . htmlspecialchars($g['container_name']); ?></td>
+                                <td><?= htmlspecialchars($g['quantity_no']) . ' / ' . htmlspecialchars($g['quantity_name']); ?></td>
+                                <td><?= htmlspecialchars(goodsName($g['good']['goods_id'])) . ' / ' . htmlspecialchars($g['good']['size']) . ' / ' . htmlspecialchars($g['good']['brand']) . ' / ' . htmlspecialchars($g['good']['origin']); ?></td>
+                                <td><?= htmlspecialchars($g['gross_weight']); ?></td>
+                                <td><?= htmlspecialchars($g['net_weight']); ?></td>
+                                <?php if (isset($_GET['agent-print'])) { ?>
+                                    <td><?= $A[$key]['boe_no'] ?? 'Not Given!'; ?></td>
+                                    <td><?= $A[$key]['pick_up_date'] ?? 'Not Given!'; ?></td>
+                                    <td><?= $A[$key]['waiting_days'] ?? 'Not Given!'; ?></td>
+                                    <td><?= $A[$key]['return_date'] ?? 'Not Given!'; ?></td>
+                                    <td><?= $A[$key]['transporter_name'] ?? 'Not Given!'; ?></td>
+                                    <td><?= $A[$key]['truck_number'] ?? 'Not Given!'; ?></td>
+                                    <td><?= $A[$key]['details'] ?? 'Not Given!'; ?></td>
+                                    <td><?= $A[$key]['driver_name'] ?? 'Not Given!'; ?></td>
+                                    <td><?= $A[$key]['driver_number'] ?? 'Not Given!'; ?></td>
+                                <?php } ?>
+                            </tr>
+                        <?php }; ?>
+                    </tbody>
+                </table>
+            </div>
 
-        <div class="row mt-3 position-relative">
-            <div class="col-8">
-                <div class="signature-box mx-auto mb-auto position-absolute bottom-0 start-0">
-                    <h6 class="fw-bold">Signature</h6>
+            <div class="row mt-3 position-relative">
+                <div class="col-8">
+                    <div class="signature-box mx-auto mb-auto position-absolute bottom-0 start-0">
+                        <h6 class="fw-bold">Signature</h6>
+                    </div>
+                </div>
+                <div class="col-4 text-end pb-2">
+                    <h6 class="fw-bold">Totals:</h6>
+                    <span><b>Containers:</b> <?= count($G); ?></span><br>
+                    <span><b>Quantity:</b> <?= array_sum(array_column($G, 'quantity_no')); ?></span><br>
+                    <span><b>Gross Weight:</b> <?= array_sum(array_column($G, 'gross_weight')); ?></span><br>
+                    <span><b>Net Weight:</b> <?= array_sum(array_column($G, 'net_weight')); ?></span>
                 </div>
             </div>
-            <div class="col-4 text-end">
-                <h6 class="fw-bold">Totals:</h6>
-                <span><b>Containers:</b> <?= htmlspecialchars($containerCounts[$UIDSearch]); ?></span><br>
-                <span><b>Quantity:</b> <?= htmlspecialchars($quantityNos[$UIDSearch]); ?></span><br>
-                <span><b>Gross Weight:</b> <?= htmlspecialchars($grossWeights[$UIDSearch]); ?></span><br>
-                <span><b>Net Weight:</b> <?= htmlspecialchars($netWeights[$UIDSearch]); ?></span>
-            </div>
+            <div class="col-12 p-2 text-center border-top text-muted">This is a Computer Generated Print - Errors are expected!</div>
         </div>
-
     </div>
+    <br><br>
+    <div class="position-fixed top-0 start-0 w-100 h-100 d-none justify-content-center align-items-center" style="background: rgba(25, 26, 25, 0.4); z-index: 60;" id="processingScreen">
+        <div class="spinner-border text-white" style="width: 5rem; height: 5rem;" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+    <script>
+        <?php include("../assets/js/jquery-3.7.1.min.js"); ?>
+
+        function openAndPrint(url) {
+            const newWindow = window.open(
+                url,
+                '_blank',
+                'toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=' + screen.width + ',height=' + screen.height
+            );
+            newWindow.onload = () => {
+                newWindow.print();
+            };
+        }
+
+        function getFileThrough(fileType, url) {
+            $('#processingScreen').toggleClass('d-none d-flex');
+            let formattedFileName = url
+                .split('?')[0] // Remove query parameters and their values
+                .replace(/^print\//, '')
+                .replace(/-main|-print$/, '')
+                .trim();
+            let formattedName = formattedFileName
+                .replace(/-/g, ' ')
+                .split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+
+            $.ajax({
+                url: `${window.location.protocol}//${window.location.host}/ajax/generateFile.php`,
+                type: 'post',
+                data: {
+                    filetype: fileType,
+                    pageURL: url
+                },
+                success: function(response) {
+                    $('#processingScreen').toggleClass('d-none d-flex');
+                    try {
+                        const result = JSON.parse(response);
+                        if (result.fileURL) {
+                            const fileURL = result.fileURL;
+                            if (fileType === 'pdf' || fileType === 'word') {
+                                fetch(fileURL)
+                                    .then(response => {
+                                        if (!response.ok) {
+                                            throw new Error(`HTTP error! Status: ${response.status}`);
+                                        }
+                                        return response.blob();
+                                    })
+                                    .then(blob => {
+                                        const currentTime = Date.now();
+                                        const fileExtension = fileType === 'pdf' ? 'pdf' : 'docx';
+                                        const fileName = `Print-${formattedFileName}${currentTime}.${fileExtension}`;
+                                        const downloadLink = document.createElement('a');
+                                        const objectURL = URL.createObjectURL(blob);
+                                        downloadLink.href = objectURL;
+                                        downloadLink.download = fileName;
+                                        document.body.appendChild(downloadLink);
+                                        downloadLink.click();
+                                        URL.revokeObjectURL(objectURL);
+                                        document.body.removeChild(downloadLink);
+                                    })
+                                    .catch(error => {
+                                        console.error('Error downloading file:', error);
+                                        alert('Failed to download the file.');
+                                    });
+                            } else if (fileType === 'whatsapp') {
+                                const whatsappURL = `https://wa.me/?text=Your+file+${encodeURIComponent(formattedName)}+is+ready!+Download+it+here:+${encodeURIComponent(fileURL)}`;
+                                window.open(whatsappURL, '_blank');
+                            } else if (fileType === 'email') {
+                                const emailURL = `/emails?page=compose&file-url=${fileURL}&file-name=${formattedFileName}&page-name=${formattedName}`;
+                                window.open(emailURL, '_blank');
+                            }
+
+                        } else {
+                            alert('Failed to retrieve the file URL.');
+                            console.log(result.error);
+                        }
+                    } catch (e) {
+                        console.error('Error parsing response:', e);
+                        alert('Invalid response format received from the server.');
+                    }
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    // Hide the processing screen
+                    $('#processingScreen').toggleClass('d-none d-flex');
+
+                    console.error("AJAX Error: ", textStatus, errorThrown);
+                    alert('An error occurred while processing your request. Please refresh and try again.');
+                }
+            });
+        }
+        <?php include("../assets/bs/js/bootstrap.bundle.min.js"); ?>
+    </script>
 </body>
 
 </html>

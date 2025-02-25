@@ -60,7 +60,7 @@ $Ptype = $P['full_advance'] === 'advance' ? strtoupper($P['full_advance']) . " "
         body {
             font-size: 12px;
             color: black;
-            background-color: white;
+            /* background-color: white; */
             position: relative;
         }
 
@@ -96,8 +96,8 @@ $Ptype = $P['full_advance'] === 'advance' ? strtoupper($P['full_advance']) . " "
     </style>
 </head>
 
-<body>
-    <div class="container border p-3 pb-0 rounded m-3 mx-auto">
+<body class="bg-light">
+    <div class="container bg-white border p-3 pb-0 rounded m-3 mx-auto">
         <div class="position-absolute top-0 end-0 mt-2 me-3 d-flex align-items-center gap-2">
             <select name="print_type" id="print_type" class="form-select form-select-sm hide-on-print">
                 <option value="contract" <?= $_GET['print_type'] === 'contract' ? 'selected' : ''; ?>>Contract Print</option>
@@ -110,7 +110,7 @@ $Ptype = $P['full_advance'] === 'advance' ? strtoupper($P['full_advance']) . " "
                 <?php } ?>
 
             </select>
-            <div class="dropdown hide-on-print">
+            <div class="dropdown bg-white hide-on-print">
                 <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="fa fa-print"></i>
                 </button>

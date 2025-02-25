@@ -8,8 +8,8 @@ global $connect;
 $results_per_page = 25;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $start_from = ($page - 1) * $results_per_page;
-$sql = "SELECT * FROM `general_loading` WHERE JSON_EXTRACT(gloading_info, '$.parent_id') IS NULL";
-$conditions = ["JSON_EXTRACT(agent_details, '$.agent_exist') = 'yes'"];
+$sql = "SELECT * FROM `general_loading`";
+$conditions = ["JSON_EXTRACT(loading_info, '$.agent_exist') = 'true'"];
 $print_filters = [];
 $user = $_SESSION['username'];
 if ($_GET) {
@@ -75,14 +75,54 @@ if ($_GET) {
     }
 }
 if (count($conditions) > 0) {
-    $sql .= " AND " . implode(' AND ', $conditions);
+    $sql .= " WHERE " . implode(' AND ', $conditions);
 }
 if ($user !== 'admin') {
-    $sql .= " AND JSON_EXTRACT(agent_details, '$.ag_id') = '$user'";
+    $sql .= " JSON_SEARCH(agent_info, 'one', '$user', NULL, '$.*.ag_id') IS NOT NUL";
 }
-$sql .= " AND JSON_EXTRACT(agent_details, '$.ag_id') IS NOT NULL ORDER BY id DESC LIMIT $start_from, $results_per_page";
+$sql .= " ORDER BY id DESC LIMIT $start_from, $results_per_page";
 $query_string = implode('&', $print_filters);
+$BlNumbers = mysqli_query($connect, $sql);
 $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
+$sortedEntries = [];
+$i = 1;
+$Agpayments = mysqli_fetch_all(fetch('agent_payments'), MYSQLI_ASSOC);
+$rozQ = fetch('roznamchaas', array('r_type' => 'Agent Bill', 'transfered_from' => 'agent_payments'));
+$payments = [];
+$rozEnteries = [];
+foreach ($rozQ as $r) {
+    $rozEnteries[$r['transfered_from_id']][] = $r;
+}
+foreach ($Agpayments as $p) {
+    if (isset($rozEnteries[$p['id']])) {
+        $rozEnteries[$p['bl_id']] = $rozEnteries[$p['id']];
+        unset($rozEnteries[$p['id']]);
+    }
+    $payments[$p['bl_id']] = json_decode($p['transfer_info'], true);
+}
+while ($oneBl = mysqli_fetch_assoc($BlNumbers)) {
+    $row_color = '';
+    $oneBl['loading_info'] = json_decode($oneBl['loading_info'] ?? '[]', true);
+    if (isset($oneBl['loading_info']['transferred_to_admin']) && $oneBl['loading_info']['transferred_to_admin'] === true) {
+        $oneBl['goods_info'] = json_decode($oneBl['goods_info'] ?? '[]', true);
+        $oneBl['agent_info'] = json_decode($oneBl['agent_info'] ?? '[]', true);
+        $oneBl['warehouse_info'] = json_decode($oneBl['warehouse_info'] ?? '[]', true);
+        $oneBl['loading_info']['transferred_to_accounts'] = isset($oneBl['loading_info']['transferred_to_accounts']) ? $oneBl['loading_info']['transferred_to_accounts'] : false;
+        $row_color = !isset($payments[$oneBl['id']]) ? 'text-danger' : 'text-warning';
+        $row_color = $oneBl['loading_info']['transferred_to_accounts'] ? 'text-dark' : 'text-warning';
+        $oneBl['row_color'] = $row_color;
+        $oneBl['i'] = $i;
+        $oneBl['payments'] = isset($payments[$oneBl['id']]) ? $payments[$oneBl['id']] : [];
+        $oneBl['roz'] = isset($rozEnteries[$oneBl['id']]) ? $rozEnteries[$oneBl['id']] : [];
+        $oneBl['firstAgent'] = reset($oneBl['agent_info']);
+        $sortedEntries[] = $oneBl;
+        $i++;
+    }
+}
+usort($sortedEntries, function ($a, $b) {
+    $colorPriority = ['text-danger' => 1, 'text-warning' => 2, 'text-dark' => 3];
+    return $colorPriority[$a['row_color']] <=> $colorPriority[$b['row_color']];
+});
 ?>
 <div class="fixed-top">
     <?php require_once('nav-links.php'); ?>
@@ -102,9 +142,9 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
                     unset($query_params['page']);
                     $base_url = $url_parts['path'] . '?' . http_build_query($query_params);
 
-                    $count_sql = "SELECT COUNT(id) AS total FROM `general_loading` WHERE JSON_EXTRACT(gloading_info, '$.parent_id') IS NULL AND JSON_EXTRACT(agent_details, '$.ag_id') IS NOT NULL";
+                    $count_sql = "SELECT COUNT(id) AS total FROM `general_loading`";
                     if (count($conditions) > 0) {
-                        $count_sql .= ' AND ' . implode(' AND ', $conditions);
+                        $count_sql .= ' WHERE ' . implode(' AND ', $conditions);
                     }
                     $count_result = mysqli_query($connect, $count_sql);
                     $row = mysqli_fetch_assoc($count_result);
@@ -274,7 +314,7 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
     <div class="table-responsive mt-4" id="RecordsTable">
         <table class="table table-bordered">
             <thead>
-                <tr class="text-nowrap">
+                <tr class="text-nowrap" style="font-size: 13px;">
                     <?php if (SuperAdmin()): ?>
                         <th>P/S#+Bill#</th>
                         <th>AGENT ACC</th>
@@ -303,77 +343,36 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
             </thead>
             <tbody>
                 <?php
-                $Loadings = mysqli_query($connect, $sql);
-                $row_count = $p_kgs_total = $p_qty_total = 0;
-                $grandTotal = $rowColor = '';
-                $paymentTotals = [];
-                $paymentsData = [];
-                $payment_totalQ = mysqli_query($connect, "SELECT * FROM agent_payments");
-                while ($payment_total = mysqli_fetch_assoc($payment_totalQ)) {
-                    $transferDetails = json_decode($payment_total['transfer_details'], true);
-                    if (empty($transferDetails['transferred_to_admin']) || !$transferDetails['transferred_to_admin']) {
-                        continue;
+                foreach ($sortedEntries as $entry) {
+                    $transfer_date = '';
+                    $Roz = [];
+                    foreach ($entry['roz'] as $myP) {
+                        $transfer_date = my_date($myP['r_date']);
+                        $Roz[] = '<span>' . $myP['r_id'] . '-' . $myP['branch_serial'] . '</span>';
                     }
-                    $loadingId = $payment_total['loading_id'];
-                    $paymentTotals[$loadingId] = $transferDetails['total_bill_amount'] ?? 0;
-                    $paymentsData[$loadingId] = $payment_total['id'];
-                }
-                $roznamchaasData = [];
-                $roznamchaasQ = mysqli_query($connect, "SELECT r_id, branch_serial, created_at, transfered_from_id FROM roznamchaas WHERE r_type = 'Agent Bill'");
-                while ($roznamchaas = mysqli_fetch_assoc($roznamchaasQ)) {
-                    $transferredFromId = $roznamchaas['transfered_from_id'];
-                    $roznamchaasData[$transferredFromId][] = [
-                        'r_id' => $roznamchaas['r_id'],
-                        'branch_serial' => $roznamchaas['branch_serial'],
-                        'created_at' => $roznamchaas['created_at']
-                    ];
-                }
-                $row_count = 0;
-                foreach ($Loadings as $SingleLoading) {
-                    $agentDetails = json_decode($SingleLoading['agent_details'], true);
-                    $loadingId = $SingleLoading['id'];
-                    if (!isset($paymentTotals[$loadingId])) {
-                        continue;
-                    }
-                    $currentBillNumber = json_decode($SingleLoading['gloading_info'], true)['billNumber'] ?? '';
-                    $grandTotal = $paymentTotals[$loadingId];
-                    $SuperCode = $rowColor . ' pointer" onclick="window.location.href = \'carry-bill?view=1&id=' . $loadingId . '\';"';
-                    $primaryId = $paymentsData[$loadingId] ?? null;
-                    $roznamchaasDisplay = $createdAt = '';
-                    if ($primaryId && isset($roznamchaasData[$primaryId])) {
-                        $roznamchaasEntries = $roznamchaasData[$primaryId];
-                        $roznamchaasDisplay = implode('<br>', array_map(function ($entry) {
-                            return "<small>{$entry['r_id']}-{$entry['branch_serial']}</small>";
-                        }, $roznamchaasEntries));
-                        $createdAt = substr(end($roznamchaasEntries)['created_at'], 0, 10);
-                    }
+                    $Roz = implode('<br>', $Roz);
                 ?>
-
-                    <tr class="text-nowrap">
+                    <tr class="text-nowrap <?= $entry['row_color']; ?>">
                         <?php if (!SuperAdmin()): ?>
-                            <td class="<?= $rowColor; ?>"><?= $row_count + 1; ?></td>
+                            <td class="<?= $entry['row_color']; ?>"><?= $entry['i']; ?></td>
                         <?php endif; ?>
-                        <td class="<?= $SuperCode; ?>"><b><?= SuperAdmin() ? ucfirst($SingleLoading['type']) . "#" . $SingleLoading['p_sr'] . " ($currentBillNumber)" : $SingleLoading['bl_no']; ?></b></td>
-                        <td class="<?= $rowColor; ?>"><?= $agentDetails['ag_acc_no']; ?></td>
-                        <td class="<?= $rowColor; ?>"><?= $agentDetails['ag_id']; ?></td>
-                        <td class="<?= $rowColor; ?>"><?= $agentDetails['ag_name']; ?></td>
-                        <?php if (SuperAdmin()): ?>
-                            <td class="<?= $SuperCode; ?>"><b><?= $SingleLoading['bl_no']; ?></b></td>
-                        <?php endif; ?>
-                        <td class="<?= $rowColor; ?>"><?= $agentDetails['boe_date'] ?? ''; ?></td>
-                        <td class="<?= $rowColor; ?>"><?= $agentDetails['pick_up_date'] ?? ''; ?></td>
-                        <td class="<?= $rowColor; ?>"><?= $agentDetails['waiting_days'] ?? ''; ?></td>
-                        <td class="<?= $rowColor; ?>"><?= $agentDetails['return_date'] ?? ''; ?></td>
-                        <td class="<?= $rowColor; ?>"><?= $agentDetails['transporter_name'] ?? ''; ?></td>
-                        <td class="<?= $rowColor; ?>"><?= $agentDetails['truck_number'] ?? ''; ?></td>
-                        <td class="<?= $rowColor; ?>"><?= $agentDetails['driver_name'] ?? ''; ?></td>
-                        <td class="<?= $rowColor; ?>"><?= $grandTotal; ?></td>
-                        <td class="<?= $rowColor; ?> transfer_date"><?= !empty($createdAt) ? $createdAt : '<i class="fa fa-times text-danger"></i>'; ?></td>
-                        <td class="<?= $rowColor; ?>"><?= !empty($roznamchaasDisplay) ? $roznamchaasDisplay : '<i class="fa fa-times text-danger"></i>'; ?></td>
+                        <td class="text-uppercase pointer <?= $entry['row_color']; ?>" onclick="window.location.href= '?view=1&bl_id=<?= $entry['id']; ?>';"><b><?= SuperAdmin() ? ucfirst($entry['p_s']) . "#" . $entry['t_sr'] . " (" . $entry['firstAgent']['bill_number'] . ")" : $entry['bl_no']; ?></b></td>
+                        <td class="<?= $entry['row_color']; ?>"><?= $entry['firstAgent']['ag_acc_no']; ?></td>
+                        <td class="<?= $entry['row_color']; ?>"><?= $entry['firstAgent']['ag_id']; ?></td>
+                        <td class="<?= $entry['row_color']; ?>"><?= $entry['firstAgent']['ag_name']; ?></td>
+                        <td class="<?= $entry['row_color']; ?>"><?= $entry['firstAgent']['boe_no'] ?? ''; ?></td>
+                        <td class="<?= $entry['row_color']; ?>"><?= $entry['firstAgent']['boe_date'] ?? ''; ?></td>
+                        <td class="<?= $entry['row_color']; ?>"><?= $entry['firstAgent']['pick_up_date'] ?? ''; ?></td>
+                        <td class="<?= $entry['row_color']; ?>"><?= $entry['firstAgent']['waiting_days'] ?? ''; ?></td>
+                        <td class="<?= $entry['row_color']; ?>"><?= $entry['firstAgent']['return_date'] ?? ''; ?></td>
+                        <td class="<?= $entry['row_color']; ?>"><?= $entry['firstAgent']['transporter_name'] ?? ''; ?></td>
+                        <td class="<?= $entry['row_color']; ?>"><?= $entry['firstAgent']['truck_number'] ?? ''; ?></td>
+                        <td class="<?= $entry['row_color']; ?>"><?= $entry['firstAgent']['driver_name'] ?? ''; ?></td>
+                        <td class="<?= $entry['row_color']; ?> bill-status fw-bold"><?= $entry['payments']['total_final_amount'] ?? '&times;'; ?></td>
+                        <td class="<?= $entry['row_color']; ?>"><?= $transfer_date ?? '&times;'; ?></td>
+                        <td class="<?= $entry['row_color']; ?>"><?= $Roz ?? '&times;'; ?></td>
                     </tr>
-
                 <?php
-                    $row_count++;
                 }
                 ?>
             </tbody>
@@ -391,14 +390,14 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
 </div>
 <script>
     function viewPurchase(id = null) {
-        let editId = '<?= isset($_GET['editId']) ? $_GET['editId'] : ''; ?>';
+        let edit = '<?= isset($_GET['edit']) ? $_GET['edit'] : ''; ?>';
         if (id) {
             $.ajax({
                 url: 'ajax/viewDailyAgentPaymentsCarry.php',
                 type: 'post',
                 data: {
                     id: id,
-                    editId: editId,
+                    edit: edit,
                 },
                 success: function(response) {
                     $('#viewDetails').html(response);
@@ -415,62 +414,53 @@ $print_url = "print/" . $pageURL . "-main" . '?' . $query_string;
 </script>
 <script>
     $(document).ready(function() {
-        // Function to get the query parameter value
         function getQueryParameter(name) {
             const urlParams = new URLSearchParams(window.location.search);
             return urlParams.get(name);
         }
-
-        // Get the value of 's_khaata_id' parameter from the URL
         var s_khaata_id = getQueryParameter('s_khaata_id').toUpperCase();
-
-        // Iterate over all the <td class="<?php echo $rowColor; ?>"> elements with class 's_khaata_id_row'
         $('td.s_khaata_id_row').each(function() {
-            // Get the text content of the current <td class="<?php echo $rowColor; ?>">
             var cellText = $(this).text().trim();
-            // If the text doesn't match the 's_khaata_id' parameter, hide the parent <tr>
             if (cellText !== s_khaata_id && s_khaata_id !== '') {
                 $(this).closest('tr').hide();
             }
         });
     });
 </script>
-
 <?php
-if (isset($_POST['agPaymentSubmit'])) {
+if (isset($_POST['PaymentSubmit'])) {
     unset($_POST['agPaymentSubmit']);
-    $jmaa_khaata_no = mysqli_real_escape_string($connect, $_POST['dr_khaata_no']);
-    $jmaa_khaata_id = mysqli_real_escape_string($connect, $_POST['dr_khaata_id']);
-    $bnaam_khaata_no = mysqli_real_escape_string($connect, $_POST['cr_khaata_no']);
-    $bnaam_khaata_id = mysqli_real_escape_string($connect, $_POST['cr_khaata_id']);
+    $bill_id = mysqli_real_escape_string($connect, $_POST['bill_id']);
+    $bl_id = mysqli_real_escape_string($connect, $_POST['bl_id']);
+    $jmaa_khaata_no = mysqli_real_escape_string($connect, $_POST['dr_acc_no']);
+    $jmaa_khaata_id = mysqli_real_escape_string($connect, $_POST['dr_acc_id']);
+    $bnaam_khaata_no = mysqli_real_escape_string($connect, $_POST['cr_acc_no']);
+    $bnaam_khaata_id = mysqli_real_escape_string($connect, $_POST['cr_acc_id']);
     $transfer_date = mysqli_real_escape_string($connect, $_POST['transfer_date']);
     $amount = mysqli_real_escape_string($connect, $_POST['amount']);
     $final_amount = mysqli_real_escape_string($connect, $_POST['final_amount']);
     $details = mysqli_real_escape_string($connect, $_POST['details']) . " | Amount: $amount " . $_POST['currency1'] . " " . $_POST['opr'] . " " . $_POST['rate'] . ' = ' . $final_amount . " " . $_POST['currency2'];
-    $p_id = mysqli_real_escape_string($connect, $_POST['parent_payment_id']);
     $type_post = "Agent Bill";
-    $url = $pageURL . '?view=1&id=' . $_POST['loading_id'];
-    $type = ucfirst($_POST['type']) . '.A.Bill';
+    $url = $pageURL . '?view=1&bl_id=' . $bl_id;
+    $type = ucfirst($_POST['p_s']) . '.Agent.Bill';
     $transfered_from = 'agent_payments';
     $r_type = 'Agent Bill';
     if ($jmaa_khaata_id > 0 && $bnaam_khaata_id > 0) {
-        $pQuery = fetch('transactions', array('id' => $_POST['p_id']));
-        $p_data = mysqli_fetch_assoc($pQuery);
-        $branch_serial = getBranchSerial($p_data['branch_id'], $r_type);
+        $branch_serial = getBranchSerial($_POST['branch_id'], $r_type);
         $dataArray = array(
             'r_type' => $r_type,
             'transfered_from' => $transfered_from,
-            'transfered_from_id' => $p_id,
-            'branch_id' => $p_data['branch_id'],
+            'transfered_from_id' => $bill_id,
+            'branch_id' => $_POST['branch_id'],
             'user_id' => $_SESSION['userId'],
             'username' => $user,
             'r_date' => $transfer_date,
-            'roznamcha_no' => $p_id,
+            'roznamcha_no' => $bill_id,
             'r_name' => $type,
-            'r_no' => $p_id,
+            'r_no' => $bill_id,
             'created_at' => date('Y-m-d H:i:s')
         );
-        $str = " Agent Bill # " . $_POST['type'] . $p_id;
+        $str = " Agent Bill # " . $type . $bill_id;
         $done = false;
         if (isset($_POST['r_id'])) {
             $r_ids = $_POST['r_id'];
@@ -534,19 +524,17 @@ if (isset($_POST['agPaymentSubmit'])) {
             }
         }
         if ($done) {
-            $existingData = json_decode($_POST['existing_data'], true);
-            $existingData['transferred_to_accounts'] = true;
-            $mybl = $existingData['bl_no'];
-            unset($_POST['existing_data']);
-            $post_json = [
-                'transfer_info' => $_POST
-            ];
-            $final = json_encode(array_merge($existingData, $post_json));
-            $preData = array('transfer_details' => $final);
-            $tlUpdated = update('agent_payments', $preData, array('id' => $p_id));
-            $parentGL = mysqli_fetch_assoc(mysqli_query($connect, "SELECT * FROM general_loading WHERE bl_no = '$mybl' AND JSON_EXTRACT(gloading_info, '$.parent_id') IS NULL"));
-            $parentGL['gloading_info'] = json_encode(array_merge(json_decode($parentGL['gloading_info'], true), ['transfer_info' => $_POST]));
-            update('general_loading', $parentGL, ['id' => $parentGL['id']]);
+            $Bill = mysqli_fetch_assoc(fetch('agent_payments', ['bl_id' => $bl_id]));
+            $BL = mysqli_fetch_assoc(fetch('general_loading', ['id' => $bl_id]));
+            $BL['loading_info'] = json_decode($BL['loading_info'], true);
+            $BL['loading_info']['transferred_to_accounts'] = true;
+            $BL['loading_info'] = json_encode($BL['loading_info']);
+            $Bill['transfer_info'] = json_decode($Bill['transfer_info'], true);
+            $Bill['transfer_info']['transferred_to_accounts'] = true;
+            $Bill['transfer_info']['transferred_info'] = $_POST;
+            $Bill['transfer_info'] = json_encode($Bill['transfer_info']);
+            update('general_loading', $BL, ['id' => $bl_id]);
+            update('agent_payments', $Bill, ['bl_id' => $bl_id]);
             $msg = 'Transferred to Business Roznamcha ' . $str;
             $msgType = 'success';
         } else {
@@ -557,10 +545,10 @@ if (isset($_POST['agPaymentSubmit'])) {
         $msg = 'Technical Problem. Contact Admin';
         $msgType = 'warning';
     }
-    message($msgType, $url, $msg);
+    // message($msgType, $url, $msg);
 }
-if (isset($_GET['id']) && is_numeric($_GET['id']) && isset($_GET['view']) && $_GET['view'] == 1) {
-    $loadingID = mysqli_real_escape_string($connect, $_GET['id']);
+if (isset($_GET['bl_id']) && is_numeric($_GET['bl_id']) && isset($_GET['view']) && $_GET['view'] == 1) {
+    $loadingID = mysqli_real_escape_string($connect, $_GET['bl_id']);
     echo "<script>
     jQuery(document).ready(function($) {
         $('#KhaataDetails').modal('show');

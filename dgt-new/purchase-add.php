@@ -182,22 +182,16 @@ echo '<script>let purchaseReports = [];</script>';
 ?>
 <div class="fixed-top">
     <?php require_once('nav-links.php'); ?>
-    <div class="bg-white border-bottom border-warning shadow-sm py-2 px-3 d-flex align-items-center justify-content-between">
-        <!-- Page Title -->
+    <div class="bg-white border-bottom border-warning shadow-sm py-2 px-3 d-flex align-items-center justify-content-between" style="margin-top:58px;">
         <h5 class="fw-bold text-uppercase m-0"><?php echo $page_title; ?></h5>
-
-        <!-- Actions -->
         <div class="d-flex align-items-center gap-2">
             <?php echo backUrl($back_page_url); ?>
-
-            <!-- New Button with Dropdown -->
             <div class="dropdown">
                 <button class="btn btn-primary btn-sm d-flex align-items-center gap-1" id="dropdownMenuButton" data-bs-toggle="dropdown">
                     <i class="fas fa-plus"></i> New
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton">
                     <?php
-                    // Fetch types dynamically
                     $static_types = fetch('static_types', ['type_for' => 'ps_types']);
                     while ($static_type = mysqli_fetch_assoc($static_types)) {
                         echo '<li><a class="dropdown-item" href="purchase-add?type=' . urlencode($static_type['type_name']) . '">
@@ -210,8 +204,6 @@ echo '<script>let purchaseReports = [];</script>';
         </div>
     </div>
 </div>
-
-
 <div class="row">
     <div class="col-md-12">
         <div class="card mb-2 border">

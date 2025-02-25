@@ -192,7 +192,7 @@ echo '<script>let saleReports = [];</script>';
 ?>
 <div class="fixed-top">
     <?php require_once('nav-links.php'); ?>
-    <div class="bg-white border-bottom border-warning shadow-sm py-2 px-3 d-flex align-items-center justify-content-between">
+    <div class="bg-white border-bottom border-warning shadow-sm py-2 px-3 d-flex align-items-center justify-content-between" style="margin-top:58px;">
         <!-- Page Title -->
         <h5 class="fw-bold text-uppercase m-0"><?php echo $page_title; ?></h5>
 

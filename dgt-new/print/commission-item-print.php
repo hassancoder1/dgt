@@ -36,11 +36,13 @@ foreach ($T['items'] as $pItem) {
     }
 }
 $pItemID = $parent_item['id'];
-$Ldata = mysqli_fetch_assoc($connect->query("SELECT bl_no, goods_details FROM general_loading WHERE p_type='commission' AND JSON_EXTRACT(goods_details, '$.goods_json.id') = '$pItemID'")) ?? [];
+$Ldata = mysqli_fetch_assoc($connect->query("SELECT bl_no, goods_info FROM general_loading WHERE t_type='commission' AND JSON_EXTRACT(goods_info, '$.*.good.id') = '$pItemID'")) ?? [];
+$goodsInfo = json_decode($Ldata['goods_info'] ?? '[]', true);
+$firstItem = reset($goodsInfo) ?: [];
 $ItemLdata = [
     'bl_no' => $Ldata['bl_no'] ?? '',
-    'container_no' => json_decode($Ldata['goods_details'] ?? '[]', true)['container_no'] ?? '',
-    'container_name' => json_decode($Ldata['goods_details'] ?? '[]', true)['container_name'] ?? '',
+    'container_no' => $firstItem['container_no'] ?? '',
+'container_name' => $firstItem['container_name'] ?? '',
     'warehouse' => ''
 ];
 
@@ -237,7 +239,7 @@ $print_url = 'print/commission-item-print.php?print_enteries=' . $_GET['print_en
                 <div class="row border border-dark border-start-0 border-top-0 border-end-0">
                     <div class="col-6 py-1 px-2">
                         <div class="text-secondary">Payment Method</div>
-                        <div><?= ucfirst($T['payment_details']->full_advance); ?></div>
+                        <div><?= ucfirst($T['payment_details']->full_advance ?? ''); ?></div>
                     </div>
                     <div class="col-6 py-1 px-2 border-start border-dark">
                         <div class="text-secondary">Route</div>
@@ -286,7 +288,7 @@ $print_url = 'print/commission-item-print.php?print_enteries=' . $_GET['print_en
                         <td style="<?= $paddingStyle; ?>" class="border-start <?= $borderbottom; ?> border-dark"><?= $SItem['qty_no'] . ' ' . $parent_item['qty_name']; ?></td>
                         <td style="<?= $paddingStyle; ?>" class="border-start <?= $borderbottom; ?> border-dark"><?= $SItem['total_kgs']; ?> / <?= $SItem['net_kgs']; ?></td>
                         <td style="<?= $paddingStyle; ?>" class="border-start <?= $borderbottom; ?> border-dark"><?= $SItem['total'] . ' ' . $SItem['divide']; ?></td>
-                        <td style="<?= $paddingStyle; ?>"  class="border-start <?= $borderbottom; ?> border-dark text-nowrap">
+                        <td style="<?= $paddingStyle; ?>" class="border-start <?= $borderbottom; ?> border-dark text-nowrap">
                             <?= number_format($SItem['rate1'], 2) . ' ' . $SItem['currency1'] ?>
                         </td>
                         <td style="<?= $paddingStyle; ?>" class="border-start <?= $borderbottom; ?> border-dark">

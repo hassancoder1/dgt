@@ -36,7 +36,7 @@ function getTransactionInfo($id)
     global $connect;
     $Ttempdata = mysqli_fetch_assoc(fetch('transactions', ['id' => $id]));
     return array_merge(
-        transactionSingle((int)$id),
+        transactionSingle((int)$id) ?? [],
         [
             'id' => $id,
             'sea_road_array'       => json_decode($Ttempdata['sea_road'] ?? '[]', true),
@@ -171,6 +171,88 @@ function generateUniqueBillNo($existingBillNumbers)
         </div>
     <?php }
     if (isset($_GET['editID']) && !isset($_GET['viewID'])): ?>
+        <div class="col-md-12 border-bottom px-2 pb-2 mb-2 row">
+            <div class="col-12 mb-2 py-2 border-bottom d-flex align-items-center justify-content-between">
+                <div>
+                    <b><?php echo strtoupper($T['p_s_name']) . ' #'; ?> </b><?php echo $T['sr']; ?>
+                </div>
+                <div><b>User </b><?php echo $T['username']; ?></div>
+                <div><b>Date </b><?php echo my_date($T['_date']); ?></div>
+                <div><b>Type </b><?php echo badge(strtoupper($T['type']), 'dark'); ?></div>
+                <div><b>Country </b><?php echo $T['country']; ?></div>
+                <div><b>Branch </b><?php echo branchName($T['branch_id']); ?></div>
+                <div><b>Status </b>
+                    <?php if ($T['locked'] == 0) {
+                        echo $T['is_doc'] == 0 ? '<span class="text-danger">Contract Pending</span>' : '<i class="fa fa-check-double text-success"></i> Attachment';
+                    } else {
+                        echo '<i class="fa fa-lock text-success"></i> Transferred.';
+                    } ?>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div><b>Cr. A/c # </b><?php echo $T['dr_acc']; ?> <sup class="fw-bold text-danger"> (Purchase)</sup></div>
+                <div><b>Cr. A/c Name </b><?php echo $T['dr_acc_name']; ?></div>
+                <?php if (!empty($T['dr_acc_details'])) {
+                    echo '<div><b>Company Details </b>' . nl2br($T['dr_acc_details']) . '</div>';
+                } ?>
+            </div>
+            <div class="col-md-3 border-end border-start">
+                <div><b>Dr. A/c # </b><?php echo $T['cr_acc']; ?> <sup class="fw-bold text-success"> (Sale)</sup></div>
+                <div><b>Dr. A/c Name </b><?php echo $T['cr_acc_name']; ?></div>
+                <?php if (!empty($T['cr_acc_details'])) {
+                    echo '<div><b>Company Details </b>' . nl2br($T['cr_acc_details']) . '</div>';
+                } ?>
+            </div>
+            <?php if (!empty($T['sea_road_array'])) {
+                if ($T['type'] !== 'local'): ?>
+                    <div class="col-md-2 col-sm-12 mb-3">
+                        <h5 class="fw-bold text-primary">By <?= $T['sea_road']; ?></h5>
+                        <h6 class="fw-bold">Loading Details</h6>
+                        <ul class="list-unstyled">
+                            <?php foreach ($T['sea_road_array'] as $key => $value):
+                                if (!empty($value)) {
+                                    if (strpos($key, 'l_') === 0):
+                                        $key = str_replace('_', ' ', $key); ?>
+                                        <li>
+                                            <strong><?= is_array($value) ? $value[0] : strtoupper($key); ?>:</strong>
+                                            <?= is_array($value) ? $value[1] : $value; ?>
+                                        </li>
+                                <?php endif;
+                                } ?>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                    <div class="col-md-2 col-sm-12 mb-3">
+                        <h6 class="fw-bold">Receiving Details</h6>
+                        <ul class="list-unstyled">
+                            <?php foreach ($T['sea_road_array'] as $key => $value):
+                                if (!empty($value)) {
+                                    if (strpos($key, 'r_') === 0 || strpos($key, 'd_') === 0):
+                                        $key = str_replace('_', ' ', $key); ?>
+                                        <li>
+                                            <strong><?= $key === 'd_date_road' ? 'Arrival Date' : (is_array($value) ? $value[0] : strtoupper($key)); ?>:</strong>
+                                            <?= is_array($value) ? $value[1] : $value; ?>
+                                        </li>
+                                <?php endif;
+                                } ?>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+
+                <?php else: ?>
+                    <div class="col-md-4 col-sm-12 mb-3">
+                        <h6 class="fw-bold"><?= ucfirst($T['sea_road_array']['lwl']); ?> Details</h6>
+                        <ul class="list-unstyled">
+                            <?php
+                            echo '<li><strong>Loading Date:</strong> ' . my_date($T['sea_road_array']['loading_date'] ?? $T['sea_road_array']['transfer_date']) . '</li>';
+                            echo '<li><strong>Receiving Date:</strong> ' . my_date($T['sea_road_array']['receiving_date']) . '</li>';
+                            ?>
+                        </ul>
+                    </div>
+            <?php endif;
+            }
+            ?>
+        </div>
         <div>
             <div class="d-flex justify-content-between align-items-center">
                 <h1 class="mb-2" id="formHeading" style="font-size: 2rem; font-weight: 700; color: #333; text-transform: uppercase; letter-spacing: 1.5px; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">
@@ -393,31 +475,12 @@ function generateUniqueBillNo($existingBillNumbers)
 
                             <?php else: ?>
                                 <div class="col-md-4 col-sm-12 mb-3">
-                                    <h6 class="fw-bold"><?= $T['sea_road'] == 'sea' ? 'Local' : 'Warehouse'; ?> Details</h6>
+                                    <h6 class="fw-bold"><?= ucfirst($T['sea_road_array']['lwl']); ?> Details</h6>
                                     <ul class="list-unstyled">
-                                        <?php if ($T['sea_road'] == 'sea'): ?>
-                                            <?php
-                                            $fields = [
-                                                'Truck No' => !empty($T['truck_no']) ? $T['truck_no'] : '',
-                                                'Truck Name' => !empty($T['truck_name']) ? $T['truck_name'] : '',
-                                                'Loading Company Name' => !empty($T['loading_company_name']) ? $T['loading_company_name'] : '',
-                                                'Date' => !empty($T['loading_date']) ? $T['loading_date'] : '',
-                                                'Transfer Name' => !empty($T['transfer_name']) ? $T['transfer_name'] : ''
-                                            ];
-                                            ?>
-                                        <?php else: ?>
-                                            <?php
-                                            $fields = [
-                                                'Old Company Name' => !empty($T['old_company_name']) ? $T['old_company_name'] : '',
-                                                'Transfer Company Name' => !empty($T['transfer_company_name']) ? $T['transfer_company_name'] : '',
-                                                'Date' => !empty($T['warehouse_date']) ? $T['warehouse_date'] : ''
-                                            ];
-                                            ?>
-                                        <?php endif; ?>
-
-                                        <?php foreach ($fields as $label => $value): ?>
-                                            <li><strong><?= $label; ?>:</strong> <?= $value; ?></li>
-                                        <?php endforeach; ?>
+                                        <?php
+                                        echo '<li><strong>Loading Date:</strong> ' . my_date($T['sea_road_array']['loading_date'] ?? $T['sea_road_array']['transfer_date']) . '</li>';
+                                        echo '<li><strong>Receiving Date:</strong> ' . my_date($T['sea_road_array']['receiving_date']) . '</li>';
+                                        ?>
                                     </ul>
                                 </div>
                             <?php endif;
@@ -440,24 +503,19 @@ function generateUniqueBillNo($existingBillNumbers)
                         }
 
                         $table_prefix = ($T['type'] == 'local') ? 'local' : 'general';
-                        $loadings_data = fetch($table_prefix . '_loading', ['p_id' => $record['t_id']]);
-                        $uid = $blNos = $Containers = [];
-
-                        if ($loadings_data && mysqli_num_rows($loadings_data) > 0) {
-                            while ($loading = mysqli_fetch_assoc($loadings_data)) {
-                                if ($table_prefix == 'local') {
-                                    $uid[] = $loading['uid'];
-                                } else {
-                                    $blNos[] = $loading['bl_no'];
-                                    $Containers[] = json_decode($loading['goods_details'], true)['container_no'];
-                                }
+                        $loadings_data = mysqli_fetch_all(fetch($table_prefix . '_loading', ['t_id' => $record['t_id']]), MYSQLI_ASSOC);
+                        $uid = $blNos = [];
+                        $ContainerCount = 0;
+                        foreach ($loadings_data as $loading) {
+                            if ($table_prefix == 'local') {
+                                $uid[] = $loading['uid'];
+                            } else {
+                                $blNos[] = $loading['bl_no'];
+                                $ContainerCount += count(json_decode($loading['goods_info'], true));
                             }
                         }
-
                         $uid = array_unique($uid);
                         $blNos = array_unique($blNos);
-                        $Containers = array_unique($Containers);
-
                         if ($qty_no > 0) { ?>
                             <div class="col-2">
                                 <strong>Good:</strong> <?= htmlspecialchars($goods_name); ?><br>
@@ -524,7 +582,7 @@ function generateUniqueBillNo($existingBillNumbers)
                     </div>
                 </div>
                 <?php
-                $roznamcha = json_decode($record['roznamcha_transfer'] ?? '[]', true);
+                $Original_Roz = $roznamcha = json_decode($record['roznamcha_transfer'] ?? '[]', true);
                 if (!empty($roznamcha)) {
                     $p_acc_id = $roznamcha['p_acc_id'];
                     $s_acc_id = $roznamcha['s_acc_id'];
@@ -538,8 +596,8 @@ function generateUniqueBillNo($existingBillNumbers)
                         }
                     }
                 }
-                $roznamcha = array_merge($roznamcha, ['amount' => $record['bill_total_amount'], 'transfer_date' => $roznamcha['transfer_date'] ?? date('Y-m-d'), 'final_amount' => '', 'rate' => '', 'details' => 'Final Amount: ' . number_format($record['bill_total_amount'])]);
-                if (!empty($roznamcha)) { ?>
+                $roznamcha = array_merge($roznamcha ?? [], ['amount' => $record['bill_total_amount'], 'transfer_date' => $roznamcha['transfer_date'] ?? date('Y-m-d'), 'final_amount' => '', 'rate' => '', 'details' => 'Final Amount: ' . number_format($record['bill_total_amount'])]);
+                if (!empty($Original_Roz)) { ?>
                     <div class="row my-2 px-4">
                         <div class="col-md-6">
                             <h6><strong>Purchaser: </strong></h6>

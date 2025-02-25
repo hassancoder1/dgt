@@ -1,4 +1,9 @@
 <?php
+function limitWords($text, $limit = 5)
+{
+    $words = explode(' ', $text);
+    return implode(' ', array_slice($words, 0, $limit)) . (count($words) > $limit ? '...' : '');
+}
 function insert($table, $data)
 {
     global $connect;
@@ -294,7 +299,40 @@ function generateSubMenu($parentId, $connect)
         echo '</ul>';
     }
 }
+function clean_input($data)
+{
+    global $connect;
+    return htmlspecialchars(strip_tags(trim(mysqli_real_escape_string($connect, $data))));
+}
 
+function upload_files($files, $uploadDir = 'attachments/')
+{
+    $attachments = [];
+
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0777, true);
+    }
+
+    foreach ($files['name'] as $key => $filename) {
+        $tmpName = $files['tmp_name'][$key];
+        $newFilename = time() . '_' . basename($filename);
+        $destination = $uploadDir . $newFilename;
+
+        if (move_uploaded_file($tmpName, $destination)) {
+            $attachments[] = $newFilename;
+        }
+    }
+    return json_encode($attachments);
+}
+function clean_json_array($array)
+{
+    array_walk_recursive($array, function (&$value) {
+        if (is_string($value)) {
+            $value = str_replace(["\r", "\n"], ' ', $value); // Replace \r and \n with space
+        }
+    });
+    return $array;
+}
 function generateSubMenuAdmin($parentId, $connect)
 {
     $query = "SELECT * FROM navbar WHERE parent_id = $parentId ORDER BY position";
